@@ -1,7 +1,7 @@
 --local macchiato = require("catppuccin.palettes").get_palette("macchiato")
 
 local bufferline = {
-    buf_kill = function(kill_command, bufnr, force)
+    buf_kill = function(self, kill_command, bufnr, force)
         kill_command = kill_command or "bd"
 
         local bo = vim.bo
@@ -33,7 +33,7 @@ local bufferline = {
                     ),
                 }, function(choice)
                     if choice ~= nil and choice:match("ye?s?") then
-                        bufferline.buf_kill(kill_command, bufnr, true)
+                        self:buf_kill(kill_command, bufnr, true)
                     end
                 end)
                 return
@@ -76,5 +76,7 @@ local bufferline = {
         end
     end
 }
+
+bufferline.__index = bufferline
 
 return bufferline
