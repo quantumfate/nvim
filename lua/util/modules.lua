@@ -1,6 +1,6 @@
 local M = {}
 
-local log = require("log")
+local log = require("util.log")
 local fmt = string.format
 -- revisit this
 -- function prequire(package)

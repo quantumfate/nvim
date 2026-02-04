@@ -5,6 +5,10 @@ return {
 	name = "catppuccin",
 	priority = 1000,
 	event = "VimEnter",
+	config = function(_, otps)
+		require("catppuccin").setup(otps)
+		vim.cmd.colorscheme "catppuccin"
+	end,
 	build = ":CatppuccinCompile",
 	opts = {
 		options = {

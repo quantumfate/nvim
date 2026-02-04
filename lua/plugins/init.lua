@@ -4,5 +4,3 @@ require("lazy").setup({
   },
   checker = { enabled = true }, -- automatic updates
 })
-
-vim.cmd.colorscheme "catppuccin"
