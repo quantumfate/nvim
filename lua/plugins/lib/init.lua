@@ -1,3 +1,3 @@
 return {
-    { import = "plugins.lib" }
+    { import = "plugins.lib.mini-nvim" }
 }

@@ -1,3 +1,4 @@
 return {
-    { import = "plugins.coding" }
+    { import = "plugins.coding.cmp" },
+    { import = "plugins.coding.snippets" }
 }
