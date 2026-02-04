@@ -1,8 +1,8 @@
-local conditions = require("plugins.specs.lualine.conditions")
-local colors = require("plugins.specs.lualine.color")
+local conditions = require("util.plugins.lualine.conditions")
+local colors = require("util.plugins.lualine.color")
 ---@class lualine_highlights
-local highlights = require("plugins.specs.lualine.highlights")
-local util = require("plugins.specs.lualine.util")
+local highlights = require("util.plugins.lualine.highlights")
+local util = require("util.plugins.lualine.util")
 
 local fmt = string.format
 
@@ -65,19 +65,21 @@ return {
 	},
 	diff = {
 		"diff",
-		source = diff_source,
 		symbols = {
-			added = icons.git.LineAdded .. " ",
-			modified = icons.git.LineModified .. " ",
-			removed = icons.git.LineRemoved .. " ",
+			added = icons.git.added,
+			modified = icons.git.modified,
+			removed = icons.git.removed,
 		},
-		padding = { left = 2, right = 1 },
-		diff_color = {
-			added = { fg = colors.green },
-			modified = { fg = colors.yellow },
-			removed = { fg = colors.red },
-		},
-		cond = nil,
+		source = function()
+			local gitsigns = vim.b.gitsigns_status_dict
+			if gitsigns then
+				return {
+					added = gitsigns.added,
+					modified = gitsigns.changed,
+					removed = gitsigns.removed,
+				}
+			end
+		end,
 	},
 	python_env = {
 		function()
@@ -100,7 +102,6 @@ return {
 	},
 	diagnostics = {
 		"diagnostics",
-		sources = { "nvim_diagnostic" },
 		symbols = {
 			error = icons.diagnostics.BoldError .. " ",
 			warn = icons.diagnostics.BoldWarning .. " ",
@@ -337,27 +338,6 @@ return {
 		"filetype",
 		cond = nil,
 		padding = { left = 2, right = 2 },
-	},
-	scrollbar = {
-		function()
-			local current_line = vim.fn.line(".")
-			local total_lines = vim.fn.line("$")
-			local chars = {
-				"__",
-				"▁▁",
-				"▂▂",
-				"▃▃",
-				"▄▄",
-				"▅▅",
-				"▆▆",
-				"▇▇",
-				"██",
-			}
-			local line_ratio = current_line / total_lines
-			local index = math.ceil(line_ratio * #chars)
-			return chars[index]
-		end,
-		padding = { left = 0, right = 0 },
-		cond = nil,
+		icon_only = true,
 	},
 }

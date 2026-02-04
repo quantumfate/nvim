@@ -6,21 +6,17 @@ return {
     },
     event = "VimEnter",
     opts = function()
-        local highlights = require("plugins.specs.lualine.highlights")
-        local color = require("plugins.specs.lualine.color")
-        local lualine_components = require("plugins.specs.lualine.components")
+        local highlights = require("util.plugins.lualine.highlights")
+        local color = require("util.plugins.lualine.color")
+        local lualine_components = require("util.plugins.lualine.components")
         return {
             options = {
                 always_divide_middle = true,
                 always_show_tabline = true,
                 -- lualine option configuration
                 component_separators = {
-                    left = highlights.CatppuccinOverlay2(
-                        icons.ui.HollowDividerLeft
-                    ),
-                    right = highlights.CatppuccinOverlay2(
-                        icons.ui.HollowDividerRight
-                    ),
+                    left = icons.ui.HollowDividerLeft,
+                    right = icons.ui.HollowDividerRight,
                 },
                 section_separators = {
                     left = icons.ui.BoldDividerLeft,
@@ -33,12 +29,14 @@ return {
                         "dashboard",
                         "NvimTree",
                         "Outline",
+                        "snacks_dashboard"
                     },
                     winbar = {
                         "alpha",
                         "dashboard",
                         "NvimTree",
                         "Outline",
+                        "snacks_dashboard"
                     },
 
                 },
@@ -70,11 +68,12 @@ return {
                     lualine_components.branch
                 },
                 lualine_c = {
-                    lualine_components.diff,
+                    lualine_components.diagnostics,
+
+                    --lualine_components.diff,
                     --lualine_components.python_env,
                 },
                 lualine_x = {
-                    --lualine_components.diagnostics,
                     --lualine_components.lsp,
                     --lualine_components.diagnostics_source,
                     --lualine_components.formatters_source,
@@ -110,9 +109,6 @@ return {
             tabline = nil,
             winbar = {
                 lualine_c = {
-                    function()
-                        print("hey")
-                    end,
                     {
                         function()
                             return require("nvim-navic").get_location()

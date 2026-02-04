@@ -101,6 +101,7 @@ return {
 					dim_context = false,
 					alt_background = false,
 				},
+				snacks = { enabled = true }
 				-- For more plugins integrations please scroll down (https://github.com/catppuccin/nvim#integrations)
 			},
 			custom_highlights = function(colors)

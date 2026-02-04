@@ -1,7 +1,4 @@
-_G.icons = require("icons")
-
-vim.g.mapleader = " "
-vim.g.maplocalleader = "\\"
+_G.icons = require("util.icons")
 
 require("config.settings")
 require("config.autocmds")

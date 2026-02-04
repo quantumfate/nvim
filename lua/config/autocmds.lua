@@ -77,7 +77,7 @@ local autocmds = {
     {
       group = "_qvim_colorscheme",
       callback = function()
-        require("util.nvim-navic").get_winbar()
+        require("util.plugins.nvim-navic").get_winbar()
         local colors = require("catppuccin.palettes").get_palette("macchiato")
 
         vim.api.nvim_set_hl(0, "CmpItemKindCopilot", { fg = colors.green })
