@@ -125,6 +125,8 @@ return {
     ---@field BoldClose string
     ---@field BoldCircleDividerLeft string
     ---@field BoldCircleDividerRight string
+    ---@field HollowDividerLeft string
+    ---@field HollowDividerRight string
     ---@field BoldDividerLeft string
     ---@field BoldDividerRight string
     ---@field BoldLineLeft string
@@ -215,8 +217,10 @@ return {
         BoldArrowRight = "",
         BoldArrowUp = "",
         BoldClose = "",
-        BoldDividerLeft = "",
-        BoldDividerRight = "",
+        HollowDividerLeft = "",
+        HollowDividerRight = "",
+        BoldDividerLeft = "",
+        BoldDividerRight = "",
         BoldCircleDividerLeft = "",
         BoldCircleDividerRight = "",
         BoldLineLeft = "▎",

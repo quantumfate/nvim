@@ -28,7 +28,7 @@ function M.shallow_table_copy(t)
 end
 
 ---Checks if s is empty or nil
----@param s string
+---@param s strine
 ---@return boolean
 function M.isempty(s)
     return s == nil or s == ""

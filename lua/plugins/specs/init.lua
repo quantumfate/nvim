@@ -1,8 +1,11 @@
 local plugins = {
+	"mini-nvim",
 	"catppuccin",
 	"bufferline",
 	"lualine",
 	"nvim-navic",
+	"whichkey",
+	"gitsigns"
 }
 
 local specs = {}

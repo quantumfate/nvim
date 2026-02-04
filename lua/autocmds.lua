@@ -1,5 +1,54 @@
 local autocmds = {
   {
+    "InsertEnter",
+    {
+      group = "_general_settings",
+      desc = "Close nvim tree when entering insert mode",
+      callback = function()
+        require("nvim-tree.api").tree.close()
+      end,
+    },
+  },
+  {
+    "TextYankPost",
+    {
+      group = "_general_settings",
+      pattern = "*",
+      desc = "Highlight text on yank",
+      callback = function()
+        vim.highlight.on_yank({ higroup = "Search", timeout = 100 })
+      end,
+    },
+  },
+  {
+    "FileType",
+    {
+      group = "_buffer_mappings",
+      pattern = {
+        "qf",
+        "help",
+        "man",
+        "floaterm",
+        "lspinfo",
+        "lir",
+        "lsp-installer",
+        "null-ls-info",
+        "tsplayground",
+        "DressingSelect",
+        "Jaq",
+      },
+      callback = function()
+        vim.keymap.set(
+          "n",
+          "q",
+          "<cmd>close<cr>",
+          { buffer = true }
+        )
+        vim.opt_local.buflisted = false
+      end,
+    },
+  },
+  {
     "VimEnter",
     {
       group = "_general_settings",
@@ -62,6 +111,44 @@ local autocmds = {
         vim.api.nvim_set_hl(0, "CatppuccinBase", { fg = colors.base })
         vim.api.nvim_set_hl(0, "CatppuccinMantle", { fg = colors.mantle })
         vim.api.nvim_set_hl(0, "CatppuccinCrust", { fg = colors.crust })
+      end,
+    },
+  },
+  { -- taken from AstroNvim
+    "BufEnter",
+    {
+      group = "_dir_opened",
+      nested = true,
+      callback = function(args)
+        local bufname = vim.api.nvim_buf_get_name(args.buf)
+        if require("util.fs").is_directory(bufname) then
+          vim.api.nvim_del_augroup_by_name("_dir_opened")
+          vim.cmd("do User DirOpened")
+          vim.api.nvim_exec_autocmds(
+            args.event,
+            { buffer = args.buf, data = args.data }
+          )
+        end
+      end,
+    },
+  },
+  { -- taken from AstroNvim
+    { "BufRead", "BufWinEnter", "BufNewFile" },
+    {
+      group = "_file_opened",
+      nested = true,
+      callback = function(args)
+        local buftype = vim.api.nvim_get_option_value(
+          "buftype",
+          { buf = args.buf }
+        )
+        if
+            not (vim.fn.expand("%") == "" or buftype == "nofile")
+        then
+          vim.api.nvim_del_augroup_by_name("_file_opened")
+          vim.cmd("do User FileOpened")
+          -- TODO: require("qvim.lang").setup()
+        end
       end,
     },
   },
