@@ -7,3 +7,8 @@
     
 - [none-ls](https://github.com/nvimtools/none-ls.nvim)
     - [none-ls-extras](https://github.com/nvimtools/none-ls-extras.nvim)
+    
+
+## Dependencies
+- go
+- npm

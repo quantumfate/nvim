@@ -77,7 +77,7 @@ local autocmds = {
     {
       group = "_qvim_colorscheme",
       callback = function()
-        require("plugins.extra.nvim-navic").get_winbar()
+        require("util.nvim-navic").get_winbar()
         local colors = require("catppuccin.palettes").get_palette("macchiato")
 
         vim.api.nvim_set_hl(0, "CmpItemKindCopilot", { fg = colors.green })
@@ -147,7 +147,6 @@ local autocmds = {
         then
           vim.api.nvim_del_augroup_by_name("_file_opened")
           vim.cmd("do User FileOpened")
-          -- TODO: require("qvim.lang").setup()
         end
       end,
     },

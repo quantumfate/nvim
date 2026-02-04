@@ -17,6 +17,12 @@ local function diff_source()
 	end
 end
 
+local function gitsigns_head()
+	local gitsigns = vim.b.gitsigns_status_dict
+	if gitsigns then
+		return gitsigns.head
+	end
+end
 ---@class lualine_components
 ---@field mode component
 ---@field branch component
@@ -46,7 +52,8 @@ return {
 		end,
 	},
 	branch = {
-		"b:gitsigns_head",
+		"branch",
+		source = gitsigns_head,
 		icon = icons.git.Branch,
 		fmt = function(displayed, _)
 			local s = util.shorten_branch_name(displayed, 50)

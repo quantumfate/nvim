@@ -67,7 +67,7 @@ return {
                     lualine_components.mode,
                 },
                 lualine_b = {
-                    lualine_components.branch,
+                    lualine_components.branch
                 },
                 lualine_c = {
                     lualine_components.diff,

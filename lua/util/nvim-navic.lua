@@ -145,7 +145,7 @@ local nvim_navic = {
                 local status_ok, _ =
                     pcall(vim.api.nvim_buf_get_var, 0, "lsp_floating_window")
                 if not status_ok then
-                    require("plugins.extra.nvim-navic"):get_winbar()
+                    require("util.nvim-navic"):get_winbar()
                 end
             end,
         })
