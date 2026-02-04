@@ -64,7 +64,6 @@ vim.filetype.add({
     },
 })
 
-local icons = require("icons")
 local default_diagnostic_config = {
     signs = {
         active = true,
