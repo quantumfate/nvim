@@ -137,6 +137,7 @@ return {
     ---@field Scopes string
     ---@field Watches string
     ---@field DebugConsole string
+    ---@field ConnectionNodes string
     ---@field Calendar string
     ---@field Check string
     ---@field ChevronRight string
@@ -231,6 +232,7 @@ return {
         Scopes = " ",
         Watches = " ",
         DebugConsole = " ",
+        ConnectionNodes = "󰌘 ",
         Calendar = " ",
         Check = " ",
         ChevronRight = "> ",
@@ -261,6 +263,7 @@ return {
         FolderSymlink = " ",
         Forward = " ",
         Gear = " ",
+        GearBold = " ",
         History = " ",
         Lightbulb = " ",
         LineLeft = "▏ ",

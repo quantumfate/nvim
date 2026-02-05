@@ -13,11 +13,11 @@ return {
             require("mason").setup()
             require("mason-lspconfig").setup({
                 ensure_installed = {
-                    "lua_ls", -- Lua
-                    "pyright", -- Python
-                    "ts_ls", -- TypeScript/JavaScript
+                    "lua_ls",        -- Lua
+                    "pyright",       -- Python
+                    "ts_ls",         -- TypeScript/JavaScript
                     "rust_analyzer", -- Rust
-                    "gopls", -- Go
+                    "gopls",         -- Go
                 },
                 automatic_installation = true,
             })
@@ -72,6 +72,15 @@ return {
                 float = {
                     border = "rounded",
                     source = "always",
+                },
+                signs = {
+                    text = {
+                        -- disable default diagnostics indicator in the column
+                        [vim.diagnostic.severity.ERROR] = "",
+                        [vim.diagnostic.severity.WARN] = "",
+                        [vim.diagnostic.severity.HINT] = "",
+                        [vim.diagnostic.severity.INFO] = "",
+                    },
                 },
             })
 

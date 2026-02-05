@@ -26,7 +26,7 @@ return {
             auto_attach = true,
             preference = nil,
         },
-        highlight = true,
+        highlight = false,
         separator = " > ",
         depth_limit = 0,
         depth_limit_indicator = "..",

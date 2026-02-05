@@ -1,5 +1,22 @@
-local conditions = require("util.plugins.lualine.conditions")
 local util = require("util.plugins.lualine.util")
+
+local window_width_limit = 100
+
+local conditions = {
+	buffer_not_empty = function()
+		return vim.fn.empty(vim.fn.expand("%:t")) ~= 1
+	end,
+	hide_in_width = function()
+		return vim.o.columns > window_width_limit
+	end,
+	no_clients = function()
+		local buf_clients = vim.lsp.get_active_clients({ bufnr = 0 })
+		return #buf_clients == 0
+	end,
+	buffer_is_terminal = function()
+		return vim.bo.buftype == "terminal"
+	end
+}
 
 local fmt = string.format
 
@@ -64,7 +81,7 @@ return {
 			end
 		end,
 		padding = { left = 2, right = 2 },
-		separator = { right = "" },
+		separator = { left = "" },
 	},
 	python_env = {
 		function()
@@ -96,6 +113,7 @@ return {
 		},
 		cond = conditions.hide_in_width,
 		padding = { left = 2, right = 2 },
+		separator = { right = "" },
 	},
 	lsp = {
 		function()
@@ -131,7 +149,9 @@ return {
 		padding = { left = 2, right = 2 },
 		cond = function()
 			return not conditions.buffer_is_terminal()
-		end
+		end,
+		--separator = { left = "" }
+		separator = { left = icons.ui.BoldDividerRight, right = "" }
 	},
 	progress = {
 		"progress",
@@ -140,7 +160,8 @@ return {
 		end,
 		cond = function()
 			return not conditions.buffer_is_terminal()
-		end
+		end,
+		separator = { left = "", right = "" }
 	},
 	spaces = {
 		function()
@@ -152,7 +173,6 @@ return {
 	encoding = {
 		"o:encoding",
 		fmt = string.upper,
-		color = {},
 		cond = conditions.hide_in_width,
 		padding = { left = 2, right = 2 },
 	},
@@ -163,4 +183,40 @@ return {
 		icon_only = true,
 		separator = { right = "" }, -- override both
 	},
+	searchcount = {
+		function()
+			local sc = vim.fn.searchcount({ maxcount = 999 })
+			if sc.total == 0 then return "" end
+			return sc.current .. "/" .. sc.total
+		end,
+		cond = function()
+			return vim.v.hlsearch == 1
+		end,
+		padding = { left = 2, right = 1 },
+		separator = { left = "" },
+	},
+	macrorecording = {
+		{
+			function()
+				local reg = vim.fn.reg_recording()
+				if reg ~= "" then return "󰑋 @" .. reg end
+				return ""
+			end,
+		},
+		padding = { left = 2, right = 1 },
+	},
+	wordcount = {
+		function() return "󰈭 " .. vim.fn.wordcount().words end,
+		cond = function() return vim.tbl_contains({ "markdown", "text", "txt" }, vim.bo.filetype) end,
+		separator = { left = "" },
+	},
+	navic = {
+		function()
+			return require("nvim-navic").get_location()
+		end,
+		cond = function()
+			return require("nvim-navic").is_available()
+		end,
+		padding = { left = 2 }
+	}
 }

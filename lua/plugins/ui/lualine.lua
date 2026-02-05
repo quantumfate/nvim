@@ -70,9 +70,7 @@ return {
                     lualine_components.path
                 },
                 lualine_c = {
-                    lualine_components.diff,
-                    lualine_components.diagnostics,
-                    lualine_components.python_env,
+                    lualine_components.navic,
                 },
                 lualine_x = {
                     Snacks.profiler.status(),
@@ -100,13 +98,25 @@ return {
                         cond = require("lazy.status").has_updates,
                         color = function() return { fg = Snacks.util.color("Special") } end,
                     },
+
+                    lualine_components.diff,
+                    lualine_components.diagnostics,
+                    lualine_components.python_env,
+
+                    lualine_components.searchcount,
+                    lualine_components.wordcount,
+
+
                 },
                 lualine_y = {
-                    lualine_components.lsp,
-                },
-                lualine_z = {
+
                     lualine_components.location,
                     lualine_components.progress,
+
+                },
+                lualine_z = {
+                    lualine_components.lsp,
+
                 },
             },
             inactive_sections = {
@@ -128,18 +138,6 @@ return {
             },
             tabline = nil,
             winbar = {
-                lualine_c = {
-                    {
-                        function()
-                            return require("nvim-navic").get_location()
-                        end,
-                        cond = function()
-                            return require("nvim-navic").is_available()
-                        end,
-                        draw_empty = true,
-                        padding = { left = 2 }
-                    },
-                }
             },
             extensions = {
                 "aerial", "assistant", "avante", "chadtree", "ctrlspace", "fern", "fugitive", "fzf", "lazy", "man",

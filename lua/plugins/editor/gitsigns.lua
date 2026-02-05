@@ -1,91 +1,84 @@
 return {
-    "lewis6991/gitsigns.nvim",
-    event = "User FileOpened",
-    cmd = "Gitsigns",
-    opts = {
-        on_attach = function(bufnr)
-            local wk = require("which-key")
-            wk.add({
-                { "<leader>g",  buffer = bufnr,                                      group = "git" },
-                { "<leader>gR", "<cmd>lua require 'gitsigns'.reset_buffer()<cr>",    buffer = bufnr, desc = "Reset Buffer" },
-                { "<leader>gb", "<cmd>Telescope git_branches<cr>",                   buffer = bufnr, desc = "Checkout branch" },
-                { "<leader>gc", "<cmd>Telescope git_commits<cr>",                    buffer = bufnr, desc = "Checkout commit" },
-                { "<leader>gd", "<cmd>Gitsigns diffthis HEAD<cr>",                   buffer = bufnr, desc = "Diff" },
-                { "<leader>gg", "<cmd>lua _LAZYGIT_TOGGLE()<CR>",                    buffer = bufnr, desc = "Lazygit" },
-                { "<leader>gj", "<cmd>lua require 'gitsigns'.next_hunk()<cr>",       buffer = bufnr, desc = "Next Hunk" },
-                { "<leader>gk", "<cmd>lua require 'gitsigns'.prev_hunk()<cr>",       buffer = bufnr, desc = "Prev Hunk" },
-                { "<leader>gl", "<cmd>lua require 'gitsigns'.blame_line()<cr>",      buffer = bufnr, desc = "Blame" },
-                { "<leader>go", "<cmd>Telescope git_status<cr>",                     buffer = bufnr, desc = "Open changed file" },
-                { "<leader>gp", "<cmd>lua require 'gitsigns'.preview_hunk()<cr>",    buffer = bufnr, desc = "Preview Hunk" },
-                { "<leader>gr", "<cmd>lua require 'gitsigns'.reset_hunk()<cr>",      buffer = bufnr, desc = "Reset Hunk" },
-                { "<leader>gs", "<cmd>lua require 'gitsigns'.stage_hunk()<cr>",      buffer = bufnr, desc = "Stage Hunk" },
-                { "<leader>gu", "<cmd>lua require 'gitsigns'.undo_stage_hunk()<cr>", buffer = bufnr, desc = "Undo Stage Hunk" },
-            })
-        end,
-        -- gitsigns option configuration
-        signs = {
-            add = {
-                hl = "GitSignsAdd",
-                text = "▎",
-                numhl = "GitSignsAddNr",
-                linehl = "GitSignsAddLn",
-            },
-            change = {
-                hl = "GitSignsChange",
-                text = "▎",
-                numhl = "GitSignsChangeNr",
-                linehl = "GitSignsChangeLn",
-            },
-            delete = {
-                hl = "GitSignsDelete",
-                text = "契",
-                numhl = "GitSignsDeleteNr",
-                linehl = "GitSignsDeleteLn",
-            },
-            topdelete = {
-                hl = "GitSignsDelete",
-                text = "契",
-                numhl = "GitSignsDeleteNr",
-                linehl = "GitSignsDeleteLn",
-            },
-            changedelete = {
-                hl = "GitSignsChange",
-                text = "▎",
-                numhl = "GitSignsChangeNr",
-                linehl = "GitSignsChangeLn",
-            },
-        },
-        signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
-        numhl = false,     -- Toggle with `:Gitsigns toggle_numhl`
-        linehl = false,    -- Toggle with `:Gitsigns toggle_linehl`
-        word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
-        watch_gitdir = {
-            interval = 1000,
-            follow_files = true,
-        },
-        attach_to_untracked = true,
-        current_line_blame = true, -- Toggle with `:Gitsigns toggle_current_line_blame`
-        current_line_blame_opts = {
-            virt_text = true,
-            virt_text_pos = "eol", -- 'eol' | 'overlay' | 'right_align'
-            delay = 1000,
-            ignore_whitespace = false,
-        },
-        current_line_blame_formatter_opts = {
-            relative_time = false,
-        },
-        sign_priority = 6,
-        update_debounce = 100,
-        status_formatter = nil, -- Use default
-        max_file_length = 40000,
-        preview_config = {
-            -- Options passed to nvim_open_win
-            border = "single",
-            style = "minimal",
-            relative = "cursor",
-            row = 0,
-            col = 1,
-        }
 
-    }
+    {
+        "lewis6991/gitsigns.nvim",
+        event = "User FileOpened",
+        opts = {
+            signs = {
+                add = { text = "▎" },
+                change = { text = "▎" },
+                delete = { text = "" },
+                topdelete = { text = "" },
+                changedelete = { text = "▎" },
+                untracked = { text = "▎" },
+            },
+            signs_staged = {
+                add = { text = "▎" },
+                change = { text = "▎" },
+                delete = { text = "" },
+                topdelete = { text = "" },
+                changedelete = { text = "▎" },
+            },
+            signcolumn = false,
+            attach_to_untracked = true,
+            current_line_blame = true, -- Toggle with `:Gitsigns toggle_current_line_blame`
+            current_line_blame_opts = {
+                virt_text = true,
+                virt_text_pos = "eol", -- 'eol' | 'overlay' | 'right_align'
+                delay = 1000,
+                ignore_whitespace = false,
+            },
+            on_attach = function(buffer)
+                local gs = package.loaded.gitsigns
+
+                local function map(mode, l, r, desc)
+                    vim.keymap.set(mode, l, r, { buffer = buffer, desc = desc, silent = true })
+                end
+
+                -- stylua: ignore start
+                map("n", "]h", function()
+                    if vim.wo.diff then
+                        vim.cmd.normal({ "]c", bang = true })
+                    else
+                        gs.nav_hunk("next")
+                    end
+                end, "Next Hunk")
+                map("n", "[h", function()
+                    if vim.wo.diff then
+                        vim.cmd.normal({ "[c", bang = true })
+                    else
+                        gs.nav_hunk("prev")
+                    end
+                end, "Prev Hunk")
+                map("n", "]H", function() gs.nav_hunk("last") end, "Last Hunk")
+                map("n", "[H", function() gs.nav_hunk("first") end, "First Hunk")
+                map({ "n", "x" }, "<leader>ghs", ":Gitsigns stage_hunk<CR>", "Stage Hunk")
+                map({ "n", "x" }, "<leader>ghr", ":Gitsigns reset_hunk<CR>", "Reset Hunk")
+                map("n", "<leader>ghS", gs.stage_buffer, "Stage Buffer")
+                map("n", "<leader>ghu", gs.undo_stage_hunk, "Undo Stage Hunk")
+                map("n", "<leader>ghR", gs.reset_buffer, "Reset Buffer")
+                map("n", "<leader>ghp", gs.preview_hunk_inline, "Preview Hunk Inline")
+                map("n", "<leader>ghb", function() gs.blame_line({ full = true }) end, "Blame Line")
+                map("n", "<leader>ghB", function() gs.blame() end, "Blame Buffer")
+                map("n", "<leader>ghd", gs.diffthis, "Diff This")
+                map("n", "<leader>ghD", function() gs.diffthis("~") end, "Diff This ~")
+                map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "GitSigns Select Hunk")
+            end,
+        },
+    },
+    {
+        "gitsigns.nvim",
+        opts = function()
+            Snacks.toggle({
+                name = "Git Signs",
+                get = function()
+                    return require("gitsigns.config").config.signcolumn
+                end,
+                set = function(state)
+                    require("gitsigns").toggle_signs(state)
+                end,
+            }):map("<leader>uG")
+        end,
+    },
+
 }
