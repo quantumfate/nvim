@@ -15,21 +15,14 @@ return {
                     vim.keymap.set("n", keys, func, { buffer = event.buf, desc = "LSP: " .. desc })
                 end
 
-                -- Navigation
                 map("gd", vim.lsp.buf.definition, "Goto Definition")
                 map("gr", vim.lsp.buf.references, "Goto References")
                 map("gI", vim.lsp.buf.implementation, "Goto Implementation")
                 map("gy", vim.lsp.buf.type_definition, "Type Definition")
-
-                -- Actions
                 map("<leader>cr", vim.lsp.buf.rename, "Rename")
                 map("<leader>ca", vim.lsp.buf.code_action, "Code Action")
-
-                -- Hover/Help
                 map("K", vim.lsp.buf.hover, "Hover Documentation")
                 map("gK", vim.lsp.buf.signature_help, "Signature Help")
-
-                -- Diagnostics
                 map("<leader>cd", vim.diagnostic.open_float, "Line Diagnostics")
                 map("]d", vim.diagnostic.goto_next, "Next Diagnostic")
                 map("[d", vim.diagnostic.goto_prev, "Prev Diagnostic")
@@ -39,7 +32,7 @@ return {
         -- Diagnostics config
         vim.diagnostic.config({
             underline = true,
-            update_in_insert = false,
+            update_in_insert = true,
             virtual_text = {
                 spacing = 4,
                 prefix = "●",
@@ -77,10 +70,24 @@ return {
             },
         }
 
-        vim.lsp.config.pyright = {
-            cmd = { "pyright-langserver", "--stdio" },
+        -- CHANGED: basedpyright instead of pyright
+        vim.lsp.config.basedpyright = {
+            cmd = { "basedpyright-langserver", "--stdio" },
             filetypes = { "python" },
             root_markers = { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "Pipfile", ".git" },
+            settings = {
+                basedpyright = {
+                    disableOrganizeImports = true, -- let ruff handle imports
+                    analysis = {
+                        diagnosticSeverityOverrides = {
+                            reportUnusedImport = "none",
+                            reportUnusedVariable = "none",
+                            reportUnusedClass = "none",
+                            reportUnusedFunction = "none",
+                        },
+                    },
+                },
+            },
         }
 
         vim.lsp.config.ts_ls = {
@@ -107,7 +114,6 @@ return {
             root_markers = { "go.work", "go.mod", ".git" },
         }
 
-        -- Enable servers
-        vim.lsp.enable({ "lua_ls", "pyright", "ts_ls", "rust_analyzer", "gopls" })
+        vim.lsp.enable({ "lua_ls", "basedpyright", "ts_ls", "rust_analyzer", "gopls" })
     end,
 }

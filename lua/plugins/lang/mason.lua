@@ -1,8 +1,7 @@
-local lsp_servers = { "lua_ls", "pyright", "ts_ls", "rust_analyzer", "gopls" }
+local lsp_servers = { "lua_ls", "basedpyright", "ts_ls", "rust_analyzer", "gopls" }
 local formatters = { "stylua", "prettierd", "black", "ruff", "shfmt" }
-local linters = { "ruff", "eslint_d", "shellcheck", "luacheck", "markdownlint", "yamllint", "hadolint" }
+local linters = { "eslint_d", "shellcheck", "luacheck", "markdownlint", "yamllint", "hadolint" } -- No ruff!
 local dap_adapters = { "python", "codelldb", "js" }
-
 return {
     -- Mason: Package manager
     {
@@ -44,6 +43,10 @@ return {
         opts = {
             ensure_installed = lsp_servers,
             automatic_installation = false,
+            handlers = {
+                -- Default handler: do nothing (we use vim.lsp.enable instead)
+                function(server_name) end,
+            },
         },
     },
 

@@ -34,7 +34,7 @@ return {
             },
             get_element_icon = function(opts)
                 -- stylua: ignore
-                return MiniIcons.get("filetype", opts.filetype)
+                return require("mini.icons").get("filetype", opts.filetype)
             end,
         },
     },
