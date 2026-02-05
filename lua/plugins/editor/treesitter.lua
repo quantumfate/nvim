@@ -25,6 +25,8 @@ return {
                 "python",
                 "query",
                 "go",
+                "rust",
+                "cpp",
                 "regex",
                 "toml",
                 "tsx",

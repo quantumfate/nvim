@@ -121,7 +121,7 @@ return {
 				bufnr = vim.api.nvim_get_current_buf(),
 			})
 			if #buf_clients == 0 then
-				return icons.ui.LanguageServer
+				return ""
 			end
 
 			-- add client
@@ -132,7 +132,7 @@ return {
 				end
 			end
 			if #lsps == 0 then
-				return icons.ui.LanguageServer
+				return ""
 			end
 			return util.unique_list_string_format(lsps)
 		end,
