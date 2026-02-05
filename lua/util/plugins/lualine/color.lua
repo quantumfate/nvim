@@ -1,60 +1,39 @@
-local colors = require("catppuccin.palettes").get_palette("macchiato")
+local C = require("catppuccin.palettes").get_palette("macchiato")
+local O = require("catppuccin").options
+local transparent_bg = O.transparent_background and "NONE" or C.mantle
 
 return {
     normal = {
-        a = { bg = colors.surface0, fg = colors.mauve, gui = "bold" },
-        b = { bg = colors.surface1, fg = colors.teal },
-        c = { bg = colors.surface0, fg = colors.pink },
-        x = { bg = colors.surface0, fg = colors.text, gui = "bold" },
-        y = { bg = colors.base, fg = colors.pink, gui = "bold" },
-        z = { bg = colors.base, fg = colors.teal, gui = "bold" },
+        a = { bg = C.mauve, fg = C.mantle, gui = "bold" },
+        b = { bg = C.surface0, fg = C.mauve },
+        c = { bg = transparent_bg, fg = C.pink },
     },
+
     insert = {
-        a = { bg = colors.surface0, fg = colors.mauve, gui = "bold" },
-        b = { bg = colors.surface1, fg = colors.teal },
-        c = { bg = colors.surface0, fg = colors.pink },
-        x = { bg = colors.surface0, fg = colors.text, gui = "bold" },
-        y = { bg = colors.base, fg = colors.pink, gui = "bold" },
-        z = { bg = colors.base, fg = colors.teal, gui = "bold" },
+        a = { bg = C.green, fg = C.base, gui = "bold" },
+        b = { bg = C.surface0, fg = C.green },
+    },
+
+    terminal = {
+        a = { bg = C.green, fg = C.base, gui = "bold" },
+        b = { bg = C.surface0, fg = C.green },
+    },
+
+    command = {
+        a = { bg = C.peach, fg = C.base, gui = "bold" },
+        b = { bg = C.surface0, fg = C.peach },
     },
     visual = {
-        a = { bg = colors.surface0, fg = colors.mauve, gui = "bold" },
-        b = { bg = colors.surface1, fg = colors.teal },
-        c = { bg = colors.surface0, fg = colors.pink },
-        x = { bg = colors.surface0, fg = colors.text, gui = "bold" },
-        y = { bg = colors.base, fg = colors.pink, gui = "bold" },
-        z = { bg = colors.base, fg = colors.teal, gui = "bold" },
+        a = { bg = C.blue, fg = C.base, gui = "bold" },
+        b = { bg = C.surface0, fg = C.blue },
     },
     replace = {
-        a = { bg = colors.surface0, fg = colors.mauve, gui = "bold" },
-        b = { bg = colors.surface1, fg = colors.teal },
-        c = { bg = colors.surface0, fg = colors.pink },
-        x = { bg = colors.surface0, fg = colors.text, gui = "bold" },
-        y = { bg = colors.base, fg = colors.pink, gui = "bold" },
-        z = { bg = colors.base, fg = colors.teal, gui = "bold" },
-    },
-    command = {
-        a = { bg = colors.surface0, fg = colors.mauve, gui = "bold" },
-        b = { bg = colors.surface1, fg = colors.teal },
-        c = { bg = colors.surface0, fg = colors.pink },
-        x = { bg = colors.surface0, fg = colors.text, gui = "bold" },
-        y = { bg = colors.base, fg = colors.pink, gui = "bold" },
-        z = { bg = colors.base, fg = colors.teal, gui = "bold" },
-    },
-    terminal = {
-        a = { bg = colors.surface0, fg = colors.mauve, gui = "bold" },
-        b = { bg = colors.surface1, fg = colors.teal },
-        c = { bg = colors.surface0, fg = colors.pink },
-        x = { bg = colors.surface0, fg = colors.text, gui = "bold" },
-        y = { bg = colors.base, fg = colors.pink, gui = "bold" },
-        z = { bg = colors.base, fg = colors.teal, gui = "bold" },
+        a = { bg = C.red, fg = C.base, gui = "bold" },
+        b = { bg = C.surface0, fg = C.red },
     },
     inactive = {
-        a = { bg = colors.surface0, fg = colors.mauve, gui = "bold" },
-        b = { bg = colors.surface1, fg = colors.teal },
-        c = { bg = colors.surface0, fg = colors.pink },
-        x = { bg = colors.surface0, fg = colors.text, gui = "bold" },
-        y = { bg = colors.base, fg = colors.pink, gui = "bold" },
-        z = { bg = colors.base, fg = colors.teal, gui = "bold" },
+        a = { bg = transparent_bg, fg = C.blue },
+        b = { bg = transparent_bg, fg = C.surface1, gui = "bold" },
+        c = { bg = transparent_bg, fg = C.overlay0 },
     },
 }

@@ -6,7 +6,6 @@ return {
     },
     event = "VimEnter",
     opts = function()
-        local highlights = require("util.plugins.lualine.highlights")
         local color = require("util.plugins.lualine.color")
         local lualine_components = require("util.plugins.lualine.components")
         return {
@@ -20,7 +19,7 @@ return {
                 },
                 section_separators = {
                     left = icons.ui.BoldDividerLeft,
-                    right = icons.ui.BoldArrowRight,
+                    right = icons.ui.BoldDividerRight,
                 },
                 theme = color,
                 disabled_filetypes = {
@@ -63,29 +62,50 @@ return {
             sections = {
                 lualine_a = {
                     lualine_components.mode,
-                },
-                lualine_b = {
                     lualine_components.branch
                 },
+                lualine_b = {
+                    lualine_components.root,
+                    lualine_components.filetype,
+                    lualine_components.path
+                },
                 lualine_c = {
+                    lualine_components.diff,
                     lualine_components.diagnostics,
-
-                    --lualine_components.diff,
-                    --lualine_components.python_env,
+                    lualine_components.python_env,
                 },
                 lualine_x = {
-                    --lualine_components.lsp,
-                    --lualine_components.diagnostics_source,
-                    --lualine_components.formatters_source,
-                    --lualine_components.code_action_source,
-                    --lualine_components.hover_source,
-                    --lualine_components.copilot,
-                    lualine_components.filetype,
+                    Snacks.profiler.status(),
+                    -- stylua: ignore
+                    {
+                        function() return require("noice").api.status.command.get() end,
+                        cond = function() return package.loaded["noice"] and require("noice").api.status.command.has() end,
+                        color = function() return { fg = Snacks.util.color("Statement") } end,
+                    },
+                    -- stylua: ignore
+                    {
+                        function() return require("noice").api.status.mode.get() end,
+                        cond = function() return package.loaded["noice"] and require("noice").api.status.mode.has() end,
+                        color = function() return { fg = Snacks.util.color("Constant") } end,
+                    },
+                    -- stylua: ignore
+                    {
+                        function() return "  " .. require("dap").status() end,
+                        cond = function() return package.loaded["dap"] and require("dap").status() ~= "" end,
+                        color = function() return { fg = Snacks.util.color("Debug") } end,
+                    },
+                    -- stylua: ignore
+                    {
+                        require("lazy.status").updates,
+                        cond = require("lazy.status").has_updates,
+                        color = function() return { fg = Snacks.util.color("Special") } end,
+                    },
                 },
                 lualine_y = {
-                    lualine_components.location,
+                    lualine_components.lsp,
                 },
                 lualine_z = {
+                    lualine_components.location,
                     lualine_components.progress,
                 },
             },
@@ -115,7 +135,9 @@ return {
                         end,
                         cond = function()
                             return require("nvim-navic").is_available()
-                        end
+                        end,
+                        draw_empty = true,
+                        padding = { left = 2 }
                     },
                 }
             },

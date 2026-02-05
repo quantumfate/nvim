@@ -53,7 +53,6 @@ return {
 				alpha = true,
 				gitsigns = true,
 				hop = true,
-				mini = false,
 				indent_blankline = {
 					enabled = true,
 					colored_indent_levels = true,
@@ -101,7 +100,8 @@ return {
 					dim_context = false,
 					alt_background = false,
 				},
-				snacks = { enabled = true }
+				snacks = { enabled = true },
+				mini = { enabled = true },
 				-- For more plugins integrations please scroll down (https://github.com/catppuccin/nvim#integrations)
 			},
 			custom_highlights = function(colors)

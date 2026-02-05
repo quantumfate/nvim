@@ -113,48 +113,32 @@ function lualine_util.shorten_branch_name(branch_name, max_length)
 	return new_branch_name .. "..."
 end
 
----@param opts? {cwd:false, subdirectory: true, parent: true, other: true, icon?:string}
-function lualine_util.root_dir(opts)
-	opts = vim.tbl_extend("force", {
-		cwd = false,
-		subdirectory = true,
-		parent = true,
-		other = true,
-		icon = "󱉭 ",
-		color = function()
-			return { fg = Snacks.util.color("Special") }
-		end,
-	}, opts or {})
-
-	local function get()
-		local cwd = LazyVim.root.cwd()
-		local root = LazyVim.root.get({ normalize = true })
-		local name = vim.fs.basename(root)
-
-		if root == cwd then
-			-- root is cwd
-			return opts.cwd and name
-		elseif root:find(cwd, 1, true) == 1 then
-			-- root is subdirectory of cwd
-			return opts.subdirectory and name
-		elseif cwd:find(root, 1, true) == 1 then
-			-- root is parent directory of cwd
-			return opts.parent and name
-		else
-			-- root and cwd are not related
-			return opts.other and name
+--- Pretty path component - shows filename with path relative to project root
+---@return function
+function lualine_util.get_path()
+	return function()
+		local path = vim.fn.expand("%:p")
+		if path == "" then
+			return ""
 		end
-	end
+		local root = require("util.fs").get_root()
+		-- Make path relative to root
+		if path:find(root, 1, true) == 1 then
+			path = path:sub(#root + 2)
+		end
+		local filename = vim.fn.fnamemodify(path, ":t")
+		local dir = vim.fn.fnamemodify(path, ":h")
+		if dir == "." then
+			dir = ""
+		else
+			dir = dir .. "/"
+		end
 
-	return {
-		function()
-			return (opts.icon and opts.icon .. " ") .. get()
-		end,
-		cond = function()
-			return type(get()) == "string"
-		end,
-		color = opts.color,
-	}
+		if vim.bo.modified then
+			filename = filename .. " ●"
+		end
+		return dir .. filename
+	end
 end
 
 return lualine_util

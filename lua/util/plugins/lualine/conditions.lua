@@ -15,6 +15,9 @@ local conditions = {
     no_clients = function()
         local buf_clients = vim.lsp.get_active_clients({ bufnr = 0 })
         return #buf_clients == 0
+    end,
+    buffer_is_terminal = function()
+        return vim.bo.buftype == "terminal"
     end
 }
 
