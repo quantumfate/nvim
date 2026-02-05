@@ -1,4 +1,3 @@
 return {
-    { import = "plugins.lib.mini" },
-    { import = "plugins.lib.snacks" }
+    { import = "plugins.lib.mini" }
 }
