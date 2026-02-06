@@ -16,3 +16,7 @@
 - python
 - ripgrep
 - fzf
+
+## Remarks
+
+- very inspired by [LazyVim](https://www.lazyvim.org/)
