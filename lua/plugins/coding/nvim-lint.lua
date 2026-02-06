@@ -27,6 +27,7 @@ return {
             yaml = { "yamllint" },
             dockerfile = { "hadolint" },
             nix = { "nix" },
+            rust = { "rust_analyzer" }
         }
 
         -- Lint on events

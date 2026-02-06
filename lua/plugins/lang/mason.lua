@@ -1,7 +1,35 @@
-local lsp_servers = { "lua_ls", "basedpyright", "ts_ls", "rust_analyzer", "gopls" }
-local formatters = { "stylua", "prettierd", "black", "ruff", "shfmt", "rustup" }
-local linters = { "eslint_d", "shellcheck", "luacheck", "markdownlint", "yamllint", "hadolint" } -- No ruff!
-local dap_adapters = { "python", "codelldb", "js" }
+local lsp_servers = {
+    "lua_ls",
+    "basedpyright",
+    "ts_ls",
+    "rust_analyzer",
+    "gopls"
+}
+
+local formatters = {
+    "stylua",
+    "prettierd",
+    "black",
+    "ruff",
+    "shfmt",
+    "rustup"
+}
+
+local linters = {
+    "eslint_d",
+    "shellcheck",
+    "luacheck",
+    "markdownlint",
+    "yamllint",
+    "hadolint"
+}
+
+local dap_adapters = {
+    "python",
+    "codelldb",
+    "js"
+}
+
 return {
     -- Mason: Package manager
     {

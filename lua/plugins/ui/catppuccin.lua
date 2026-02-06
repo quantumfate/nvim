@@ -58,16 +58,14 @@ return {
 					colored_indent_levels = true,
 				},
 				noice = true,
-				leap = true,
+				flash = true,
 				markdown = true,
 				mason = true,
 				neotest = true,
 				neogit = true,
 				cmp = true,
-				dap = {
-					enabled = true,
-					enable_ui = true,
-				},
+				dap = true,
+				enable_ui = true,
 				native_lsp = {
 					enabled = true,
 					virtual_text = {
@@ -108,49 +106,6 @@ return {
 				local ucolors = modules.require_on_index("catppuccin.utils.colors")
 				local macchiato = require("catppuccin.palettes").get_palette("macchiato")
 				return {
-					-- rainbow delimiter
-					RainbowDelimiterRed = { fg = colors.red },
-					RainbowDelimiterYellow = { fg = colors.mauve },
-					RainbowDelimiterBlue = { fg = colors.pink },
-					RainbowDelimiterOrange = { fg = colors.blue },
-					RainbowDelimiterGreen = { fg = colors.rosewater },
-					RainbowDelimiterViolet = { fg = colors.peach },
-					RainbowDelimiterCyan = { fg = colors.teal },
-					-- window picker
-					WindowPickerStatusLine = {
-						fg = colors.teal,
-						bg = colors.surface2,
-						style = { "bold" },
-					},
-					WindowPickerStatusLineNC = {
-						fg = colors.teal,
-						bg = colors.surface2,
-						style = { "bold" },
-					},
-					WindowPickerWinBar = {
-						fg = colors.teal,
-						bg = colors.surface2,
-						style = { "bold" },
-					},
-					WindowPickerWinBarNC = {
-						fg = colors.teal,
-						bg = colors.surface2,
-						style = { "bold" },
-					},
-
-					-- Indent Blankline
-					IndentBlanklineIndent1 = { fg = colors.surface0 },
-					IndentBlanklineIndent2 = { fg = colors.surface0 },
-					IndentBlanklineIndent3 = { fg = colors.surface0 },
-					IndentBlanklineIndent4 = { fg = colors.surface0 },
-					IndentBlanklineIndent5 = { fg = colors.surface0 },
-					IndentBlanklineIndent6 = { fg = colors.surface0 },
-					IndentBlanklineContextChar = {
-						fg = colors.surface2,
-					},
-					IndentBlanklineContextStart = {
-						style = { "underline" },
-					},
 					-- Cmp Menu
 					PmenuSel = {
 						fg = colors.base,
@@ -186,10 +141,9 @@ return {
 					TelescopeResultsTitle = { fg = colors.crust, bg = colors.mauve },
 					TelescopePreviewTitle = { fg = colors.crust, bg = colors.mauve },
 					-- Bufferline
-					BufferLineIndicatorSelected = { fg = colors.pink },
+					BufferLineIndicatorSelected = { fg = colors.mauve },
 					BufferLineIndicator = { fg = colors.base },
-					BufferLineModifiedSelected = { fg = colors.teal },
-					TabLineSel = { bg = colors.pink },
+					BufferLineModifiedSelected = { fg = colors.peach },
 					-- Cursorline & Linenumbers
 					CursorLine = { bg = colors.mantle },
 					-- Visual Mode
