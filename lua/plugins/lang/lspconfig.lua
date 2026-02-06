@@ -15,8 +15,6 @@ return {
                     vim.keymap.set("n", keys, func, { buffer = event.buf, desc = "LSP: " .. desc })
                 end
 
-                map("gd", vim.lsp.buf.definition, "Goto Definition")
-                map("gr", vim.lsp.buf.references, "Goto References")
                 map("gI", vim.lsp.buf.implementation, "Goto Implementation")
                 map("gy", vim.lsp.buf.type_definition, "Type Definition")
                 map("<leader>cr", vim.lsp.buf.rename, "Rename")
