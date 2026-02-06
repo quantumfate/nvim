@@ -35,6 +35,13 @@ return {
                 "vimdoc",
                 "xml",
                 "yaml",
+                "css",
+                "latex",
+                "norg",
+                "scss",
+                "svelte",
+                "typst",
+                "vue"
             },
             highlight = { enable = true },
             auto_install = true,

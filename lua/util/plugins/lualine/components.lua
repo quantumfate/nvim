@@ -10,7 +10,7 @@ local conditions = {
 		return vim.o.columns > window_width_limit
 	end,
 	no_clients = function()
-		local buf_clients = vim.lsp.get_active_clients({ bufnr = 0 })
+		local buf_clients = vim.lsp.get_clients({ bufnr = 0 })
 		return #buf_clients == 0
 	end,
 	buffer_is_terminal = function()
@@ -117,7 +117,7 @@ return {
 	},
 	lsp = {
 		function()
-			local buf_clients = vim.lsp.get_active_clients({
+			local buf_clients = vim.lsp.get_clients({
 				bufnr = vim.api.nvim_get_current_buf(),
 			})
 			if #buf_clients == 0 then
