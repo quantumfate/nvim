@@ -49,7 +49,7 @@ return {
 	},
 	root = {
 		function()
-			local root = require("util.fs").get_root()
+			local root = require("util.root").get()
 			local name = vim.fn.fnamemodify(root, ":t")
 			return icons.ui.FolderOpen .. " " .. name
 		end,

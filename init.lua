@@ -25,4 +25,7 @@ require("lazy").setup({
   checker = { enabled = true }, -- automatic updates
 })
 
+require("util.root").setup()
+vim.g.root_spec = { "lsp", { ".git", "lua" }, "cwd" }
+vim.g.root_lsp_ignore = { "copilot" }
 require("config")

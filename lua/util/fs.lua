@@ -115,35 +115,4 @@ function M.fs_copy(source, destination)
     end
 end
 
---- Get the root directory of the current project
---- Looks for .git, then falls back to LSP root, then cwd
----@return string
-function M.get_root()
-    local path = vim.api.nvim_buf_get_name(0)
-    if path == "" then
-        return vim.fn.getcwd()
-    end
-
-    -- Try to find .git directory
-    local root = vim.fs.find({ ".git", "Makefile", "package.json", "Cargo.toml", "go.mod" }, {
-        path = path,
-        upward = true,
-    })[1]
-
-    if root then
-        return vim.fn.fnamemodify(root, ":h")
-    end
-
-    -- Try LSP root
-    local clients = vim.lsp.get_clients({ bufnr = 0 })
-    for _, client in ipairs(clients) do
-        if client.config.root_dir then
-            return client.config.root_dir
-        end
-    end
-
-    -- Fallback to cwd
-    return vim.fn.getcwd()
-end
-
 return M

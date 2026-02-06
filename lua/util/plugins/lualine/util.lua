@@ -121,7 +121,7 @@ function lualine_util.get_path()
 		if path == "" then
 			return ""
 		end
-		local root = require("util.fs").get_root()
+		local root = require("util.root").get()
 		-- Make path relative to root
 		if path:find(root, 1, true) == 1 then
 			path = path:sub(#root + 2)
