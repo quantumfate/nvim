@@ -18,6 +18,8 @@
     - [ ] c/cpp
 
 - [ ] better window layouts with picker/popups
+  - [ ] [edgy.nvim](https://github.com/folke/edgy.nvim?tab=readme-ov-file)
+    - [ ] [snack terminal with edgy](https://github.com/folke/snacks.nvim/blob/main/docs/terminal.md)
 
 ## Dependencies
 
@@ -30,4 +32,3 @@
 ## Remarks
 
 - very inspired by [LazyVim](https://www.lazyvim.org/)
-

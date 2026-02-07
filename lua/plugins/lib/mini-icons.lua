@@ -1,22 +1,22 @@
 return {
-    "nvim-mini/mini.icons",
-    lazy = true,
-    opts = {
-        file = {
-            [".keep"] = { glyph = "󰊢", hl = "MiniIconsGrey" },
-            ["devcontainer.json"] = { glyph = "", hl = "MiniIconsAzure" },
-        },
-        filetype = {
-            dotenv = { glyph = "", hl = "MiniIconsYellow" },
-        },
-    },
-    init = function()
-        package.preload["nvim-web-devicons"] = function()
-            require("mini.icons").mock_nvim_web_devicons()
-            return package.loaded["nvim-web-devicons"]
-        end
-        vim.schedule(function()
-            require("mini.icons").tweak_lsp_kind("prepend") -- or "append" or "replace"
-        end)
-    end,
+	"nvim-mini/mini.icons",
+	lazy = true,
+	opts = {
+		file = {
+			[".keep"] = { glyph = "󰊢", hl = "MiniIconsGrey" },
+			["devcontainer.json"] = { glyph = "", hl = "MiniIconsAzure" },
+		},
+		filetype = {
+			dotenv = { glyph = "", hl = "MiniIconsYellow" },
+		},
+	},
+	init = function()
+		package.preload["nvim-web-devicons"] = function()
+			require("mini.icons").mock_nvim_web_devicons()
+			return package.loaded["nvim-web-devicons"]
+		end
+		vim.schedule(function()
+			require("mini.icons").tweak_lsp_kind("prepend") -- or "append" or "replace"
+		end)
+	end,
 }
