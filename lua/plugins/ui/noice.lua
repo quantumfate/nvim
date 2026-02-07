@@ -7,18 +7,16 @@ return {
     },
     opts = {
         views = {
-            views = {
-                split = {
-                    -- override the default split view to always enter the split when it opens
-                    enter = true,
-                },
+            split = {
+                enter = true,
             },
             mini = {
                 win_options = {
                     winblend = 0,
+                    winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
                 },
                 border = {
-                    padding = { 1, 3 }, -- { vertical, horizontal }
+                    padding = { 0, 1 },
                 },
             },
             hover = {
@@ -26,11 +24,15 @@ return {
                     style = "rounded",
                 },
                 win_options = {
-                    winhighlight = {
-                        Normal = "NormalFloat",
-                        FloatBorder = "FloatBorder"
-
-                    },
+                    winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
+                },
+            },
+            popup = {
+                border = {
+                    style = "rounded",
+                },
+                win_options = {
+                    winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
                 },
             },
         },
