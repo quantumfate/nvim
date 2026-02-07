@@ -71,33 +71,15 @@ return {
                 },
                 lualine_c = {
                     lualine_components.navic,
+                    lualine_components.trouble
                 },
                 lualine_x = {
                     Snacks.profiler.status(),
                     -- stylua: ignore
-                    {
-                        function() return require("noice").api.status.command.get() end,
-                        cond = function() return package.loaded["noice"] and require("noice").api.status.command.has() end,
-                        color = function() return { fg = Snacks.util.color("Statement") } end,
-                    },
-                    -- stylua: ignore
-                    {
-                        function() return require("noice").api.status.mode.get() end,
-                        cond = function() return package.loaded["noice"] and require("noice").api.status.mode.has() end,
-                        color = function() return { fg = Snacks.util.color("Constant") } end,
-                    },
-                    -- stylua: ignore
-                    {
-                        function() return "  " .. require("dap").status() end,
-                        cond = function() return package.loaded["dap"] and require("dap").status() ~= "" end,
-                        color = function() return { fg = Snacks.util.color("Debug") } end,
-                    },
-                    -- stylua: ignore
-                    {
-                        require("lazy.status").updates,
-                        cond = require("lazy.status").has_updates,
-                        color = function() return { fg = Snacks.util.color("Special") } end,
-                    },
+                    lualine_components.command_status,
+                    lualine_components.mode_status,
+                    lualine_components.debug_status,
+                    lualine_components.updates_available,
 
                     lualine_components.diff,
                     lualine_components.diagnostics,
@@ -105,7 +87,6 @@ return {
 
                     lualine_components.searchcount,
                     lualine_components.wordcount,
-
 
                 },
                 lualine_y = {

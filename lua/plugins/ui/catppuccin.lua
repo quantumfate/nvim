@@ -151,6 +151,9 @@ return {
 						bg = ucolors.darken("#9745be", 0.25, macchiato.mantle),
 						style = { "italic" },
 					},
+					-- Float windows (noice, hover, etc.)
+					NormalFloat = { bg = colors.base }, -- or colors.base, colors.crust
+					FloatBorder = { fg = colors.surface1, bg = colors.base },
 				}
 			end,
 			highlight_overrides = {

@@ -218,5 +218,34 @@ return {
 			return require("nvim-navic").is_available()
 		end,
 		padding = { left = 2 }
-	}
+	},
+	command_status = {
+		function() return require("noice").api.status.command.get() end,
+		cond = function() return package.loaded["noice"] and require("noice").api.status.command.has() end,
+		color = function() return { fg = Snacks.util.color("Statement") } end,
+		separator = { left = "" }
+	},
+	-- stylua: ignore
+	mode_status = {
+		function() return require("noice").api.status.mode.get() end,
+		cond = function() return package.loaded["noice"] and require("noice").api.status.mode.has() end,
+		color = function() return { fg = Snacks.util.color("Constant") } end,
+		separator = { left = "" }
+	},
+	-- stylua: ignore
+	debug_status = {
+		function() return "  " .. require("dap").status() end,
+		cond = function() return package.loaded["dap"] and require("dap").status() ~= "" end,
+		color = function() return { fg = Snacks.util.color("Debug") } end,
+		separator = { left = "" }
+	},
+	-- stylua: ignore
+	updates_available = {
+		require("lazy.status").updates,
+		cond = require("lazy.status").has_updates,
+		color = function() return { fg = Snacks.util.color("Special") } end,
+		separator = { left = "" }
+	},
+
+
 }
