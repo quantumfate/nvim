@@ -1,5 +1,3 @@
-local modules = require("util.modules")
-
 return {
 	"catppuccin/nvim",
 	name = "catppuccin",
@@ -46,7 +44,6 @@ return {
 		default_integrations = true,
 		auto_integrations = true,
 
-		-- For more plugins integrations please scroll down (https://github.com/catppuccin/nvim#integrations)
 		custom_highlights = function(colors)
 			return {
 				NormalFloat = { bg = colors.base },

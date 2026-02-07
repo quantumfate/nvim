@@ -15,9 +15,6 @@ return {
                     winblend = 0,
                     winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
                 },
-                border = {
-                    padding = { 0, 1 },
-                },
             },
             hover = {
                 border = {
