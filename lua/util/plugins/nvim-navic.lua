@@ -20,15 +20,17 @@ local get_gps = function()
 	end
 end
 
+local navbuddy_actions = require("nvim-navbuddy.actions")
+
 local nvim_navic = {
 	get_filename = function()
 		local filename = vim.fn.expand("%:t")
 		local extension = vim.fn.expand("%:e")
-		local f = require("qvim.utils.fn")
+		local f = require("utils.fn")
 
 		if not f.isempty(filename) then
 			local file_icon, hl_group
-			local devicons_ok, devicons = pcall(require, "nvim-web-devicons")
+			local devicons_ok, devicons = pcall(require, "mini.icons")
 			if devicons_ok then
 				file_icon, hl_group = devicons.get_icon(filename, extension, { default = true })
 
@@ -77,7 +79,7 @@ local nvim_navic = {
 		if self:excludes() then
 			return
 		end
-		local f = require("qvim.utils.fn")
+		local f = require("utils.fn")
 		local value = self.get_filename()
 
 		local gps_added = false
@@ -130,6 +132,44 @@ local nvim_navic = {
 				end
 			end,
 		})
+	end,
+	override_comment = function()
+		-- do the original setup
+		navbuddy_actions.comment()
+
+		return {
+			callback = function(display)
+				-- Let original do the setup (fix_end_character_position, window switching, marks)
+				-- But we intercept before it calls Comment.nvim
+
+				-- Manually do what original does, but swap the comment part
+				display.state.leaving_window_for_action = true
+				vim.api.nvim_set_current_win(display.for_win)
+
+				local start_line = display.focus_node.scope["start"].line
+				local end_line = display.focus_node.scope["end"].line
+
+				-- Use native commenting
+				local ok, comment = pcall(require, "vim._comment")
+				if ok and comment.toggle_lines then
+					comment.toggle_lines(start_line, end_line)
+				else
+					vim.cmd(string.format("normal! %dGV%dGgc", start_line, end_line))
+				end
+
+				vim.api.nvim_set_current_win(display.mid.winid)
+				display.state.leaving_window_for_action = false
+			end,
+			description = "Comment",
+		}
+	end,
+	override_telescope = function(_opts)
+		return {
+			callback = function(display)
+				require("nvim-navbuddy.picker.snacks").find(_opts, display)
+			end,
+			description = "Snacks picker override.",
+		}
 	end,
 }
 
