@@ -15,7 +15,7 @@ local conditions = {
 	end,
 	buffer_is_terminal = function()
 		return vim.bo.buftype == "terminal"
-	end
+	end,
 }
 
 local fmt = string.format
@@ -87,15 +87,11 @@ return {
 		function()
 			local utils = require("plugins.specs.lualine.utils")
 			if vim.bo.filetype == "python" then
-				local venv = os.getenv("CONDA_DEFAULT_ENV")
-					or os.getenv("VIRTUAL_ENV")
+				local venv = os.getenv("CONDA_DEFAULT_ENV") or os.getenv("VIRTUAL_ENV")
 				if venv then
 					local icons = require("nvim-web-devicons")
 					local py_icon, _ = icons.get_icon(".py")
-					return string.format(
-						" " .. py_icon .. " (%s)",
-						utils.env_cleanup(venv)
-					)
+					return string.format(" " .. py_icon .. " (%s)", utils.env_cleanup(venv))
 				end
 			end
 			return ""
@@ -151,7 +147,7 @@ return {
 			return not conditions.buffer_is_terminal()
 		end,
 		--separator = { left = "" }
-		separator = { left = icons.ui.BoldDividerRight, right = "" }
+		separator = { left = icons.ui.BoldDividerRight, right = "" },
 	},
 	progress = {
 		"progress",
@@ -161,7 +157,7 @@ return {
 		cond = function()
 			return not conditions.buffer_is_terminal()
 		end,
-		separator = { left = "", right = "" }
+		separator = { left = "", right = "" },
 	},
 	spaces = {
 		function()
@@ -186,7 +182,9 @@ return {
 	searchcount = {
 		function()
 			local sc = vim.fn.searchcount({ maxcount = 999 })
-			if sc.total == 0 then return "" end
+			if sc.total == 0 then
+				return ""
+			end
 			return sc.current .. "/" .. sc.total
 		end,
 		cond = function()
@@ -199,15 +197,21 @@ return {
 		{
 			function()
 				local reg = vim.fn.reg_recording()
-				if reg ~= "" then return "󰑋 @" .. reg end
+				if reg ~= "" then
+					return "󰑋 @" .. reg
+				end
 				return ""
 			end,
 		},
 		padding = { left = 2, right = 1 },
 	},
 	wordcount = {
-		function() return "󰈭 " .. vim.fn.wordcount().words end,
-		cond = function() return vim.tbl_contains({ "markdown", "text", "txt" }, vim.bo.filetype) end,
+		function()
+			return "󰈭 " .. vim.fn.wordcount().words
+		end,
+		cond = function()
+			return vim.tbl_contains({ "markdown", "text", "txt" }, vim.bo.filetype)
+		end,
 		separator = { left = "" },
 	},
 	navic = {
@@ -217,13 +221,19 @@ return {
 		cond = function()
 			return require("nvim-navic").is_available()
 		end,
-		padding = { left = 2 }
+		padding = { left = 2 },
 	},
 	command_status = {
-		function() return require("noice").api.status.command.get() end,
-		cond = function() return package.loaded["noice"] and require("noice").api.status.command.has() end,
-		color = function() return { fg = Snacks.util.color("Statement") } end,
-		separator = { left = "" }
+		function()
+			return require("noice").api.status.command.get()
+		end,
+		cond = function()
+			return package.loaded["noice"] and require("noice").api.status.command.has()
+		end,
+		color = function()
+			return { fg = Snacks.util.color("Statement") }
+		end,
+		separator = { left = "" },
 	},
 	-- stylua: ignore
 	mode_status = {
@@ -246,6 +256,4 @@ return {
 		color = function() return { fg = Snacks.util.color("Special") } end,
 		separator = { left = "" }
 	},
-
-
 }

@@ -1,156 +1,136 @@
 local get_gps = function()
-    local status_gps_ok, gps = pcall(require, "nvim-navic")
-    if not status_gps_ok then
-        return ""
-    end
+	local status_gps_ok, gps = pcall(require, "nvim-navic")
+	if not status_gps_ok then
+		return ""
+	end
 
-    local status_ok, gps_location = pcall(gps.get_location, {})
-    if not status_ok then
-        return ""
-    end
+	local status_ok, gps_location = pcall(gps.get_location, {})
+	if not status_ok then
+		return ""
+	end
 
-    if not gps.is_available() or gps_location == "error" then
-        return ""
-    end
+	if not gps.is_available() or gps_location == "error" then
+		return ""
+	end
 
-    if not require("utils.fn").isempty(gps_location) then
-        return "%#NavicSeparator#"
-            .. icons.ui.ChevronRight
-            .. "%* "
-            .. gps_location
-    else
-        return ""
-    end
+	if not require("utils.fn").isempty(gps_location) then
+		return "%#NavicSeparator#" .. icons.ui.ChevronRight .. "%* " .. gps_location
+	else
+		return ""
+	end
 end
 
 local nvim_navic = {
-    get_filename = function()
-        local filename = vim.fn.expand("%:t")
-        local extension = vim.fn.expand("%:e")
-        local f = require("qvim.utils.fn")
+	get_filename = function()
+		local filename = vim.fn.expand("%:t")
+		local extension = vim.fn.expand("%:e")
+		local f = require("qvim.utils.fn")
 
-        if not f.isempty(filename) then
-            local file_icon, hl_group
-            local devicons_ok, devicons = pcall(require, "nvim-web-devicons")
-            if devicons_ok then
-                file_icon, hl_group =
-                    devicons.get_icon(filename, extension, { default = true })
+		if not f.isempty(filename) then
+			local file_icon, hl_group
+			local devicons_ok, devicons = pcall(require, "nvim-web-devicons")
+			if devicons_ok then
+				file_icon, hl_group = devicons.get_icon(filename, extension, { default = true })
 
-                if f.isempty(file_icon) then
-                    file_icon = icons.kind.File
-                end
-            else
-                file_icon = ""
-                hl_group = "Normal"
-            end
+				if f.isempty(file_icon) then
+					file_icon = icons.kind.File
+				end
+			else
+				file_icon = ""
+				hl_group = "Normal"
+			end
 
-            local buf_ft = vim.bo.filetype
+			local buf_ft = vim.bo.filetype
 
-            if buf_ft == "dapui_breakpoints" then
-                file_icon = icons.ui.Bug
-            end
+			if buf_ft == "dapui_breakpoints" then
+				file_icon = icons.ui.Bug
+			end
 
-            if buf_ft == "dapui_stacks" then
-                file_icon = icons.ui.Stacks
-            end
+			if buf_ft == "dapui_stacks" then
+				file_icon = icons.ui.Stacks
+			end
 
-            if buf_ft == "dapui_scopes" then
-                file_icon = icons.ui.Scopes
-            end
+			if buf_ft == "dapui_scopes" then
+				file_icon = icons.ui.Scopes
+			end
 
-            if buf_ft == "dapui_watches" then
-                file_icon = icons.ui.Watches
-            end
+			if buf_ft == "dapui_watches" then
+				file_icon = icons.ui.Watches
+			end
 
-            if buf_ft == "dapui_console" then
-                file_icon = icons.ui.DebugConsole
-            end
+			if buf_ft == "dapui_console" then
+				file_icon = icons.ui.DebugConsole
+			end
 
-            local navic_text = vim.api.nvim_get_hl_by_name("Normal", true)
-            vim.api.nvim_set_hl(0, "Winbar", { fg = navic_text.foreground })
+			local navic_text = vim.api.nvim_get_hl_by_name("Normal", true)
+			vim.api.nvim_set_hl(0, "Winbar", { fg = navic_text.foreground })
 
-            return " "
-                .. "%#"
-                .. hl_group
-                .. "#"
-                .. file_icon
-                .. "%*"
-                .. " "
-                .. "%#Winbar#"
-                .. filename
-                .. "%*"
-        end
-    end,
-    ---@param self any
-    ---@return boolean
-    excludes = function(self)
-        return vim.tbl_contains(self.winbar_filetype_exclude or {}, vim.bo.filetype)
-    end,
-    get_winbar = function(self)
-        if self:excludes() then
-            return
-        end
-        local f = require("qvim.utils.fn")
-        local value = self.get_filename()
+			return " " .. "%#" .. hl_group .. "#" .. file_icon .. "%*" .. " " .. "%#Winbar#" .. filename .. "%*"
+		end
+	end,
+	---@param self any
+	---@return boolean
+	excludes = function(self)
+		return vim.tbl_contains(self.winbar_filetype_exclude or {}, vim.bo.filetype)
+	end,
+	get_winbar = function(self)
+		if self:excludes() then
+			return
+		end
+		local f = require("qvim.utils.fn")
+		local value = self.get_filename()
 
-        local gps_added = false
-        if not f.isempty(value) then
-            local gps_value = get_gps()
-            value = value .. " " .. gps_value
-            if not f.isempty(gps_value) then
-                gps_added = true
-            end
-        end
+		local gps_added = false
+		if not f.isempty(value) then
+			local gps_value = get_gps()
+			value = value .. " " .. gps_value
+			if not f.isempty(gps_value) then
+				gps_added = true
+			end
+		end
 
-        if not f.isempty(value) and f.get_buf_option("mod") then
-            local mod = "%#LspCodeLens#" .. qvim.icons.ui.Circle .. "%*"
-            if gps_added then
-                value = value .. " " .. mod
-            else
-                value = value .. mod
-            end
-        end
+		if not f.isempty(value) and f.get_buf_option("mod") then
+			local mod = "%#LspCodeLens#" .. icons.ui.Circle .. "%*"
+			if gps_added then
+				value = value .. " " .. mod
+			else
+				value = value .. mod
+			end
+		end
 
-        local num_tabs = #vim.api.nvim_list_tabpages()
+		local num_tabs = #vim.api.nvim_list_tabpages()
 
-        if num_tabs > 1 and not f.isempty(value) then
-            local tabpage_number = tostring(vim.api.nvim_tabpage_get_number(0))
-            value = value .. "%=" .. tabpage_number .. "/" .. tostring(num_tabs)
-        end
+		if num_tabs > 1 and not f.isempty(value) then
+			local tabpage_number = tostring(vim.api.nvim_tabpage_get_number(0))
+			value = value .. "%=" .. tabpage_number .. "/" .. tostring(num_tabs)
+		end
 
-        local status_ok, _ = pcall(
-            vim.api.nvim_set_option_value,
-            "winbar",
-            value,
-            { scope = "local" }
-        )
-        if not status_ok then
-            return
-        end
-    end,
-    create_winbar = function(self)
-        vim.api.nvim_create_augroup("_winbar", {})
-        vim.api.nvim_create_autocmd({
-            "CursorHoldI",
-            "CursorHold",
-            "BufWinEnter",
-            "BufFilePost",
-            "InsertEnter",
-            "BufWritePost",
-            "TabClosed",
-            "TabEnter",
-        }, {
-            group = "_winbar",
-            callback = function()
-                local status_ok, _ =
-                    pcall(vim.api.nvim_buf_get_var, 0, "lsp_floating_window")
-                if not status_ok then
-                    require("util.plugins.nvim-navic"):get_winbar()
-                end
-            end,
-        })
-    end
-
+		local status_ok, _ = pcall(vim.api.nvim_set_option_value, "winbar", value, { scope = "local" })
+		if not status_ok then
+			return
+		end
+	end,
+	create_winbar = function(self)
+		vim.api.nvim_create_augroup("_winbar", {})
+		vim.api.nvim_create_autocmd({
+			"CursorHoldI",
+			"CursorHold",
+			"BufWinEnter",
+			"BufFilePost",
+			"InsertEnter",
+			"BufWritePost",
+			"TabClosed",
+			"TabEnter",
+		}, {
+			group = "_winbar",
+			callback = function()
+				local status_ok, _ = pcall(vim.api.nvim_buf_get_var, 0, "lsp_floating_window")
+				if not status_ok then
+					require("util.plugins.nvim-navic"):get_winbar()
+				end
+			end,
+		})
+	end,
 }
 
 nvim_navic.__index = nvim_navic

@@ -1,27 +1,26 @@
 # My neovim config
 
-![](./assets/nvim.png)
+![nvim](./assets/nvim.png)
 
 ## TODO
 
 - [x] [nvim-navic](https://github.com/SmiteshP/nvim-navic)
-    - [ ] [nvim-navbuddy](https://github.com/hasansujon786/nvim-navbuddy)
- 
+  - [ ] [nvim-navbuddy](https://github.com/hasansujon786/nvim-navbuddy)
+
 - [ ] key mappings
-    - [x] go through every plugin and disable default mappings, keep the ones I need
-    
+  - [x] go through every plugin and disable default mappings, keep the ones I need
 - [ ] dap
-    - [ ] mason
-    - [ ] test with languages
-        - [ ] python
-        - [ ] rust
-        - [ ] go
-        - [ ] c/cpp
+  - [ ] mason
+  - [ ] test with languages
+    - [ ] python
+    - [ ] rust
+    - [ ] go
+    - [ ] c/cpp
 
 - [ ] better window layouts with picker/popups
-    
 
 ## Dependencies
+
 - go
 - npm
 - python
@@ -31,3 +30,4 @@
 ## Remarks
 
 - very inspired by [LazyVim](https://www.lazyvim.org/)
+

@@ -1,13 +1,17 @@
--- lua/plugins/lsp/lspconfig.lua
 return {
 	"neovim/nvim-lspconfig",
 	event = { "BufReadPre", "BufNewFile" },
 	dependencies = {
 		"mason.nvim",
 		"mason-lspconfig.nvim",
-		"lazydev.nvim",
+		"folke/lazydev.nvim", -- Make sure this loads first
 	},
 	config = function()
+		-- Disable stylua LSP completely
+		vim.lsp.config("stylua", {
+			cmd = {}, -- Empty cmd prevents it from starting
+		})
+
 		-- Keymaps on LSP attach
 		vim.api.nvim_create_autocmd("LspAttach", {
 			group = vim.api.nvim_create_augroup("lsp_attach", { clear = true }),
@@ -23,15 +27,19 @@ return {
 				map("K", vim.lsp.buf.hover, "Hover Documentation")
 				map("gK", vim.lsp.buf.signature_help, "Signature Help")
 				map("<leader>cd", vim.diagnostic.open_float, "Line Diagnostics")
-				map("]d", vim.diagnostic.goto_next, "Next Diagnostic")
-				map("[d", vim.diagnostic.goto_prev, "Prev Diagnostic")
+				map("]d", function()
+					vim.diagnostic.jump({ count = 1 })
+				end, "Next Diagnostic")
+				map("[d", function()
+					vim.diagnostic.jump({ count = -1 })
+				end, "Prev Diagnostic")
 			end,
 		})
 
 		-- Diagnostics config
 		vim.diagnostic.config({
 			underline = true,
-			update_in_insert = true,
+			update_in_insert = false,
 			virtual_text = {
 				spacing = 4,
 				prefix = "●",
@@ -39,7 +47,7 @@ return {
 			severity_sort = true,
 			float = {
 				border = "rounded",
-				source = "always",
+				source = true,
 			},
 			signs = {
 				text = {
@@ -51,7 +59,7 @@ return {
 			},
 		})
 
-		-- Server configurations
+		-- lua_ls: Let lazydev handle the workspace library
 		vim.lsp.config.lua_ls = {
 			cmd = { "lua-language-server" },
 			filetypes = { "lua" },
@@ -59,20 +67,17 @@ return {
 			settings = {
 				Lua = {
 					runtime = { version = "LuaJIT" },
+					diagnostics = {
+						globals = { "vim", "Snacks", "icons" },
+					},
 					workspace = {
 						checkThirdParty = false,
-						library = vim.api.nvim_get_runtime_file("", true), -- This loads Neovim runtime files
+						library = vim.api.nvim_get_runtime_file("", true),
 					},
 					telemetry = { enable = false },
-					codeLens = {
-						enable = true,
-					},
-					completion = {
-						callSnippet = "Replace",
-					},
-					doc = {
-						privateName = { "^_" },
-					},
+					codeLens = { enable = true },
+					completion = { callSnippet = "Replace" },
+					doc = { privateName = { "^_" } },
 					hint = {
 						enable = true,
 						setType = false,
@@ -85,14 +90,13 @@ return {
 			},
 		}
 
-		-- CHANGED: basedpyright instead of pyright
 		vim.lsp.config.basedpyright = {
 			cmd = { "basedpyright-langserver", "--stdio" },
 			filetypes = { "python" },
 			root_markers = { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "Pipfile", ".git" },
 			settings = {
 				basedpyright = {
-					disableOrganizeImports = true, -- let ruff handle imports
+					disableOrganizeImports = true,
 					analysis = {
 						diagnosticSeverityOverrides = {
 							reportUnusedImport = "none",
