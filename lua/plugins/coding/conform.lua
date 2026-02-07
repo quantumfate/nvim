@@ -30,7 +30,7 @@ return {
             typescriptreact = { "prettierd", "prettier" },
             json = { "prettierd", "prettier" },
             yaml = { "prettierd", "prettier" },
-            markdown = { "prettierd", "prettier" },
+            markdown = { "prettierd", "prettier", "codespell" },
             html = { "prettierd", "prettier" },
             css = { "prettierd", "prettier" },
             sh = { "shfmt" },
@@ -39,6 +39,7 @@ return {
             rust = { "rustfmt" },
             nix = { "nixfmt" },
             ["_"] = { "trim_whitespace" },
+            ["*"] = { "codespell" }
         },
         format_on_save = function(bufnr)
             -- Disable for certain filetypes

@@ -8,7 +8,7 @@
     - [ ] [nvim-navbuddy](https://github.com/hasansujon786/nvim-navbuddy)
  
 - [ ] key mappings
-    - [ ] go through every plugin and disable default mappings, keep the ones I need
+    - [x] go through every plugin and disable default mappings, keep the ones I need
     
 - [ ] dap
     - [ ] mason
@@ -17,6 +17,8 @@
         - [ ] rust
         - [ ] go
         - [ ] c/cpp
+
+- [ ] better window layouts with picker/popups
     
 
 ## Dependencies
