@@ -28,6 +28,13 @@ return {
 			end,
 			desc = "other buffers",
 		},
+		{
+			"<leader>br",
+			function()
+				Snacks.explorer.reveal()
+			end,
+			desc = "reveal in explorer",
+		},
 	},
 	opts = {
 		options = {
