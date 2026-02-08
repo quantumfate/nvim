@@ -17,6 +17,19 @@ return {
 			["<C-b>"] = { "scroll_documentation_up", "fallback" },
 			["<C-f>"] = { "scroll_documentation_down", "fallback" },
 		},
+		cmdline = {
+			keymap = {
+				preset = "none",
+				["<Tab>"] = { "select_next", "fallback" },
+				["<S-Tab>"] = { "select_prev", "fallback" },
+				["<CR>"] = { "accept_and_enter", "fallback" },
+				["<C-e>"] = { "cancel", "fallback" },
+			},
+			completion = {
+				menu = { auto_show = true },
+				ghost_text = { enabled = true },
+			},
+		},
 		appearance = {
 			nerd_font_variant = "mono",
 		},

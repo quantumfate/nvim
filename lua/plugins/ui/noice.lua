@@ -32,6 +32,37 @@ return {
 					winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
 				},
 			},
+			cmdline_popup = {
+				position = {
+					row = 5,
+					col = "50%",
+				},
+				size = {
+					width = 60,
+					height = "auto",
+				},
+				win_options = {
+					winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
+				},
+			},
+			popupmenu = {
+				relative = "editor",
+				position = {
+					row = 8,
+					col = "50%",
+				},
+				size = {
+					width = 60,
+					height = 10,
+				},
+				border = {
+					style = "rounded",
+					padding = { 0, 1 },
+				},
+				win_options = {
+					winhighlight = { Normal = "Normal", FloatBorder = "DiagnosticInfo" },
+				},
+			},
 		},
 		cmdline = {
 			enabled = true, -- enables the Noice cmdline UI
