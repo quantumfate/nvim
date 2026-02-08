@@ -1,0 +1,40 @@
+return {
+	"saghen/blink.cmp",
+	-- optional: provides snippets for the snippet source
+	dependencies = { "rafamadriz/friendly-snippets" },
+	build = "cargo build --release",
+
+	---@module 'blink.cmp'
+	---@type blink.cmp.Config
+	opts = {
+		keymap = {
+			preset = "none",
+			["<Tab>"] = { "snippet_forward", "select_next", "fallback" },
+			["<S-Tab>"] = { "snippet_backward", "select_prev", "fallback" },
+			["<CR>"] = { "accept", "fallback" },
+			["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
+			["<C-e>"] = { "cancel", "fallback" },
+			["<C-b>"] = { "scroll_documentation_up", "fallback" },
+			["<C-f>"] = { "scroll_documentation_down", "fallback" },
+		},
+		appearance = {
+			nerd_font_variant = "mono",
+		},
+		sources = {
+			default = { "lsp", "path", "snippets", "buffer" },
+		},
+		completion = {
+			menu = { border = "single" },
+			documentation = {
+				window = { border = "single" },
+				auto_show = true,
+			},
+			list = {
+				selection = { preselect = true, auto_insert = true },
+			},
+		},
+		signature = { window = { border = "single" } },
+		fuzzy = { implementation = "prefer_rust_with_warning" },
+	},
+	opts_extend = { "sources.default" },
+}
