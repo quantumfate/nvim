@@ -76,13 +76,15 @@ return {
 				TroubleIconDirectory = { fg = colors.mauve },
 				TroubleCount = { fg = colors.mauve, bg = colors.surface0 },
 
-				-- In custom_highlights
+				-- Dap
 				DapStoppedLine = { bg = colors.surface0 },
 				DapUIScope = { fg = colors.mauve },
 				DapUIType = { fg = colors.mauve },
 				DapUIValue = { fg = colors.text },
 				DapUIVariable = { fg = colors.text },
 				DapUIModifiedValue = { fg = colors.peach, bold = true },
+
+				-- Ufo
 			}
 		end,
 		highlight_overrides = {
@@ -90,17 +92,19 @@ return {
 				return {
 					Pmenu = { fg = colors.mauve, bg = colors.base },
 					PmenuSel = { bg = colors.mauve, fg = colors.crust },
-					PmenuThumb = { bg = colors.mauve },
-					PmenuSbar = { fg = colors.mauve, bg = colors.mauve },
+					PmenuThumb = { fg = colors.mauve, bg = colors.base },
+					PmenuSbar = { fg = colors.mauve, bg = colors.base },
 
 					Normal = { fg = colors.text, bg = colors.base },
 					Special = { fg = colors.mauve, bg = colors.base },
+					Visual = { bg = colors.surface0 },
+					CursorLine = { bg = colors.base },
 					Directory = { fg = colors.mauve },
 					LineNr = { fg = colors.mauve },
 					TroubleFilename = { fg = colors.mauve },
 					Title = { fg = colors.mauve },
 
-					WinSeparator = { fg = colors.mauve, bg = colors.base },
+					MoreMsg = { fg = colors.teal },
 				}
 			end,
 		},

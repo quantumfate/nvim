@@ -9,6 +9,11 @@ return {
 							"toggle_cwd",
 							mode = { "n", "i" },
 						},
+						-- Swap Tab/S-Tab with C-j/C-k
+						["<Tab>"] = { "list_down", mode = { "n", "i" } },
+						["<S-Tab>"] = { "list_up", mode = { "n", "i" } },
+						["<C-j>"] = { "select_and_next", mode = { "n", "i" } },
+						["<C-k>"] = { "select_and_prev", mode = { "n", "i" } },
 					},
 				},
 			},

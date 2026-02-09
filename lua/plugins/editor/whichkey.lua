@@ -67,7 +67,9 @@ return {
 				{ "<leader>g", group = "git" },
 				{ "<leader>gh", group = "hunks" },
 				{ "<leader>q", group = "quit/session" },
+				{ "<leader>r", group = "refactor" },
 				{ "<leader>s", group = "search" },
+				{ "<leader>t", group = "search" },
 				{ "<leader>u", group = "ui" },
 				{ "<leader>ue", group = "edgy" },
 				{ "<leader>x", group = "diagnostics/quickfix" },
@@ -110,6 +112,11 @@ return {
 				require("which-key").show({ keys = "<c-w>", loop = true })
 			end,
 			desc = "Window Hydra Mode (which-key)",
+		},
+		{
+			"<leader>ul",
+			"<cmd>Lazy<cr>",
+			desc = "Lazy",
 		},
 	},
 }
