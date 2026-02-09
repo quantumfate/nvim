@@ -51,6 +51,7 @@ return {
 		vim.opt.splitkeep = "screen"
 	end,
 	opts = {
+		exit_when_last = true,
 		bottom = {
 			{
 				ft = "trouble",
