@@ -357,13 +357,6 @@ return {
 			end,
 			desc = "Undo History",
 		},
-		{
-			"<leader>uC",
-			function()
-				Snacks.picker.colorschemes()
-			end,
-			desc = "Colorschemes",
-		},
 		-- LSP
 		{
 			"gd",

@@ -1,26 +1,15 @@
 return {
 	"folke/trouble.nvim",
 	cmd = { "Trouble" },
-	opts = {
-		modes = {
-			lsp = {
-				win = { position = "right" },
-			},
-			test = {
-				mode = "diagnostics",
-				preview = {
-					type = "split",
-					relative = "win",
-					position = "right",
-					size = 0.3,
-				},
-			},
-		},
-	},
+	opts = {},
 	keys = {
 		{ "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", desc = "Diagnostics (Trouble)" },
 		{ "<leader>xX", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", desc = "Buffer Diagnostics (Trouble)" },
-		{ "<leader>cs", "<cmd>Trouble symbols toggle<cr>", desc = "Symbols (Trouble)" },
+		{
+			"<leader>cs",
+			"<cmd>Trouble symbols toggle focus=false win.position=right<cr>",
+			desc = "Symbols Outline (Trouble)",
+		},
 		{
 			"<leader>cS",
 			"<cmd>Trouble lsp toggle<cr>",

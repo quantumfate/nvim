@@ -60,6 +60,23 @@ return {
 				NoiceMini = { bg = colors.base },
 				NoiceConfirm = { bg = colors.base },
 				NoiceConfirmBorder = { fg = colors.mauve, bg = colors.base },
+				-- Edgy window backgrounds and borders
+				EdgyNormal = { bg = colors.base },
+				EdgyWinBar = { fg = colors.mauve, bg = colors.base, bold = true },
+				EdgyWinBarInactive = { fg = colors.overlay0, bg = colors.base },
+				EdgyTitle = { fg = colors.mauve, bg = colors.base, bold = true },
+				EdgyTitleInactive = { fg = colors.overlay0, bg = colors.base },
+				EdgyIcon = { fg = colors.mauve, bg = colors.base },
+				EdgyIconActive = { fg = colors.mauve, bg = colors.base },
+
+				-- Trouble backgrounds (for the edgy panels)
+				TroubleNormal = { bg = colors.base },
+				TroubleNormalNC = { bg = colors.base },
+				TroubleTitle = { fg = colors.mauve },
+				TroubleIconDirectory = { fg = colors.mauve },
+				TroubleCount = { fg = colors.mauve, bg = colors.surface0 },
+
+				WinSeparator = { fg = colors.mauve, bg = colors.base },
 			}
 		end,
 		highlight_overrides = {
@@ -69,6 +86,13 @@ return {
 					PmenuSel = { bg = colors.mauve, fg = colors.crust },
 					PmenuThumb = { bg = colors.mauve },
 					PmenuSbar = { fg = colors.mauve, bg = colors.mauve },
+
+					Normal = { fg = colors.text, bg = colors.base },
+					Special = { fg = colors.mauve, bg = colors.base },
+					Directory = { fg = colors.mauve },
+					LineNr = { fg = colors.mauve },
+					TroubleFilename = { fg = colors.mauve },
+					Title = { fg = colors.mauve },
 				}
 			end,
 		},
