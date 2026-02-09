@@ -26,7 +26,11 @@ return {
 				["<C-e>"] = { "cancel", "fallback" },
 			},
 			completion = {
-				menu = { auto_show = true },
+				menu = {
+					auto_show = function(ctx)
+						return vim.fn.getcmdtype() == ":" or vim.fn.getcmdtype() == "@"
+					end,
+				},
 				ghost_text = { enabled = true },
 			},
 		},
@@ -35,6 +39,17 @@ return {
 		},
 		sources = {
 			default = { "lsp", "path", "snippets", "buffer" },
+			providers = {
+				cmdline = {
+					min_keyword_length = function(ctx)
+						-- when typing a command, only show when the keyword is 3 characters or longer
+						if ctx.mode == "cmdline" and string.find(ctx.line, " ") == nil then
+							return 5
+						end
+						return 0
+					end,
+				},
+			},
 		},
 		completion = {
 			menu = { border = "single" },

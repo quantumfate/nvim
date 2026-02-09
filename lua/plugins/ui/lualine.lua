@@ -76,8 +76,7 @@ return {
 				},
 				lualine_x = {
 					Snacks.profiler.status(),
-                    -- stylua: ignore
-                    lualine_components.command_status,
+					lualine_components.command_status,
 					lualine_components.mode_status,
 					lualine_components.debug_status,
 					lualine_components.updates_available,

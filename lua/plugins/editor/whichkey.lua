@@ -1,7 +1,4 @@
-return
--- which-key helps you remember key bindings by showing a popup
--- with the active keybindings of the command you started typing.
-{
+return {
 	"folke/which-key.nvim",
 	event = "VeryLazy",
 	opts_extend = { "spec" },
@@ -30,6 +27,32 @@ return
 		filter = function(mapping)
 			return mapping.desc ~= ""
 		end,
+		icons = {
+			rules = {
+				-- Debugging icons (more specific patterns first)
+				{ pattern = "conditional breakpoint", icon = icons.debugging.BreakpointCondition, color = "yellow" },
+				{ pattern = "breakpoint", icon = icons.debugging.Breakpoint, color = "red" },
+				{ pattern = "log point", icon = icons.debugging.BreakpointLog, color = "blue" },
+				{ pattern = "continue", icon = icons.debugging.Continue, color = "green" },
+				{ pattern = "step into", icon = icons.debugging.StepInto, color = "cyan" },
+				{ pattern = "step over", icon = icons.debugging.StepOver, color = "cyan" },
+				{ pattern = "step out", icon = icons.debugging.StepOut, color = "cyan" },
+				{ pattern = "pause", icon = icons.debugging.Pause, color = "yellow" },
+				{ pattern = "terminate", icon = icons.debugging.Terminate, color = "red" },
+				{ pattern = "disconnect", icon = icons.debugging.Disconnect, color = "red" },
+				{ pattern = "restart", icon = icons.debugging.Restart, color = "orange" },
+				{ pattern = "run to cursor", icon = icons.debugging.Continue, color = "green" },
+				{ pattern = "run last", icon = icons.debugging.Continue, color = "green" },
+				{ pattern = "repl", icon = icons.ui.DebugConsole, color = "purple" },
+				{ pattern = "eval", icon = icons.ui.Code, color = "blue" },
+				{ pattern = "session", icon = icons.ui.Stacks, color = "purple" },
+				{ pattern = "widget", icon = icons.ui.Watches, color = "cyan" },
+				{ pattern = "debug view", icon = icons.ui.Scopes, color = "purple" },
+				{ pattern = "up.*frame", icon = icons.ui.BoldArrowUp, color = "cyan" },
+				{ pattern = "down.*frame", icon = icons.ui.BoldArrowDown, color = "cyan" },
+				{ pattern = "go to line", icon = icons.debugging.StepOver, color = "cyan" },
+			},
+		},
 		spec = {
 			{
 

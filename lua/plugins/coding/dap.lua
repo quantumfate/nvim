@@ -1,0 +1,313 @@
+-- lua/plugins/coding/dap.lua
+return {
+	{
+		"mfussenegger/nvim-dap",
+		dependencies = {
+			"rcarriga/nvim-dap-ui",
+			"nvim-neotest/nvim-nio",
+			"theHamsta/nvim-dap-virtual-text",
+			"jay-babu/mason-nvim-dap.nvim",
+		},
+		keys = {
+			{
+				"<leader>db",
+				function()
+					require("dap").toggle_breakpoint()
+				end,
+				desc = "Toggle Breakpoint",
+			},
+			{
+				"<leader>dB",
+				function()
+					require("dap").set_breakpoint(vim.fn.input("Condition: "))
+				end,
+				desc = "Conditional Breakpoint",
+			},
+			{
+				"<leader>dc",
+				function()
+					require("dap").continue()
+				end,
+				desc = "Continue",
+			},
+			{
+				"<leader>dC",
+				function()
+					require("dap").run_to_cursor()
+				end,
+				desc = "Run to Cursor",
+			},
+			{
+				"<leader>di",
+				function()
+					require("dap").step_into()
+				end,
+				desc = "Step Into",
+			},
+			{
+				"<leader>do",
+				function()
+					require("dap").step_over()
+				end,
+				desc = "Step Over",
+			},
+			{
+				"<leader>dO",
+				function()
+					require("dap").step_out()
+				end,
+				desc = "Step Out",
+			},
+			{
+				"<leader>dp",
+				function()
+					require("dap").pause()
+				end,
+				desc = "Pause",
+			},
+			{
+				"<leader>dr",
+				function()
+					require("dap").repl.toggle()
+				end,
+				desc = "Toggle REPL",
+			},
+			{
+				"<leader>ds",
+				function()
+					require("dap").session()
+				end,
+				desc = "Session",
+			},
+			{
+				"<leader>dt",
+				function()
+					require("dap").terminate()
+				end,
+				desc = "Terminate",
+			},
+			{
+				"<leader>du",
+				function()
+					require("util.plugins.edgy").toggle_view("debug")
+				end,
+				desc = "Toggle Debug View",
+			},
+			{
+				"<leader>de",
+				function()
+					require("dapui").eval()
+				end,
+				desc = "Eval",
+				mode = { "n", "v" },
+			},
+			{
+				"<leader>dw",
+				function()
+					require("dap.ui.widgets").hover()
+				end,
+				desc = "Widgets",
+			},
+		},
+		config = function()
+			local dap = require("dap")
+			local dapui = require("dapui")
+			local edgy_util = require("util.plugins.edgy")
+
+			vim.fn.sign_define("DapBreakpoint", { text = icons.debugging.Breakpoint, texthl = "DiagnosticError" })
+			vim.fn.sign_define(
+				"DapBreakpointCondition",
+				{ text = icons.debugging.BreakpointCondition, texthl = "DiagnosticWarn" }
+			)
+			vim.fn.sign_define(
+				"DapBreakpointRejected",
+				{ text = icons.debugging.BreakpointUnsupported, texthl = "DiagnosticError" }
+			)
+			vim.fn.sign_define("DapLogPoint", { text = icons.debugging.BreakpointLog, texthl = "DiagnosticInfo" })
+			vim.fn.sign_define(
+				"DapStopped",
+				{ text = icons.debugging.Stopped, texthl = "DiagnosticOk", linehl = "DapStoppedLine" }
+			)
+
+			-- DAP UI setup - let edgy handle the layout
+			dapui.setup({
+				icons = { expanded = "▾", collapsed = "▸", current_frame = "▸" },
+				layouts = {
+					{
+						elements = {
+							{ id = "scopes", size = 0.4 },
+							{ id = "breakpoints", size = 0.4 },
+							{ id = "stacks", size = 0.4 },
+							{ id = "watches", size = 0.4 },
+						},
+						size = 60,
+						position = "left",
+					},
+					{
+						elements = {
+							{ id = "repl", size = 0.5 },
+							{ id = "console", size = 0.5 },
+						},
+						size = 0.25,
+						position = "bottom",
+					},
+				},
+			})
+
+			-- Virtual text
+			require("nvim-dap-virtual-text").setup({
+				enabled = true,
+				enabled_commands = true,
+			})
+
+			-- Auto open debug view when debugging starts
+			dap.listeners.after.event_initialized["dapui_config"] = function()
+				edgy_util.open_view("debug")
+			end
+
+			-- Auto close debug view when debugging ends
+			dap.listeners.before.event_terminated["dapui_config"] = function()
+				--edgy_util.close_all()
+			end
+			dap.listeners.before.event_exited["dapui_config"] = function()
+				--edgy_util.close_all()
+			end
+
+			-- Python (debugpy)
+			dap.adapters.python = function(cb, config)
+				if config.request == "attach" then
+					local port = (config.connect or config).port
+					local host = (config.connect or config).host or "127.0.0.1"
+					cb({
+						type = "server",
+						port = assert(port, "`connect.port` is required for attach"),
+						host = host,
+						options = { source_filetype = "python" },
+					})
+				else
+					cb({
+						type = "executable",
+						command = vim.fn.exepath("debugpy-adapter"),
+						options = { source_filetype = "python" },
+					})
+				end
+			end
+
+			dap.configurations.python = {
+				{
+					type = "python",
+					request = "launch",
+					name = "Launch file",
+					program = "${file}",
+					pythonPath = function()
+						local venv = os.getenv("VIRTUAL_ENV") or os.getenv("CONDA_PREFIX")
+						if venv then
+							return venv .. "/bin/python"
+						end
+						return vim.fn.exepath("python3") or vim.fn.exepath("python") or "python"
+					end,
+				},
+				{
+					type = "python",
+					request = "launch",
+					name = "Launch with arguments",
+					program = "${file}",
+					args = function()
+						local args_string = vim.fn.input("Arguments: ")
+						return vim.split(args_string, " +")
+					end,
+					pythonPath = function()
+						local venv = os.getenv("VIRTUAL_ENV") or os.getenv("CONDA_PREFIX")
+						if venv then
+							return venv .. "/bin/python"
+						end
+						return vim.fn.exepath("python3") or vim.fn.exepath("python") or "python"
+					end,
+				},
+			}
+
+			-- Rust/C/C++ (codelldb)
+			dap.adapters.codelldb = {
+				type = "server",
+				port = "${port}",
+				executable = {
+					command = vim.fn.exepath("codelldb"),
+					args = { "--port", "${port}" },
+				},
+			}
+
+			dap.configurations.rust = {
+				{
+					name = "Launch",
+					type = "codelldb",
+					request = "launch",
+					program = function()
+						return vim.fn.input("Path to executable: ", vim.fn.getcwd() .. "/target/debug/", "file")
+					end,
+					cwd = "${workspaceFolder}",
+					stopOnEntry = false,
+				},
+			}
+			dap.configurations.c = dap.configurations.rust
+			dap.configurations.cpp = dap.configurations.rust
+
+			-- JavaScript/TypeScript (js-debug-adapter)
+			dap.adapters["pwa-node"] = {
+				type = "server",
+				host = "localhost",
+				port = "${port}",
+				executable = {
+					command = "node",
+					args = {
+						vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
+						"${port}",
+					},
+				},
+			}
+
+			for _, lang in ipairs({ "javascript", "typescript", "javascriptreact", "typescriptreact" }) do
+				dap.configurations[lang] = {
+					{
+						type = "pwa-node",
+						request = "launch",
+						name = "Launch file",
+						program = "${file}",
+						cwd = "${workspaceFolder}",
+					},
+					{
+						type = "pwa-node",
+						request = "attach",
+						name = "Attach",
+						processId = require("dap.utils").pick_process,
+						cwd = "${workspaceFolder}",
+					},
+				}
+			end
+
+			-- Go (delve)
+			dap.adapters.delve = {
+				type = "server",
+				port = "${port}",
+				executable = {
+					command = "dlv",
+					args = { "dap", "-l", "127.0.0.1:${port}" },
+				},
+			}
+
+			dap.configurations.go = {
+				{
+					type = "delve",
+					name = "Debug",
+					request = "launch",
+					program = "${file}",
+				},
+				{
+					type = "delve",
+					name = "Debug Package",
+					request = "launch",
+					program = "${fileDirname}",
+				},
+			}
+		end,
+	},
+}

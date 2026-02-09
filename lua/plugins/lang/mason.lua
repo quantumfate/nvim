@@ -25,9 +25,10 @@ local linters = {
 }
 
 local dap_adapters = {
-	"python",
-	"codelldb",
-	"js",
+	"debugpy", -- Python (was "python")
+	"codelldb", -- Rust/C/C++
+	"js-debug-adapter", -- JS/TS (was "js")
+	"delve", -- Go (optional)
 }
 
 return {

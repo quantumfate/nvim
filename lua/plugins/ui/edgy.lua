@@ -24,6 +24,13 @@ return {
 			desc = "Edgy: Focus View",
 		},
 		{
+			"<leader>ueb",
+			function()
+				require("util.plugins.edgy").toggle_view("debug")
+			end,
+			desc = "Edgy: Debug View",
+		},
+		{
 			"<leader>ue0",
 			function()
 				require("util.plugins.edgy").close_all()
@@ -58,7 +65,6 @@ return {
 			{
 				ft = "help",
 				size = { height = 20 },
-				-- only show help buffers
 				filter = function(buf)
 					return vim.bo[buf].buftype == "help"
 				end,
@@ -73,6 +79,40 @@ return {
 						and vim.w[win].snacks_win.relative == "editor"
 						and not vim.w[win].trouble_preview
 				end,
+			},
+			-- DAP UI bottom panels
+			{
+				ft = "dapui_console",
+				title = "Console",
+				size = { height = 0.25 },
+			},
+			{
+				ft = "dap-repl",
+				title = "REPL",
+				size = { height = 0.25 },
+			},
+		},
+		left = {
+			-- DAP UI left panels
+			{
+				ft = "dapui_scopes",
+				title = "Scopes",
+				size = { width = 60 },
+			},
+			{
+				ft = "dapui_stacks",
+				title = "Stacks",
+				size = { width = 60 },
+			},
+			{
+				ft = "dapui_breakpoints",
+				title = "Breakpoints",
+				size = { width = 60 },
+			},
+			{
+				ft = "dapui_watches",
+				title = "Watches",
+				size = { width = 60 },
 			},
 		},
 		right = {
@@ -97,8 +137,6 @@ return {
 		},
 		animate = {
 			enabled = false,
-			fps = 60,
-			cps = 120,
 		},
 		wo = {
 			winhighlight = "Normal:EdgyNormal,WinBar:EdgyWinBar,WinBarNC:EdgyWinBarInactive",

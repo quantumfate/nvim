@@ -76,7 +76,13 @@ return {
 				TroubleIconDirectory = { fg = colors.mauve },
 				TroubleCount = { fg = colors.mauve, bg = colors.surface0 },
 
-				WinSeparator = { fg = colors.mauve, bg = colors.base },
+				-- In custom_highlights
+				DapStoppedLine = { bg = colors.surface0 },
+				DapUIScope = { fg = colors.mauve },
+				DapUIType = { fg = colors.mauve },
+				DapUIValue = { fg = colors.text },
+				DapUIVariable = { fg = colors.text },
+				DapUIModifiedValue = { fg = colors.peach, bold = true },
 			}
 		end,
 		highlight_overrides = {
@@ -93,6 +99,8 @@ return {
 					LineNr = { fg = colors.mauve },
 					TroubleFilename = { fg = colors.mauve },
 					Title = { fg = colors.mauve },
+
+					WinSeparator = { fg = colors.mauve, bg = colors.base },
 				}
 			end,
 		},
