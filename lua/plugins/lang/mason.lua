@@ -42,7 +42,7 @@ return {
 		build = ":MasonUpdate",
 		opts = {
 			ui = {
-				border = "rounded",
+				border = "single",
 				icons = {
 					package_installed = "✓",
 					package_pending = "➜",

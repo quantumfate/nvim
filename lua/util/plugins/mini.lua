@@ -25,7 +25,7 @@ function mini.pairs(opts)
 		set = function(state)
 			vim.g.minipairs_disable = not state
 		end,
-	}):map("<leader>up")
+	}):map("<leader>tp")
 
 	local pairs = require("mini.pairs")
 	pairs.setup(opts)

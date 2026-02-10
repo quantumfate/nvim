@@ -46,7 +46,7 @@ return {
 			},
 			severity_sort = true,
 			float = {
-				border = "rounded",
+				border = "single",
 				source = true,
 			},
 			signs = {

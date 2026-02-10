@@ -1,4 +1,3 @@
--- Update lua/util/plugins/edgy.lua
 local M = {}
 
 -- Define views and their Trouble panels
@@ -14,14 +13,10 @@ M.views = {
 	focus = {
 		"Trouble symbols focus=false",
 	},
-	debug = {
-		-- DAP UI handles its own windows, we just need to open it
-		-- and optionally keep symbols for context
-	},
 }
 
 -- Extract mode names from commands + common LSP modes
-M.trouble_modes = {
+M.modes = {
 	"diagnostics",
 	"symbols",
 	"lsp",
@@ -45,46 +40,40 @@ function M.has_lsp_and_is_file()
 end
 
 function M.close_all()
-	for _, mode in ipairs(M.trouble_modes) do
+	for _, mode in ipairs(M.modes) do
 		pcall(vim.cmd, "Trouble close " .. mode)
 	end
-	-- Also close DAP UI if open
-	pcall(function()
-		require("dapui").close()
-	end)
 	vim.g.edgy_current_view = nil
 end
 
-function M.open_view(name)
+--- Open an edgy view of the currently focused window. Closes all splits.
+---@param name string Name of the view
+---@param ... any Options parsed to view functions that implement one
+function M.open_view(name, ...)
 	local view = M.views[name]
 	if not view then
 		vim.notify("Unknown edgy view: " .. name, vim.log.levels.ERROR)
 		return
 	end
-
-	-- Close everything first
+	if #vim.api.nvim_tabpage_list_wins(0) > 1 then
+		vim.cmd("only")
+	end
 	M.close_all()
-
-	-- Special handling for debug view
-	if name == "debug" then
-		require("dapui").open()
-	else
-		-- Regular trouble views
+	if type(view) == "function" then
+		view(...)
+	elseif type(view) == "table" then
 		for _, cmd in ipairs(view) do
 			vim.cmd(cmd)
 		end
 	end
-
 	vim.g.edgy_current_view = name
 end
 
 function M.toggle_view(name)
-	-- Debug view doesn't require LSP
-	if name ~= "debug" and not M.has_lsp_and_is_file() then
+	if not M.has_lsp_and_is_file() then
 		vim.notify("No LSP attached to this buffer", vim.log.levels.WARN)
 		return
 	end
-
 	if vim.g.edgy_current_view == name then
 		M.close_all()
 	else

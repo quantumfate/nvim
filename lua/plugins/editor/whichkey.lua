@@ -58,7 +58,7 @@ return {
 
 				mode = { "n", "x" },
 				{ "<leader><tab>", group = "tabs" },
-				{ "<leader>b", group = "buffers" },
+				{ "<leader>b", group = "buffer" },
 				{ "<leader>bd", group = "delete" },
 				{ "<leader>c", group = "code" },
 				{ "<leader>d", group = "debug" },
@@ -69,8 +69,9 @@ return {
 				{ "<leader>q", group = "quit/session" },
 				{ "<leader>r", group = "refactor" },
 				{ "<leader>s", group = "search" },
-				{ "<leader>t", group = "search" },
+				{ "<leader>t", group = "toggle" },
 				{ "<leader>u", group = "ui" },
+				{ "<leader>w", group = "windows", proxy = "<c-w>" },
 				{ "<leader>ue", group = "edgy" },
 				{ "<leader>x", group = "diagnostics/quickfix" },
 				{ "[", group = "prev" },
@@ -78,21 +79,6 @@ return {
 				{ "g", group = "goto" },
 				{ "gs", group = "surround" },
 				{ "z", group = "fold" },
-				{
-					"<leader>b",
-					group = "buffer",
-					expand = function()
-						return require("which-key.extras").expand.buf()
-					end,
-				},
-				{
-					"<leader>w",
-					group = "windows",
-					proxy = "<c-w>",
-					expand = function()
-						return require("which-key.extras").expand.win()
-					end,
-				},
 				-- better descriptions
 				{ "gx", desc = "Open with system app" },
 			},

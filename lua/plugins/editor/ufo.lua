@@ -24,7 +24,7 @@ return {
 		},
 		preview = {
 			win_config = {
-				border = "rounded",
+				border = "single",
 				winhighlight = "Normal:NormalFloat",
 				winblend = 0,
 			},

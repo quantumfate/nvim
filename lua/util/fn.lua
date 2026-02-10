@@ -43,4 +43,15 @@ function M.get_buf_option(opt)
 	end
 end
 
+function M.gen_uuid()
+	local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+	return template:gsub("[xy]", function(c)
+		local v = math.random(0, 15)
+		if c == "y" then
+			v = (v & 0x3) | 0x8 -- 8..b for variant
+		end
+		return string.format("%x", v)
+	end)
+end
+
 return M

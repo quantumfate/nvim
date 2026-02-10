@@ -77,7 +77,7 @@ return {
 				set = function(state)
 					require("gitsigns").toggle_signs(state)
 				end,
-			}):map("<leader>uG")
+			}):map("<leader>tG")
 		end,
 	},
 }

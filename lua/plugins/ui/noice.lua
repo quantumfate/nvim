@@ -18,7 +18,7 @@ return {
 			},
 			hover = {
 				border = {
-					style = "rounded",
+					style = "single",
 				},
 				win_options = {
 					winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
@@ -26,7 +26,7 @@ return {
 			},
 			popup = {
 				border = {
-					style = "rounded",
+					style = "single",
 				},
 				win_options = {
 					winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
@@ -56,7 +56,7 @@ return {
 					height = 10,
 				},
 				border = {
-					style = "rounded",
+					style = "single",
 					padding = { 0, 1 },
 				},
 				win_options = {
