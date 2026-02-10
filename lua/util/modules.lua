@@ -2,16 +2,6 @@ local M = {}
 
 local log = require("util.log")
 local fmt = string.format
--- revisit this
--- function prequire(package)
---   local status, lib = pcall(require, package)
---   if status then
---     return lib
---   else
---     vim.notify("Failed to require '" .. package .. "' from " .. debug.getinfo(2).source)
---     return nil
---   end
--- end
 
 ---Assigns the key of a new table to the old table. Existing entries
 ---in the old table may be overridden. In case of a type mismatch the
@@ -23,13 +13,8 @@ local fmt = string.format
 local function _assign(old, new, k)
 	local otype = type(old[k])
 	local ntype = type(new[k])
-	if
-		(otype == "thread" or otype == "userdata")
-		or (ntype == "thread" or ntype == "userdata")
-	then
-		vim.notify(
-			fmt("warning: old or new attr %s type be thread or userdata", k)
-		)
+	if (otype == "thread" or otype == "userdata") or (ntype == "thread" or ntype == "userdata") then
+		Snacks.notify.warn(fmt("warning: old or new attr %s type be thread or userdata", k))
 	end
 	old[k] = new[k]
 end
@@ -77,12 +62,7 @@ local function _replace(old, new, repeat_tbl)
 		else
 			if type(old[k]) ~= type(new[k]) then
 				log.debug(
-					fmt(
-						"Reloader: mismatch between old [%s] and new [%s] type for [%s]",
-						type(old[k]),
-						type(new[k]),
-						k
-					)
+					fmt("Reloader: mismatch between old [%s] and new [%s] type for [%s]", type(old[k]), type(new[k]), k)
 				)
 				_assign(old, new, k)
 			else
@@ -98,7 +78,7 @@ local function _replace(old, new, repeat_tbl)
 	end
 end
 
---- Requires a module and clears any chached state of the module.
+--- Requires a module and clears any cached state of the module.
 --- If the require of the module failed the cached state of the
 --- module will be preserved.
 ---@param m table the module that should be clean required
@@ -118,9 +98,7 @@ M.require_safe = function(mod)
 	if not status_ok then
 		local trace = debug.getinfo(2, "SL")
 		local shorter_src = trace.short_src
-		local lineinfo = shorter_src
-			.. ":"
-			.. (trace.currentline or trace.linedefined)
+		local lineinfo = shorter_src .. ":" .. (trace.currentline or trace.linedefined)
 		local msg = fmt("%s : skipped loading [%s]", lineinfo, mod)
 		log.debug(msg)
 		return status_ok
@@ -128,7 +106,7 @@ M.require_safe = function(mod)
 	return module
 end
 
---- Requires a module and clears any chached state of the module.
+--- Requires a module and clears any cached state of the module.
 --- If the require of the module failed the cached state of the
 --- module will be preserved. If a module was not required yet
 --- it will be required and this function returns immediately.

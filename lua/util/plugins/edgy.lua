@@ -52,7 +52,7 @@ end
 function M.open_view(name, ...)
 	local view = M.views[name]
 	if not view then
-		vim.notify("Unknown edgy view: " .. name, vim.log.levels.ERROR)
+		Snacks.notify.error("Unknown edgy view: " .. name)
 		return
 	end
 	if #vim.api.nvim_tabpage_list_wins(0) > 1 then
@@ -71,7 +71,7 @@ end
 
 function M.toggle_view(name)
 	if not M.has_lsp_and_is_file() then
-		vim.notify("No LSP attached to this buffer", vim.log.levels.WARN)
+		Snacks.notify.error("No LSP attached to this buffer")
 		return
 	end
 	if vim.g.edgy_current_view == name then
