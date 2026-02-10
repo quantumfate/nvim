@@ -167,10 +167,10 @@ return {
 
 			-- Auto close debug view when debugging ends
 			dap.listeners.before.event_terminated["dapui_config"] = function()
-				--edgy_util.close_all()
+				edgy_util.close_all()
 			end
 			dap.listeners.before.event_exited["dapui_config"] = function()
-				--edgy_util.close_all()
+				edgy_util.close_all()
 			end
 
 			-- Python (debugpy)
