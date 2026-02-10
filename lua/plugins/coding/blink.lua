@@ -23,6 +23,7 @@ return {
 				["<Tab>"] = { "select_next", "fallback" },
 				["<S-Tab>"] = { "select_prev", "fallback" },
 				["<CR>"] = { "accept_and_enter", "fallback" },
+				["<C-CR>"] = { "accept", "fallback" },
 				["<C-e>"] = { "cancel", "fallback" },
 			},
 			completion = {
@@ -40,15 +41,6 @@ return {
 		sources = {
 			default = { "lazydev", "lsp", "path", "snippets", "buffer" },
 			providers = {
-				cmdline = {
-					min_keyword_length = function(ctx)
-						-- when typing a command, only show when the keyword is 3 characters or longer
-						if ctx.mode == "cmdline" and string.find(ctx.line, " ") == nil then
-							return 5
-						end
-						return 0
-					end,
-				},
 				lazydev = {
 					name = "LazyDev",
 					module = "lazydev.integrations.blink",

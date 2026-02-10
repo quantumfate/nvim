@@ -35,6 +35,13 @@ return {
 			end,
 			desc = "reveal in explorer",
 		},
+		{
+			"<leader>bp",
+			function()
+				Snacks.picker.buffers()
+			end,
+			desc = "Buffers",
+		},
 	},
 	opts = {
 		options = {
