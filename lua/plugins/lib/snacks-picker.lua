@@ -50,13 +50,6 @@ return {
 			end,
 			desc = "Command History",
 		},
-		{
-			"<leader>e",
-			function()
-				Snacks.explorer()
-			end,
-			desc = "File Explorer",
-		},
 		-- find
 		{
 			"<leader>fc",

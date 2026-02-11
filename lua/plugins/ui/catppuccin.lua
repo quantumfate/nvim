@@ -42,13 +42,22 @@ return {
 		},
 		color_overrides = {},
 		default_integrations = true,
-		auto_integrations = true,
+			auto_integrations = true,
+			integrations = {
+				neo_tree = true,
+			},
 
 		custom_highlights = function(colors)
 			return {
 				NormalFloat = { bg = colors.base },
 				FloatBorder = { fg = colors.mauve, bg = colors.base },
 				BlinkCmpMenuBorder = { link = "FloatBorder" },
+
+				BlinkCmpKindAvante = { fg = colors.mauve },
+				BlinkCmpKindAvanteCmd = { fg = colors.mauve },
+				BlinkCmpKindAvanteMention = { fg = colors.mauve },
+				BlinkCmpKindAvanteShortcut = { fg = colors.mauve },
+
 				-- Noice cmdline
 				NoiceCmdline = { bg = colors.base },
 				NoiceCmdlinePopup = { bg = colors.base },
@@ -85,6 +94,54 @@ return {
 				DapUIModifiedValue = { fg = colors.peach, bold = true },
 
 				-- Ufo
+
+				-- Neo-tree theme integration with mauve accent
+				NeoTreeNormal = { bg = colors.base },
+				NeoTreeNormalNC = { bg = colors.base },
+				NeoTreeWinSeparator = { fg = colors.mauve, bg = colors.base },
+				NeoTreeBorder = { fg = colors.mauve, bg = colors.base },
+				NeoTreeTitleBar = { fg = colors.crust, bg = colors.mauve },
+				NeoTreeFloatBorder = { link = "FloatBorder" },
+				NeoTreeFloatTitle = { fg = colors.mauve, bg = colors.base },
+				NeoTreeTabInactive = { fg = colors.overlay0, bg = colors.base },
+				NeoTreeTabActive = { fg = colors.mauve, bg = colors.base, bold = true },
+				NeoTreeTabSeparatorInactive = { fg = colors.overlay0, bg = colors.base },
+				NeoTreeTabSeparatorActive = { fg = colors.mauve, bg = colors.base },
+
+				-- Neo-tree file/folder icons and text
+				NeoTreeDirectoryIcon = { fg = colors.mauve },
+				NeoTreeDirectoryName = { fg = colors.mauve },
+				NeoTreeFileName = { fg = colors.text },
+				NeoTreeFileIcon = { fg = colors.blue },
+				NeoTreeModified = { fg = colors.peach },
+				NeoTreeHiddenByName = { fg = colors.overlay0 },
+
+				-- Neo-tree git status
+				NeoTreeGitAdded = { fg = colors.green },
+				NeoTreeGitConflict = { fg = colors.red },
+				NeoTreeGitDeleted = { fg = colors.red },
+				NeoTreeGitIgnored = { fg = colors.overlay0 },
+				NeoTreeGitModified = { fg = colors.yellow },
+				NeoTreeGitUnstaged = { fg = colors.red },
+				NeoTreeGitUntracked = { fg = colors.green },
+				NeoTreeGitStaged = { fg = colors.green },
+
+				-- Neo-tree symbols and UI elements
+				NeoTreeSymbolicLinkTarget = { fg = colors.teal },
+				NeoTreeRootName = { fg = colors.mauve, bold = true },
+				NeoTreeIndentMarker = { fg = colors.overlay0 },
+				NeoTreeExpander = { fg = colors.mauve },
+				NeoTreeDimText = { fg = colors.overlay0 },
+
+				-- Neo-tree window picker
+				NeoTreeEndOfBuffer = { fg = colors.base },
+
+				-- Neo-tree buffers source
+				NeoTreeBufferNumber = { fg = colors.overlay1 },
+
+				-- Neo-tree preview
+				NeoTreePreview = { bg = colors.base },
+				NeoTreeCursorLine = { bg = colors.surface0 },
 			}
 		end,
 		highlight_overrides = {

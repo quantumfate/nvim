@@ -1,7 +1,7 @@
 return {
 	"saghen/blink.cmp",
 	-- optional: provides snippets for the snippet source
-	dependencies = { "rafamadriz/friendly-snippets" },
+	dependencies = { "rafamadriz/friendly-snippets", "Kaiser-Yang/blink-cmp-avante" },
 	build = "cargo build --release",
 
 	---@module 'blink.cmp'
@@ -39,13 +39,39 @@ return {
 			nerd_font_variant = "mono",
 		},
 		sources = {
-			default = { "lazydev", "lsp", "path", "snippets", "buffer" },
+			default = { "lazydev", "avante", "lsp", "path", "snippets", "buffer" },
 			providers = {
 				lazydev = {
 					name = "LazyDev",
 					module = "lazydev.integrations.blink",
 					-- make lazydev completions top priority (see `:h blink.cmp`)
 					score_offset = 100,
+				},
+				avante = {
+					module = "blink-cmp-avante",
+					name = "Avante",
+					opts = {
+						command = {
+							get_kind_name = function(_)
+								return "AvanteCmd"
+							end,
+						},
+						mention = {
+							get_kind_name = function(_)
+								return "AvanteMention"
+							end,
+						},
+						shortcut = {
+							get_kind_name = function(_)
+								return "AvanteShortcut"
+							end,
+						},
+						kind_icons = {
+							AvanteCmd = " ",
+							AvanteMention = " ",
+							AvanteShortcut = " ",
+						},
+					},
 				},
 			},
 		},
