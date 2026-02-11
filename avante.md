@@ -180,6 +180,58 @@ Before completing any Lua code, verify:
 ---@return boolean success Whether registration succeeded
 ```
 
+## Plugin API Awareness
+
+**ALWAYS** understand plugin-specific APIs before implementing keymaps or configurations. Different plugins have different requirements and limitations.
+
+### Keymap Registration Methods
+
+Not all keymap registration methods support the same options:
+
+| Method             | `expr`  | `callback` | `buffer` | `desc` | Notes                           |
+| ------------------ | ------- | ---------- | -------- | ------ | ------------------------------- |
+| `vim.keymap.set()` | ✓       | ✓          | ✓        | ✓      | Full control                    |
+| `which-key.add()`  | ✓       | ✓          | ✓        | ✓      | Adds which-key integration      |
+| lazy.nvim `keys`   | Limited | ✓          | ✓        | ✓      | May not pass all opts correctly |
+
+### When to Use Each:
+
+```lua
+-- ✅ Standard keymaps: Use lazy.nvim keys table
+keys = {
+    { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
+}
+
+-- ✅ Keymaps needing expr = true: Use which-key.add() in config
+config = function(_, opts)
+    require("plugin").setup(opts)
+    require("which-key").add({
+        {
+            "<leader>rf",
+            function()
+                return require("refactoring").refactor("Extract Function")
+            end,
+            expr = true,
+            desc = "Extract Function",
+        },
+    })
+end
+
+-- ✅ Buffer-local LSP keymaps: Use vim.keymap.set in LspAttach
+vim.api.nvim_create_autocmd("LspAttach", {
+    callback = function(event)
+        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = event.buf })
+    end,
+})
+```
+
+### Before Implementing:
+
+1. **Read the plugin's README** for recommended keymap patterns
+2. **Check if the plugin provides commands** (`:PluginCommand`) vs Lua API
+3. **Test edge cases** like `expr = true`, visual mode, operator-pending mode
+4. **Verify which-key integration** shows correct descriptions
+
 ## Project-Specific Notes
 
 - Uses **lazy.nvim** for plugin management

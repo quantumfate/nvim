@@ -18,7 +18,7 @@ return {
 			claude = {
 				endpoint = "https://api.anthropic.com",
 				model = "claude-sonnet-4-20250514",
-				timeout = 30000, -- Timeout in milliseconds
+				timeout = 120000, -- Timeout in milliseconds
 				extra_request_body = {
 					temperature = 0.75,
 					max_tokens = 20480,
@@ -59,37 +59,55 @@ return {
 		{ "<leader>at", "<cmd>AvanteToggle<cr>", desc = "Avante: Toggle" },
 
 		-- Provider switching
-		{ "<leader>apc", function()
-			require("avante.config").override({ provider = "claude" })
-			vim.notify("Switched to Claude provider", vim.log.levels.INFO)
-		end, desc = "Avante: Switch to Claude" },
+		{
+			"<leader>apc",
+			function()
+				require("avante.config").override({ provider = "claude" })
+				vim.notify("Switched to Claude provider", vim.log.levels.INFO)
+			end,
+			desc = "Avante: Switch to Claude",
+		},
 
-		{ "<leader>apo", function()
-			require("avante.config").override({ provider = "openai" })
-			vim.notify("Switched to OpenAI provider", vim.log.levels.INFO)
-		end, desc = "Avante: Switch to OpenAI" },
+		{
+			"<leader>apo",
+			function()
+				require("avante.config").override({ provider = "openai" })
+				vim.notify("Switched to OpenAI provider", vim.log.levels.INFO)
+			end,
+			desc = "Avante: Switch to OpenAI",
+		},
 
-		{ "<leader>apg", function()
-			require("avante.config").override({ provider = "gemini" })
-			vim.notify("Switched to Gemini provider", vim.log.levels.INFO)
-		end, desc = "Avante: Switch to Gemini" },
+		{
+			"<leader>apg",
+			function()
+				require("avante.config").override({ provider = "gemini" })
+				vim.notify("Switched to Gemini provider", vim.log.levels.INFO)
+			end,
+			desc = "Avante: Switch to Gemini",
+		},
 
 		-- Quick actions
 		{ "<leader>aq", "<cmd>AvanteAsk<cr>", desc = "Avante: Quick Ask" },
-		{ "<leader>as", function()
-			-- Save current context and ask
-			local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-			local content = table.concat(lines, "\n")
-			vim.fn.setreg('"', content)
-			vim.cmd("AvanteAsk")
-		end, desc = "Avante: Save context and ask" },
+		{
+			"<leader>as",
+			function()
+				-- Save current context and ask
+				local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+				local content = table.concat(lines, "\n")
+				vim.fn.setreg('"', content)
+				vim.cmd("AvanteAsk")
+			end,
+			desc = "Avante: Save context and ask",
+		},
 
 		-- File operations
-		{ "<leader>afi", function()
-			-- Create avante instructions file if it doesn't exist
-			local file = vim.fn.getcwd() .. "/avante.md"
-			if vim.fn.filereadable(file) == 0 then
-				local default_content = [[# Avante Instructions
+		{
+			"<leader>afi",
+			function()
+				-- Create avante instructions file if it doesn't exist
+				local file = vim.fn.getcwd() .. "/avante.md"
+				if vim.fn.filereadable(file) == 0 then
+					local default_content = [[# Avante Instructions
 
 ## Project Context
 This is a [describe your project] project.
@@ -101,11 +119,13 @@ This is a [describe your project] project.
 ## Specific Instructions
 - [Add any specific instructions for this project]
 ]]
-				vim.fn.writefile(vim.split(default_content, "\n"), file)
-				vim.notify("Created avante.md file", vim.log.levels.INFO)
-			end
-			vim.cmd("edit " .. file)
-		end, desc = "Avante: Edit instructions file" },
+					vim.fn.writefile(vim.split(default_content, "\n"), file)
+					vim.notify("Created avante.md file", vim.log.levels.INFO)
+				end
+				vim.cmd("edit " .. file)
+			end,
+			desc = "Avante: Edit instructions file",
+		},
 
 		-- Diff operations
 		{ "<leader>ado", "<cmd>AvanteShowDiff<cr>", desc = "Avante: Show diff" },
@@ -117,44 +137,72 @@ This is a [describe your project] project.
 		{ "<leader>acl", "<cmd>AvanteClear<cr>", desc = "Avante: Clear chat" },
 
 		-- Advanced features
-		{ "<leader>aex", function()
-			-- Export current conversation
-			local timestamp = os.date("%Y%m%d_%H%M%S")
-			local filename = "avante_export_" .. timestamp .. ".md"
-			vim.cmd("AvanteExport " .. filename)
-			vim.notify("Exported to " .. filename, vim.log.levels.INFO)
-		end, desc = "Avante: Export conversation" },
+		{
+			"<leader>aex",
+			function()
+				-- Export current conversation
+				local timestamp = os.date("%Y%m%d_%H%M%S")
+				local filename = "avante_export_" .. timestamp .. ".md"
+				vim.cmd("AvanteExport " .. filename)
+				vim.notify("Exported to " .. filename, vim.log.levels.INFO)
+			end,
+			desc = "Avante: Export conversation",
+		},
 
 		-- Quick templates
-		{ "<leader>atr", function()
-			vim.cmd("AvanteAsk")
-			vim.api.nvim_feedkeys("Review this code for potential issues and suggest improvements:", "n", false)
-		end, desc = "Avante: Code review template" },
+		{
+			"<leader>atr",
+			function()
+				vim.cmd("AvanteAsk")
+				vim.api.nvim_feedkeys("Review this code for potential issues and suggest improvements:", "n", false)
+			end,
+			desc = "Avante: Code review template",
+		},
 
-		{ "<leader>ato", function()
-			vim.cmd("AvanteAsk")
-			vim.api.nvim_feedkeys("Optimize this code for better performance:", "n", false)
-		end, desc = "Avante: Optimization template" },
+		{
+			"<leader>ato",
+			function()
+				vim.cmd("AvanteAsk")
+				vim.api.nvim_feedkeys("Optimize this code for better performance:", "n", false)
+			end,
+			desc = "Avante: Optimization template",
+		},
 
-		{ "<leader>atd", function()
-			vim.cmd("AvanteAsk")
-			vim.api.nvim_feedkeys("Add comprehensive documentation to this code:", "n", false)
-		end, desc = "Avante: Documentation template" },
+		{
+			"<leader>atd",
+			function()
+				vim.cmd("AvanteAsk")
+				vim.api.nvim_feedkeys("Add comprehensive documentation to this code:", "n", false)
+			end,
+			desc = "Avante: Documentation template",
+		},
 
-		{ "<leader>att", function()
-			vim.cmd("AvanteAsk")
-			vim.api.nvim_feedkeys("Write unit tests for this code:", "n", false)
-		end, desc = "Avante: Test template" },
+		{
+			"<leader>att",
+			function()
+				vim.cmd("AvanteAsk")
+				vim.api.nvim_feedkeys("Write unit tests for this code:", "n", false)
+			end,
+			desc = "Avante: Test template",
+		},
 
 		-- Debug and troubleshooting
-		{ "<leader>adb", function()
-			local config = require("avante.config")
-			print(vim.inspect(config))
-		end, desc = "Avante: Show config" },
+		{
+			"<leader>adb",
+			function()
+				local config = require("avante.config")
+				print(vim.inspect(config))
+			end,
+			desc = "Avante: Show config",
+		},
 
-		{ "<leader>adl", function()
-			vim.cmd("messages")
-		end, desc = "Avante: Show logs" },
+		{
+			"<leader>adl",
+			function()
+				vim.cmd("messages")
+			end,
+			desc = "Avante: Show logs",
+		},
 	},
 	dependencies = {
 		"nvim-lua/plenary.nvim",
