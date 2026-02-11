@@ -1,6 +1,11 @@
+--- Chezmoi utility module for dotfile management integration
+--- Provides functions for picking and editing chezmoi-managed files
+---@class util.plugins.chezmoi
 local M = {}
 
-M.pick_chezmoi = function()
+--- Open a picker to select and edit chezmoi-managed files
+--- Lists all chezmoi files and opens selected file in edit mode with watch
+function M.pick_chezmoi()
 	local results = require("chezmoi.commands").list({
 		args = {
 			"--path-style",

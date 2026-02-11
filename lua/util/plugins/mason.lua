@@ -1,8 +1,13 @@
+--- Mason utility module for package management
+--- Provides functions to ensure packages are installed and filter available packages
+---@class util.plugins.mason
 local M = {}
 
 --- Install packages only if they exist in Mason's registry
----@param packages string[]
----@return string[] available, string[] unavailable
+--- Checks each package against the registry and installs missing ones
+---@param packages string[] List of package names to ensure are installed
+---@return string[] available List of packages that are available in Mason registry
+---@return string[] unavailable List of packages not found in Mason registry
 function M.ensure_installed(packages)
 	local registry = require("mason-registry")
 	local available = {}
@@ -29,8 +34,9 @@ function M.ensure_installed(packages)
 end
 
 --- Filter list to only Mason-available packages
----@param packages string[]
----@return string[]
+--- Removes packages that are not available in the Mason registry
+---@param packages string[] List of package names to filter
+---@return string[] filtered_packages List containing only packages available in Mason
 function M.filter_available(packages)
 	local registry = require("mason-registry")
 	return vim.tbl_filter(function(pkg)

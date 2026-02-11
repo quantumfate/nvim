@@ -1,8 +1,12 @@
+--- Navbuddy utility module for enhanced navigation functionality
+--- Provides custom actions and overrides for nvim-navbuddy plugin
+---@class util.plugins.navbuddy
 local navbuddy_actions = require("nvim-navbuddy.actions")
 
 local M = {
-	---Overwrites navbuddy's comment function to use neovims inbuilt comment
-	---engine streamlined by treesitter and ts-comments.
+	--- Override navbuddy's comment function to use Neovim's built-in comment engine
+	--- Uses treesitter and ts-comments for better commenting support
+	---@return table action_config Action configuration with callback and description
 	override_comment = function()
 		-- do the original setup
 		navbuddy_actions.comment()
@@ -33,8 +37,10 @@ local M = {
 			description = "Comment",
 		}
 	end,
-	---Overwrites navbuddy's telescope function to call snacks instead
-	---@param _opts table
+	--- Override navbuddy's telescope function to use Snacks picker instead
+	--- Replaces telescope picker with Snacks picker for consistent UI
+	---@param _opts table Configuration options for the picker
+	---@return table action_config Action configuration with callback and description
 	override_telescope = function(_opts)
 		return {
 			callback = function(display)

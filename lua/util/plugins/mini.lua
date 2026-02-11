@@ -1,4 +1,12 @@
+--- Mini.nvim utility functions for enhanced text object and pair functionality
+--- Provides utilities for buffer text objects, smart pairs, and which-key integration
+---@class util.plugins.mini
 local mini = {}
+
+--- Create a text object for the entire buffer content
+--- Handles both 'a' (around) and 'i' (inside) text object variants
+---@param ai_type string Text object type: "a" for around (entire buffer), "i" for inside (excluding blank lines)
+---@return table region Buffer region with from/to positions
 function mini.ai_buffer(ai_type)
 	local start_line, end_line = 1, vim.fn.line("$")
 	if ai_type == "i" then
@@ -15,7 +23,9 @@ function mini.ai_buffer(ai_type)
 	return { from = { line = start_line, col = 1 }, to = { line = end_line, col = to_col } }
 end
 
----@param opts {skip_next: string, skip_ts: string[], skip_unbalanced: boolean, markdown: boolean}
+--- Enhanced mini.pairs setup with smart context-aware behavior
+--- Configures automatic bracket pairing with special handling for markdown, treesitter, and unbalanced pairs
+---@param opts {skip_next: string, skip_ts: string[], skip_unbalanced: boolean, markdown: boolean} Configuration options
 function mini.pairs(opts)
 	Snacks.toggle({
 		name = "Mini Pairs",
@@ -64,8 +74,9 @@ function mini.pairs(opts)
 	end
 end
 
--- register all text objects with which-key
----@param opts table
+--- Register all text objects with which-key for better discoverability
+--- Creates comprehensive which-key mappings for all mini.ai text objects
+---@param opts table Configuration options for mini.ai mappings
 function mini.ai_whichkey(opts)
 	local objects = {
 		{ " ", desc = "whitespace" },

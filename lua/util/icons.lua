@@ -1,10 +1,13 @@
+--- Icon definitions module for consistent iconography throughout the configuration
+--- Provides organized icon collections for different use cases like LSP kinds, git status, UI elements, etc.
 ---@class icons
----@field kind kind
----@field git git
----@field ui ui
----@field diagnostics diagnostics
----@field misc misc
----@field signs signs
+---@field kind kind LSP completion item kind icons
+---@field git git Git status and operation icons
+---@field ui ui User interface element icons
+---@field diagnostics diagnostics Diagnostic severity level icons
+---@field debugging debugging Debug session control icons
+---@field misc misc Miscellaneous utility icons
+---@field signs signs Alphabetic sign icons for various purposes
 return {
 	---@class kind
 	---@field Array string

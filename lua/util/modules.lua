@@ -1,15 +1,16 @@
+--- Module loading and reloading utilities for dynamic development
+--- Provides safe module loading, hot reloading, and lazy loading capabilities
+---@class util.modules
 local M = {}
 
 local log = require("util.log")
 local fmt = string.format
 
----Assigns the key of a new table to the old table. Existing entries
----in the old table may be overridden. In case of a type mismatch the
----entries will still be overridden but a warning will be called.
----
----@param old table the old table
----@param new table the new table
----@param k any the key of the respective table
+--- Assigns the key of a new table to the old table with type safety warnings
+--- Existing entries in the old table may be overridden with type mismatch warnings
+---@param old table The old table to update
+---@param new table The new table containing updates
+---@param k any The key to assign from new to old table
 local function _assign(old, new, k)
 	local otype = type(old[k])
 	local ntype = type(new[k])
@@ -19,22 +20,12 @@ local function _assign(old, new, k)
 	old[k] = new[k]
 end
 
----Replaces the the values of the old table with the values
----in the new table. When the key, value pair in the new table
----doesn't exist, it will be deleted from the old table. This
----function works recursively and if the type is a table it will
----enter the recursion and if it is not it will call the replace
----function instead to to overwrite the old entries with the
----new ones
----
+--- Recursively replaces table values with new values, deleting missing keys
+--- Works recursively on nested tables to perform deep replacement operations
 --- TODO: optionally keep old data
----
----If there is a type mismatch between the keys it will overwrite
----the old type with the new type.
----
----@param old table the entries of the old table
----@param new table the entries of the new table
----@param repeat_tbl table a flag table to keep track of processed entries where the key maps to booleans
+---@param old table The entries of the old table to be replaced
+---@param new table The entries of the new table containing replacements
+---@param repeat_tbl table A flag table to keep track of processed entries
 local function _replace(old, new, repeat_tbl)
 	if repeat_tbl[old] then
 		-- return when an entry was already processed
@@ -78,11 +69,10 @@ local function _replace(old, new, repeat_tbl)
 	end
 end
 
---- Requires a module and clears any cached state of the module.
---- If the require of the module failed the cached state of the
---- module will be preserved.
----@param m table the module that should be clean required
----@return table module the clean required module on success else the old module before require
+--- Requires a module and clears any cached state of the module
+--- If the require of the module fails, the cached state will be preserved
+---@param m string The module path that should be clean required
+---@return table module The clean required module on success, else the old module before require
 M.require_clean = function(m)
 	package.loaded[m] = nil
 	_G[m] = nil
@@ -90,9 +80,10 @@ M.require_clean = function(m)
 	return module
 end
 
----Requires a module using the pcall statement
----@param mod string the path to the module
----@return table|boolean module the module's table or false on failed pcall
+--- Safely requires a module using pcall to catch errors
+--- Logs debug information when module loading fails
+---@param mod string The path to the module
+---@return table|boolean module The module's table on success or false on failed pcall
 M.require_safe = function(mod)
 	local status_ok, module = pcall(require, mod)
 	if not status_ok then
@@ -106,12 +97,10 @@ M.require_safe = function(mod)
 	return module
 end
 
---- Requires a module and clears any cached state of the module.
---- If the require of the module failed the cached state of the
---- module will be preserved. If a module was not required yet
---- it will be required and this function returns immediately.
----@param mod string the path to the module
----@return table|boolean module the clean required module on success else the old module before require or false
+--- Hot reload a module by clearing cache and reloading with state preservation
+--- Preserves cached state if module reload fails, enables live development
+---@param mod string The path to the module to reload
+---@return table|boolean module The reloaded module on success, old module or false on failure
 M.reload = function(mod)
 	if not package.loaded[mod] then
 		return M.require_safe(mod)
@@ -130,10 +119,10 @@ M.reload = function(mod)
 	return old
 end
 
---- Require on index.
----
---- Will only require the module after the first index of a module.
---- Only works for modules that export a table.
+--- Create a lazy-loading proxy that requires module only when first accessed
+--- Only works for modules that export a table, enables performance optimization
+---@param require_path string The module path to lazy load
+---@return table proxy A metatable proxy that loads the module on first access
 function M.require_on_index(require_path)
 	-- code from <https://github.com/tjdevries/lazy-require.nvim/blob/bb626818ebc175b8c595846925fd96902b1ce02b/lua/lazy-require.lua#L25>
 	return setmetatable({}, {
@@ -147,21 +136,16 @@ function M.require_on_index(require_path)
 	})
 end
 
---- Require when an exported method is called.
----
---- Creates a new function. Cannot be used to compare functions,
---- set new values, etc. Only useful for waiting to do the require until you actually
---- call the code.
----
---- <pre>
+--- Create a lazy-loading proxy that requires module only when methods are called
+--- Creates function wrappers that delay module loading until actual function call
+---@param require_path string The module path to lazy load
+---@return table proxy A metatable proxy that loads module when functions are called
+---@usage
 --- -- This is not loaded yet
 --- local lazy_mod = lazy.require_on_exported_call('my_module')
 --- local lazy_func = lazy_mod.exported_func
----
 --- -- ... some time later
 --- lazy_func(42)  -- <- Only loads the module now
----
---- </pre>
 function M.require_on_exported_call(require_path)
 	-- https://github.com/tjdevries/lazy-require.nvim/blob/bb626818ebc175b8c595846925fd96902b1ce02b/lua/lazy-require.lua#L64
 	return setmetatable({}, {
@@ -173,13 +157,19 @@ function M.require_on_exported_call(require_path)
 	})
 end
 
+--- Check if a lazy.nvim plugin is currently loaded
+--- Queries lazy.nvim's internal state to determine plugin load status
+---@param name string The plugin name to check
+---@return boolean is_loaded True if the plugin is loaded, false otherwise
 function M.is_loaded(name)
 	local Config = require("lazy.core.config")
 	return Config.plugins[name] and Config.plugins[name]._.loaded
 end
 
----@param name string
----@param fn fun(name:string)
+--- Execute a callback when a lazy.nvim plugin loads
+--- Immediately executes if plugin is already loaded, otherwise waits for LazyLoad event
+---@param name string The plugin name to wait for
+---@param fn fun(name:string) Callback function to execute when plugin loads
 function M.on_load(name, fn)
 	if M.is_loaded(name) then
 		fn(name)

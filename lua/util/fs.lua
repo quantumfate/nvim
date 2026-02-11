@@ -1,11 +1,15 @@
+--- Filesystem utility module for file operations and path manipulation
+--- Provides functions for file/directory checking, recursive operations, and path handling
+---@class util.fs
 local M = {}
 local uv = vim.loop
 
----Recursively print a structure pretty formatted with a separator
----@param structure any the structure to be recursed
----@param limit any the maximum depth for the recursion
----@param separator any the string to pretty format the structure
----@return integer|unknown limit limit - 1
+--- Recursively print a structure pretty formatted with a separator
+--- Inspects nested data structures with depth limiting and pretty formatting
+---@param structure any The structure to be recursed and printed
+---@param limit integer|nil The maximum depth for the recursion (default: 100)
+---@param separator string|nil The string to pretty format the structure (default: ".")
+---@return integer remaining_limit The updated limit after processing
 function M.r_inspect_settings(structure, limit, separator)
     limit = limit or 100         -- default item limit
     separator = separator or "." -- indent string
@@ -48,26 +52,29 @@ function M.r_inspect_settings(structure, limit, separator)
     return limit - 1
 end
 
---- Checks whether a given path exists and is a file.
---@param path (string) path to check
---@returns (bool)
+--- Checks whether a given path exists and is a file
+--- Uses libuv stat to determine if path is a regular file
+---@param path string Path to check for file existence
+---@return boolean is_file True if path exists and is a file, false otherwise
 function M.is_file(path)
     local stat = uv.fs_stat(path)
     return stat and stat.type == "file" or false
 end
 
 --- Checks whether a given path exists and is a directory
---@param path (string) path to check
---@returns (bool)
+--- Uses libuv stat to determine if path is a directory
+---@param path string Path to check for directory existence
+---@return boolean is_directory True if path exists and is a directory, false otherwise
 function M.is_directory(path)
     local stat = uv.fs_stat(path)
     return stat and stat.type == "directory" or false
 end
 
----Write data to a file
----@param path string can be full or relative to `cwd`
----@param txt string|table text to be written, uses `vim.inspect` internally for tables
----@param flag string used to determine access mode, common flags: "w" for `overwrite` or "a" for `append`
+--- Write data to a file asynchronously
+--- Supports both string and table data, using vim.inspect for tables
+---@param path string File path, can be full or relative to current working directory
+---@param txt string|table Text to be written, uses vim.inspect internally for tables
+---@param flag string Access mode flag: "w" for overwrite, "a" for append
 function M.write_file(path, txt, flag)
     local data = type(txt) == "string" and txt or vim.inspect(txt)
     uv.fs_open(path, flag, 438, function(open_err, fd)
@@ -81,15 +88,20 @@ function M.write_file(path, txt, flag)
     end)
 end
 
+--- Join multiple path components with appropriate path separator
+--- Automatically detects platform and uses correct separator (\ for Windows, / for Unix)
+---@param ... string Path components to join
+---@return string joined_path The concatenated path with proper separators
 function M.join_paths(...)
     local path_sep = uv.os_uname().version:match("Windows") and "\\" or "/"
     local result = table.concat({ ... }, path_sep)
     return result
 end
 
----Copies a file or directory recursively
----@param source string
----@param destination string
+--- Copies a file or directory recursively
+--- Handles both files and directories, preserving permissions and structure
+---@param source string Source file or directory path
+---@param destination string Destination file or directory path
 function M.fs_copy(source, destination)
     local source_stats = assert(vim.loop.fs_stat(source))
 
