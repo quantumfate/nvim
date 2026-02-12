@@ -35,7 +35,6 @@ return {
 			typescriptreact = { "eslint_d" },
 			vue = { "eslint_d" },
 			sh = { "shellcheck" },
-			rust = { "clippy" },
 			bash = { "shellcheck" },
 			markdown = { "markdownlint" },
 			yaml = { "yamllint" },

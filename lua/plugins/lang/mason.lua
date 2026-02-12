@@ -51,7 +51,7 @@ local linters = {
 	"markdownlint",
 	"yamllint",
 	"hadolint",
-	"ansible-lint",
+	"ansible_lint",
 	"jsonlint",
 	"cpplint",
 }
