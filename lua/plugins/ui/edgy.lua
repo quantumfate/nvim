@@ -21,7 +21,6 @@ return {
 		{ "<leader>ue0", desc = "Edgy: Close All" },
 		{ "<leader>ues", desc = "Edgy Select Window" },
 	},
-
 	init = function()
 		vim.opt.laststatus = 3
 		vim.opt.splitkeep = "screen"
