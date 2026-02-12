@@ -3,17 +3,17 @@
 ![nvim](./assets/nvim.png)
 ![debug](./assets/depug.png)
 
-## TODO
-
-- [ ] Fix unknown lsp gr mappings
-
 ## Dependencies
 
+- neovim > v0.11
+- fzf
+- git
 - go
+- rustup
+- nodejs
 - npm
 - python
 - ripgrep
-- fzf
 
 ## Remarks
 

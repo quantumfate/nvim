@@ -4,7 +4,7 @@ return {
 	opts = {
 		modes = {
 			search = {
-				enabled = true, -- Always enable flash during / and ? search
+				enabled = false, -- Always enable flash during / and ? search
 			},
 			char = {
 				enabled = true, -- Also for f, F, t, T motions

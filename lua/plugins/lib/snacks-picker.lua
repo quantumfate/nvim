@@ -4,6 +4,7 @@ return {
 		picker = {
 			win = {
 				input = {
+					show_first = false,
 					keys = {
 						["<a-c>"] = {
 							"toggle_cwd",
