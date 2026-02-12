@@ -26,7 +26,7 @@ local M = {
 				},
 				diagnostics = {
 					globals = { "vim", "Snacks", "icons" },
-					disable = { "missing-fields" },
+					disable = { "missing-fields", "undefined-field", "different-requires" },
 				},
 
 				telemetry = { enable = false },
@@ -218,6 +218,64 @@ local M = {
 				semanticTokens = true,
 			},
 		},
+	},
+	bashls = {
+		cmd = { "bash-language-server", "start" },
+		filetypes = { "sh", "bash" },
+		root_markers = { ".git" },
+		settings = {
+			bashIde = {
+				globPattern = "*@(.sh|.inc|.bash|.command)",
+			},
+		},
+	},
+
+	clangd = {
+		cmd = { "clangd", "--background-index", "--clang-tidy", "--header-insertion=iwyu" },
+		filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
+		root_markers = { ".clangd", "compile_commands.json", "compile_flags.txt", ".git" },
+	},
+
+	jsonls = {
+		cmd = { "vscode-json-language-server", "--stdio" },
+		filetypes = { "json", "jsonc" },
+		root_markers = { ".git" },
+		settings = {
+			json = {
+				validate = { enable = true },
+			},
+		},
+	},
+
+	yamlls = {
+		cmd = { "yaml-language-server", "--stdio" },
+		filetypes = { "yaml", "yaml.docker-compose", "yaml.gitlab" },
+		root_markers = { ".git" },
+		settings = {
+			yaml = {
+				keyOrdering = false,
+				schemaStore = { enable = true, url = "https://www.schemastore.org/api/json/catalog.json" },
+				validate = true,
+			},
+		},
+	},
+
+	ansiblels = {
+		cmd = { "ansible-language-server", "--stdio" },
+		filetypes = { "yaml.ansible" },
+		root_markers = { "ansible.cfg", ".ansible-lint", "playbooks/", "roles/" },
+	},
+
+	tailwindcss = {
+		cmd = { "tailwindcss-language-server", "--stdio" },
+		filetypes = { "html", "css", "javascript", "javascriptreact", "typescript", "typescriptreact", "vue", "svelte" },
+		root_markers = { "tailwind.config.js", "tailwind.config.ts", "tailwind.config.cjs", "tailwind.config.mjs" },
+	},
+
+	vuels = {
+		cmd = { "vue-language-server", "--stdio" },
+		filetypes = { "vue" },
+		root_markers = { "package.json", "vue.config.js" },
 	},
 }
 

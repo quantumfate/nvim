@@ -12,11 +12,6 @@ return {
 		"folke/lazydev.nvim", -- Make sure this loads first
 	},
 	config = function()
-		-- Disable stylua LSP completely (we use conform.nvim for formatting)
-		vim.lsp.config("stylua", {
-			cmd = {}, -- Empty cmd prevents it from starting
-		})
-
 		-- Capability-aware keymap registration on LSP attach
 		vim.api.nvim_create_autocmd("LspAttach", {
 			group = vim.api.nvim_create_augroup("lsp_attach", { clear = true }),

@@ -23,6 +23,12 @@ local lsp_servers = {
 	"ts_ls",
 	"rust_analyzer",
 	"gopls",
+	"clangd",
+	"jsonls",
+	"yamlls",
+	"ansiblels",
+	"tailwindcss",
+	"bashls",
 }
 
 --- External formatters for languages where LSP doesn't provide formatting
@@ -33,7 +39,8 @@ local formatters = {
 	"black",
 	"ruff",
 	"shfmt",
-	"rustup",
+	"clang-format",
+	"goimports",
 }
 
 --- External linters for additional code quality checks
@@ -41,10 +48,12 @@ local formatters = {
 local linters = {
 	"eslint_d",
 	"shellcheck",
-	--"luacheck",
 	"markdownlint",
 	"yamllint",
 	"hadolint",
+	"ansible-lint",
+	"jsonlint",
+	"cpplint",
 }
 
 --- Debug adapters for supported languages
@@ -97,10 +106,7 @@ return {
 		opts = {
 			ensure_installed = lsp_servers,
 			automatic_installation = false,
-			handlers = {
-				-- Default handler: do nothing (we use vim.lsp.enable instead)
-				function(server_name) end,
-			},
+			automatic_enable = false,
 		},
 	},
 

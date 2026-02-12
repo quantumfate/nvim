@@ -17,6 +17,7 @@ return {
 			{ path = "${3rd}/luv/library", words = { "vim%.uv" } },
 			{ path = "LazyVim", words = { "LazyVim" } },
 			{ path = "snacks.nvim", words = { "Snacks" } },
+			{ path = vim.fn.stdpath("data") .. "/lazy", mods = {} },
 		},
 		integrations = {
 			-- Fixes lspconfig's workspace management for LuaLS

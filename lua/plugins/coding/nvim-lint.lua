@@ -29,18 +29,21 @@ return {
 		local lint = require("lint")
 
 		lint.linters_by_ft = {
-			python = {},
 			javascript = { "eslint_d" },
 			typescript = { "eslint_d" },
 			javascriptreact = { "eslint_d" },
 			typescriptreact = { "eslint_d" },
+			vue = { "eslint_d" },
 			sh = { "shellcheck" },
-			fish = { "fish" },
+			rust = { "clippy" },
+			bash = { "shellcheck" },
 			markdown = { "markdownlint" },
 			yaml = { "yamllint" },
+			["yaml.ansible"] = { "ansible_lint" },
 			dockerfile = { "hadolint" },
-			nix = { "nix" },
-			rust = { "rust_analyzer" },
+			c = { "cpplint" },
+			cpp = { "cpplint" },
+			json = { "jsonlint" },
 		}
 
 		-- Auto-lint on events (only if linters exist)
