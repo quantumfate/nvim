@@ -1,3 +1,34 @@
+--- Enhanced command-line, messages, and notification UI with capability-aware features
+--- Provides modern floating windows for cmdline, messages, and LSP documentation
+---@class plugins.ui.noice
+---@field setup fun(): nil
+
+---@class NoiceConfig
+---@field views table<string, NoiceView> View configurations for different UI elements
+---@field cmdline NoiceCmdlineConfig Command-line interface configuration
+---@field notify NoiceNotifyConfig Notification system configuration
+---@field lsp NoiceLspConfig LSP integration settings
+---@field routes NoiceRoute[] Message routing rules
+---@field presets NoicePresets Pre-configured UI presets
+
+---@class NoiceView
+---@field enter? boolean Whether to enter the view automatically
+---@field win_options? table Window-specific options
+---@field border? table Border configuration
+---@field position? table Position settings
+---@field size? table Size configuration
+
+---@class NoiceCmdlineConfig
+---@field enabled boolean Whether to enable Noice cmdline UI
+---@field view string View type for rendering cmdline
+---@field format table<string, NoiceCmdlineFormat> Format configurations for different command types
+
+---@class NoiceCmdlineFormat
+---@field pattern string Pattern to match command
+---@field icon string Icon to display
+---@field lang? string Language for syntax highlighting
+---@field kind? string Command kind classification
+
 return {
 	"folke/noice.nvim",
 	event = "VimEnter",

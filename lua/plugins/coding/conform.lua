@@ -1,3 +1,15 @@
+--- Code formatting plugin with capability-aware configuration
+--- Provides external formatter integration with conditional keymap registration
+---@class plugins.coding.conform
+---@field formatters_by_ft table<string, string[]> Formatters mapped by filetype
+---@field format_on_save? fun(bufnr: integer): table|nil Configuration for automatic formatting
+
+---@class ConformFormatOptions
+---@field async? boolean Whether to format asynchronously
+---@field lsp_fallback? boolean Whether to fall back to LSP formatting
+---@field timeout_ms? integer Timeout for formatting operation
+---@field formatters? string[] Specific formatters to use
+
 return {
 	"stevearc/conform.nvim",
 	event = { "BufWritePre" },
@@ -6,7 +18,31 @@ return {
 		{
 			"<leader>cf",
 			function()
-				require("conform").format({ async = true, lsp_fallback = true })
+				local buf = vim.api.nvim_get_current_buf()
+				local ft = vim.bo[buf].filetype
+				local conform = require("conform")
+
+				local formatters = conform.list_formatters_for_buffer(buf)
+				if #formatters == 0 then
+					local clients = vim.lsp.get_clients({ bufnr = buf })
+					local has_lsp_formatting = false
+					for _, client in ipairs(clients) do
+						if client:supports_method("textDocument/formatting") then
+							has_lsp_formatting = true
+							break
+						end
+					end
+
+					if has_lsp_formatting then
+						vim.lsp.buf.format({ async = true })
+						Snacks.notify.info("Formatted with LSP (no external formatter)")
+					else
+						Snacks.notify.warn("No formatter available for " .. ft)
+					end
+					return
+				end
+
+				conform.format({ async = true, lsp_fallback = true })
 			end,
 			mode = { "n", "v" },
 			desc = "Format buffer",

@@ -1,4 +1,14 @@
--- lua/plugins/editor/treesitter.lua
+--- Advanced syntax highlighting and code analysis with treesitter
+--- Provides intelligent parsing for multiple languages with lazy-loading optimization
+---@class plugins.editor.treesitter
+---@field setup fun(): nil
+
+---@class TreesitterConfig
+---@field ensure_installed string[] Languages to automatically install parsers for
+---@field highlight table Syntax highlighting configuration
+---@field indent table Automatic indentation settings
+---@field folds table Code folding configuration
+
 return {
 	{
 		"nvim-treesitter/nvim-treesitter",

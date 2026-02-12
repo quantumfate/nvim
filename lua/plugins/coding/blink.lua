@@ -1,11 +1,31 @@
+--- Modern completion engine with LSP integration and capability awareness
+--- Provides intelligent completion with context-aware source selection
+---@class plugins.coding.blink
+---@field setup fun(): nil
+
+---@class BlinkCompletionConfig
+---@field menu table Menu display configuration
+---@field documentation table Documentation window settings
+---@field draw table Custom drawing components
+---@field list table Selection and insertion behavior
+
+---@class BlinkSourceConfig
+---@field default string[] List of default completion sources
+---@field providers table<string, BlinkProviderConfig> Source-specific configurations
+
+---@class BlinkProviderConfig
+---@field name string Human-readable provider name
+---@field module? string Lua module path for the provider
+---@field score_offset? number Priority adjustment for completions
+---@field opts? table Provider-specific options
+
 return {
 	"saghen/blink.cmp",
 	-- optional: provides snippets for the snippet source
 	dependencies = { "rafamadriz/friendly-snippets", "Kaiser-Yang/blink-cmp-avante" },
 	build = "cargo build --release",
 
-	---@module 'blink.cmp'
-	---@type blink.cmp.Config
+	---@type table
 	opts = {
 		keymap = {
 			preset = "none",

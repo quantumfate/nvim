@@ -1,49 +1,25 @@
+--- Window layout management with capability-aware panel toggling
+--- Provides context-sensitive sidebar and bottom panel management
+---@class plugins.ui.edgy
+---@field setup fun(): nil
+
+---@class EdgyViewConfig
+---@field ft string Filetype for the panel
+---@field title string Display title for the panel
+---@field open? string Command to open the panel
+---@field filter? fun(buf: integer, win: integer): boolean Filter function for panel visibility
+---@field size table Size configuration for the panel
+
 return {
 	"folke/edgy.nvim",
 	event = "VeryLazy",
 	keys = {
-		{
-			"<leader>ued",
-			function()
-				require("util.plugins.edgy").toggle_view("diagnostics")
-			end,
-			desc = "Edgy: Diagnostics View",
-		},
-		{
-			"<leader>uel",
-			function()
-				require("util.plugins.edgy").toggle_view("lsp")
-			end,
-			desc = "Edgy: LSP View",
-		},
-		{
-			"<leader>uef",
-			function()
-				require("util.plugins.edgy").toggle_view("focus")
-			end,
-			desc = "Edgy: Focus View",
-		},
-		{
-			"<leader>ueb",
-			function()
-				require("util.plugins.edgy").toggle_view("debug")
-			end,
-			desc = "Edgy: Debug View",
-		},
-		{
-			"<leader>ue0",
-			function()
-				require("util.plugins.edgy").close_all()
-			end,
-			desc = "Edgy: Close All",
-		},
-		{
-			"<leader>ues",
-			function()
-				require("edgy").select()
-			end,
-			desc = "Edgy Select Window",
-		},
+		{ "<leader>ued", desc = "Edgy: Diagnostics View" },
+		{ "<leader>uel", desc = "Edgy: LSP View" },
+		{ "<leader>uef", desc = "Edgy: Focus View" },
+		{ "<leader>ueb", desc = "Edgy: Debug View" },
+		{ "<leader>ue0", desc = "Edgy: Close All" },
+		{ "<leader>ues", desc = "Edgy Select Window" },
 	},
 
 	init = function()
@@ -147,4 +123,61 @@ return {
 			relativenumber = false,
 		},
 	},
+	config = function(_, opts)
+		require("edgy").setup(opts)
+		local edgy_util = require("util.plugins.edgy")
+
+		-- Always available
+		require("which-key").add({
+			{ "<leader>ue", group = "edgy" },
+			{
+				"<leader>ue0",
+				function()
+					edgy_util.close_all()
+				end,
+				desc = "Edgy: Close All",
+			},
+			{
+				"<leader>ues",
+				function()
+					require("edgy").select()
+				end,
+				desc = "Edgy Select Window",
+			},
+		})
+
+		-- LSP-dependent keymaps: register on LspAttach
+		vim.api.nvim_create_autocmd("LspAttach", {
+			group = vim.api.nvim_create_augroup("edgy_lsp_keymaps", { clear = true }),
+			callback = function(event)
+				local buf = event.buf
+				local map = function(key, fn, desc)
+					vim.keymap.set("n", key, fn, { buffer = buf, desc = desc })
+				end
+
+				map("<leader>ued", function()
+					edgy_util.toggle_view("diagnostics")
+				end, "Edgy: Diagnostics View")
+
+				map("<leader>uel", function()
+					edgy_util.toggle_view("lsp")
+				end, "Edgy: LSP View")
+
+				map("<leader>uef", function()
+					edgy_util.toggle_view("focus")
+				end, "Edgy: Focus View")
+			end,
+		})
+
+		-- Debug keymaps: register for supported filetypes
+		vim.api.nvim_create_autocmd("FileType", {
+			group = vim.api.nvim_create_augroup("edgy_debug_keymaps", { clear = true }),
+			pattern = { "python", "go", "rust", "javascript", "typescript", "c", "cpp", "java" },
+			callback = function(event)
+				vim.keymap.set("n", "<leader>ueb", function()
+					edgy_util.toggle_view("debug")
+				end, { buffer = event.buf, desc = "Edgy: Debug View" })
+			end,
+		})
+	end,
 }

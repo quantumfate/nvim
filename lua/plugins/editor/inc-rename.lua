@@ -1,26 +1,16 @@
--- lua/plugins/editor/inc-rename.lua
+---@class plugins.editor.inc_rename
+
+---@class IncRenameConfig
+---@field input_buffer_type string|nil Buffer type for input ("dressing" or nil for cmdline)
+---@field preview_empty_name boolean Whether to preview when name is empty
+---@field show_message boolean Whether to show completion messages
+
 return {
 	"smjonas/inc-rename.nvim",
-	cmd = "IncRename",
+	event = "LspAttach",
 	opts = {
-		input_buffer_type = "dressing", -- or nil for cmdline
+		input_buffer_type = "noice",
 		preview_empty_name = false,
 		show_message = true,
 	},
-	keys = {
-		{
-			"<leader>cr",
-			function()
-				return ":IncRename " .. vim.fn.expand("<cword>")
-			end,
-			expr = true,
-			desc = "Rename (inc-rename)",
-		},
-	},
-	config = function(_, opts)
-		require("inc_rename").setup(opts)
-
-		-- Noice integration for better UI
-		-- If you're using noice, it will automatically pick up IncRename
-	end,
 }

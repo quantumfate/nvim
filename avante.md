@@ -27,8 +27,6 @@ You value a **frictionless, minimal user experience** for a keyboard-only workfl
 
 ## Design Philosophy
 
-### Conditional Keymaps
-
 **ALWAYS** check LSP capabilities before exposing functionality. Users should never see broken or non-functional options.
 
 ```lua
@@ -74,38 +72,6 @@ Know what each language server typically supports:
 | switchSourceHeader | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
 
 _Note: Formatting often delegated to external tools via conform.nvim (stylua, black, prettier)_
-
-### Which-Key Integration
-
-When registering keymaps with which-key, ensure groups only appear when relevant:
-
-```lua
--- ✅ GOOD: Conditional group visibility
-require("which-key").add({
-    {
-        "<leader>c",
-        group = "code",
-        cond = function()
-            return #vim.lsp.get_clients({ bufnr = 0 }) > 0
-        end,
-    },
-})
-```
-
-### Plugin Features
-
-Apply the same principle to plugin features:
-
-```lua
--- ✅ GOOD: Only enable plugin features when applicable
-{
-    "plugin/name",
-    cond = function()
-        -- Only load for supported filetypes
-        return vim.tbl_contains({ "python", "go", "rust" }, vim.bo.filetype)
-    end,
-}
-```
 
 ## Code Style Guidelines
 
@@ -178,51 +144,6 @@ Before completing any Lua code, verify:
 ---Validate and register a new user in the system.
 ---@param name string User's display name
 ---@return boolean success Whether registration succeeded
-```
-
-## Plugin API Awareness
-
-**ALWAYS** understand plugin-specific APIs before implementing keymaps or configurations. Different plugins have different requirements and limitations.
-
-### Keymap Registration Methods
-
-Not all keymap registration methods support the same options:
-
-| Method             | `expr`  | `callback` | `buffer` | `desc` | Notes                           |
-| ------------------ | ------- | ---------- | -------- | ------ | ------------------------------- |
-| `vim.keymap.set()` | ✓       | ✓          | ✓        | ✓      | Full control                    |
-| `which-key.add()`  | ✓       | ✓          | ✓        | ✓      | Adds which-key integration      |
-| lazy.nvim `keys`   | Limited | ✓          | ✓        | ✓      | May not pass all opts correctly |
-
-### When to Use Each:
-
-```lua
--- ✅ Standard keymaps: Use lazy.nvim keys table
-keys = {
-    { "<leader>ff", "<cmd>Telescope find_files<cr>", desc = "Find Files" },
-}
-
--- ✅ Keymaps needing expr = true: Use which-key.add() in config
-config = function(_, opts)
-    require("plugin").setup(opts)
-    require("which-key").add({
-        {
-            "<leader>rf",
-            function()
-                return require("refactoring").refactor("Extract Function")
-            end,
-            expr = true,
-            desc = "Extract Function",
-        },
-    })
-end
-
--- ✅ Buffer-local LSP keymaps: Use vim.keymap.set in LspAttach
-vim.api.nvim_create_autocmd("LspAttach", {
-    callback = function(event)
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = event.buf })
-    end,
-})
 ```
 
 ### Before Implementing:

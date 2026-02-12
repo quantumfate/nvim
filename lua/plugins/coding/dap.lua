@@ -1,4 +1,28 @@
--- lua/plugins/coding/dap.lua
+--- Debug Adapter Protocol (DAP) configuration for Neovim debugging
+--- Provides comprehensive debugging support for multiple languages with conditional keymaps
+--- @class plugins.coding.dap
+--- @field setup fun(): nil
+
+--- DAP adapter configuration for different debug protocols
+--- @class DapAdapter
+--- @field type string Adapter connection type ("server", "executable", etc.)
+--- @field port? string Port specification for server adapters
+--- @field host? string Host address for server connections
+--- @field executable? table Command and arguments for executable adapters
+--- @field options? table Additional adapter-specific options
+
+--- DAP configuration for language-specific debugging
+--- @class DapConfiguration
+--- @field type string Debug adapter type to use
+--- @field request string Debug request type ("launch", "attach")
+--- @field name string Human-readable configuration name
+--- @field program? string|fun(): string Path to program or function returning path
+--- @field cwd? string Working directory for debug session
+--- @field args? string[]|fun(): string[] Program arguments
+--- @field pythonPath? fun(): string Python interpreter path resolver
+--- @field stopOnEntry? boolean Whether to stop at program entry point
+--- @field processId? fun(): number Process ID picker for attach requests
+
 return {
 	{
 		"mfussenegger/nvim-dap",

@@ -1,3 +1,13 @@
+--- Enhanced Lua development environment with LSP workspace management
+--- Provides intelligent completion and type checking for Neovim Lua development
+---@class plugins.coding.lazydev
+---@field setup fun(): nil
+
+---@class LazydevConfig
+---@field library table[] Library path configurations for type definitions
+---@field integrations table Integration settings for external tools
+---@field enabled boolean|fun(root_dir: string): boolean Whether to enable lazydev
+
 return {
 	"folke/lazydev.nvim",
 	ft = "lua",

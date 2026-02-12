@@ -1,4 +1,8 @@
--- lua/plugins/coding/nvim-lint.lua
+--- Linting plugin with capability-aware configuration
+--- Provides external linter integration with conditional keymap registration
+---@class plugins.coding.nvim_lint
+---@field linters_by_ft table<string, string[]> Linters mapped by filetype
+---@field setup fun(): nil
 return {
 	"mfussenegger/nvim-lint",
 	event = { "User FileOpened" },
@@ -6,7 +10,17 @@ return {
 		{
 			"<leader>cl",
 			function()
-				require("lint").try_lint()
+				local lint = require("lint")
+				local ft = vim.bo.filetype
+				local linters = lint.linters_by_ft[ft] or {}
+
+				if #linters == 0 then
+					Snacks.notify.warn("No linters configured for " .. ft)
+					return
+				end
+
+				lint.try_lint()
+				Snacks.notify.info("Linting with: " .. table.concat(linters, ", "))
 			end,
 			desc = "Lint buffer",
 		},
@@ -20,7 +34,6 @@ return {
 			typescript = { "eslint_d" },
 			javascriptreact = { "eslint_d" },
 			typescriptreact = { "eslint_d" },
-			--lua = { "luacheck" },
 			sh = { "shellcheck" },
 			fish = { "fish" },
 			markdown = { "markdownlint" },
@@ -30,11 +43,15 @@ return {
 			rust = { "rust_analyzer" },
 		}
 
-		-- Lint on events
+		-- Auto-lint on events (only if linters exist)
 		vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
 			group = vim.api.nvim_create_augroup("nvim-lint", { clear = true }),
 			callback = function()
-				lint.try_lint()
+				local ft = vim.bo.filetype
+				local linters = lint.linters_by_ft[ft] or {}
+				if #linters > 0 then
+					lint.try_lint()
+				end
 			end,
 		})
 	end,

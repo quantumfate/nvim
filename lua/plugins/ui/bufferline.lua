@@ -1,3 +1,12 @@
+--- Enhanced buffer tabline with intelligent buffer management
+--- Provides visual buffer navigation with diagnostic integration and capability-aware features
+---@class plugins.ui.bufferline
+---@field setup fun(): nil
+
+---@class BufferlineConfig
+---@field options table Buffer display and interaction options
+---@field highlights? table Theme-specific highlight overrides
+
 return {
 	"akinsho/bufferline.nvim",
 	event = "BufEnter",

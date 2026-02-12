@@ -1,3 +1,22 @@
+--- Capability-aware package management for LSP servers, formatters, linters, and debug adapters
+--- Provides intelligent installation and configuration with ecosystem awareness
+---@class plugins.lang.mason
+---@field setup fun(): nil
+
+---@class MasonPackageList
+---@field lsp_servers string[] Language server packages
+---@field formatters string[] Code formatter packages
+---@field linters string[] Code linter packages
+---@field dap_adapters string[] Debug adapter packages
+
+---@class MasonConfig
+---@field ui table UI configuration for Mason interface
+---@field ensure_installed string[] Packages to automatically install
+---@field automatic_installation boolean Whether to auto-install packages
+---@field handlers table<string, fun(server_name: string)> Server setup handlers
+
+--- LSP servers with capability awareness
+---@type string[]
 local lsp_servers = {
 	"lua_ls",
 	"basedpyright",
@@ -6,6 +25,8 @@ local lsp_servers = {
 	"gopls",
 }
 
+--- External formatters for languages where LSP doesn't provide formatting
+---@type string[]
 local formatters = {
 	"stylua",
 	"prettierd",
@@ -15,6 +36,8 @@ local formatters = {
 	"rustup",
 }
 
+--- External linters for additional code quality checks
+---@type string[]
 local linters = {
 	"eslint_d",
 	"shellcheck",
@@ -24,6 +47,8 @@ local linters = {
 	"hadolint",
 }
 
+--- Debug adapters for supported languages
+---@type string[]
 local dap_adapters = {
 	"debugpy", -- Python (was "python")
 	"codelldb", -- Rust/C/C++

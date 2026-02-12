@@ -1,7 +1,24 @@
+--- Advanced search and replace with live preview and project-wide operations
+--- Provides powerful find/replace functionality with capability-aware conditional loading
+---@class plugins.editor.spectre
+---@field setup fun(): nil
+
+---@class SpectreConfig
+---@field open_cmd string Command to open spectre window
+---@field live_update boolean Whether to update results in real time
+---@field is_insert_mode boolean Whether to start in insert mode
+---@field mapping table<string, SpectreMapping> Key mappings for spectre operations
+
+---@class SpectreMapping
+---@field map string Key sequence for the mapping
+---@field cmd string Command to execute
+---@field desc string Description for the mapping
+
 return {
 	"nvim-pack/nvim-spectre",
 	dependencies = { "nvim-lua/plenary.nvim" },
 	cmd = "Spectre",
+	---@type SpectreConfig
 	opts = {
 		open_cmd = "noswapfile vnew",
 		live_update = true,
@@ -70,34 +87,45 @@ return {
 		},
 	},
 	keys = {
-		{
-			"<leader>sr",
-			function()
-				require("spectre").open()
-			end,
-			desc = "Replace in Files (Spectre)",
-		},
-		{
-			"<leader>sw",
-			function()
-				require("spectre").open_visual({ select_word = true })
-			end,
-			desc = "Replace Word (Spectre)",
-		},
-		{
-			"<leader>sw",
-			function()
-				require("spectre").open_visual()
-			end,
-			mode = "v",
-			desc = "Replace Selection (Spectre)",
-		},
-		{
-			"<leader>sf",
-			function()
-				require("spectre").open_file_search({ select_word = true })
-			end,
-			desc = "Replace in Current File (Spectre)",
-		},
+		{ "<leader>sr", desc = "Replace in Files (Spectre)" },
+		{ "<leader>sw", desc = "Replace Word (Spectre)" },
+		{ "<leader>sw", mode = "v", desc = "Replace Selection (Spectre)" },
+		{ "<leader>sf", desc = "Replace in Current File (Spectre)" },
 	},
+	config = function(_, opts)
+		require("spectre").setup(opts)
+
+		-- Register conditional keymaps via which-key
+		require("which-key").add({
+			{
+				"<leader>sr",
+				function()
+					require("spectre").open()
+				end,
+				desc = "Replace in Files (Spectre)",
+			},
+			{
+				"<leader>sw",
+				function()
+					require("spectre").open_visual({ select_word = true })
+				end,
+				desc = "Replace Word (Spectre)",
+			},
+			{
+				"<leader>sw",
+				function()
+					require("spectre").open_visual()
+				end,
+				mode = "v",
+				desc = "Replace Selection (Spectre)",
+			},
+			{
+				"<leader>sf",
+				function()
+					require("spectre").open_file_search({ select_word = true })
+				end,
+				desc = "Replace in Current File (Spectre)",
+			},
+		})
+	end,
 }

@@ -80,36 +80,83 @@ return {
 		},
 		spec = {
 			{
-
 				mode = { "n", "x" },
+				-- Core groups - always available
 				{ "<leader><tab>", group = "tabs" },
 				{ "<leader>b", group = "buffer" },
 				{ "<leader>bd", group = "delete" },
-				{ "<leader>a", group = "avante" },
-				{ "<leader>ap", group = "providers" },
-				{ "<leader>ad", group = "diff" },
-				{ "<leader>af", group = "file" },
-				{ "<leader>at", group = "templates" },
-				{ "<leader>c", group = "code" },
-				{ "<leader>d", group = "debug" },
-				{ "<leader>dp", group = "profiler" },
 				{ "<leader>f", group = "file/find" },
-				{ "<leader>g", group = "git" },
-				{ "<leader>gh", group = "hunks" },
 				{ "<leader>q", group = "quit/session" },
-				{ "<leader>r", group = "refactor" },
 				{ "<leader>s", group = "search" },
 				{ "<leader>t", group = "toggle" },
 				{ "<leader>u", group = "ui" },
 				{ "<leader>w", group = "windows", proxy = "<c-w>" },
 				{ "<leader>ue", group = "edgy" },
-				{ "<leader>x", group = "diagnostics/quickfix" },
-				{ "[", group = "prev" },
-				{ "]", group = "next" },
-				{ "g", group = "goto" },
-				{ "gs", group = "surround" },
-				{ "z", group = "fold" },
-				-- better descriptions
+				{ "<leader>a", group = "avante" },
+				{ "<leader>ap", group = "providers" },
+				{
+					"<leader>ad",
+					group = "diff",
+				},
+				{
+					"<leader>af",
+					group = "file",
+				},
+				{
+					"<leader>at",
+					group = "templates",
+				},
+				{
+					"<leader>c",
+					group = "code",
+				},
+				{
+					"<leader>d",
+					group = "debug",
+				},
+				{
+					"<leader>dp",
+					group = "profiler",
+				},
+				{
+					"<leader>g",
+					group = "git",
+				},
+				{
+					"<leader>gh",
+					group = "hunks",
+				},
+				{
+					"<leader>r",
+					group = "refactor",
+				},
+				{
+					"<leader>x",
+					group = "diagnostics/quickfix",
+				},
+				-- Navigation groups - context dependent
+				{
+					"[",
+					group = "prev",
+				},
+				{
+					"]",
+					group = "next",
+				},
+				{
+					"g",
+					group = "goto",
+				},
+				{
+					"gs",
+					group = "surround",
+				},
+				{
+					"z",
+					group = "fold",
+				},
+
+				-- Better descriptions
 				{ "gx", desc = "Open with system app" },
 			},
 		},

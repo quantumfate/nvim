@@ -1,3 +1,14 @@
+--- Enhanced statusline with intelligent component display and capability awareness
+--- Provides contextual information with performance-optimized updates and conditional visibility
+---@class plugins.ui.lualine
+---@field setup fun(): nil
+
+---@class LualineConfig
+---@field options table Statusline appearance and behavior configuration
+---@field sections table Component layout for active statusline sections
+---@field inactive_sections table Component layout for inactive windows
+---@field extensions string[] Plugin extensions to load
+
 return {
 	"nvim-lualine/lualine.nvim",
 	dependencies = {
