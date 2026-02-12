@@ -15,20 +15,20 @@ local M = {
 		root_markers = { ".luarc.json", ".luarc.jsonc", ".luacheckrc", ".stylua.toml", "stylua.toml", ".git" },
 		settings = {
 			Lua = {
-				runtime = {
-					version = "LuaJIT",
-					path = vim.split(package.path, ";"),
+				runtime = { version = "LuaJIT" },
+
+				workspace = {
+					checkThirdParty = false,
+					-- Remove library - let lazydev manage it
+					-- Reduce these if still slow:
+					maxPreload = 2000,
+					preloadFileSize = 1000,
 				},
 				diagnostics = {
 					globals = { "vim", "Snacks", "icons" },
 					disable = { "missing-fields" },
 				},
-				workspace = {
-					checkThirdParty = false,
-					library = vim.api.nvim_get_runtime_file("", true),
-					maxPreload = 100000,
-					preloadFileSize = 10000,
-				},
+
 				telemetry = { enable = false },
 				codeLens = { enable = true },
 				completion = {
