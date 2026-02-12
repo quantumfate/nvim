@@ -109,43 +109,126 @@ return {
 		--- Standard LSP keymaps with capability checks
 		---@type LspKeymapConfig[]
 		local lsp_keymaps = {
-			-- Core navigation
+			-- Core navigation (using Snacks picker)
 			{
 				keys = "gd",
-				func = vim.lsp.buf.definition,
+				func = function()
+					Snacks.picker.lsp_definitions()
+				end,
 				desc = "Goto Definition",
 				method = "textDocument/definition",
 			},
 			{
 				keys = "gD",
-				func = vim.lsp.buf.declaration,
+				func = function()
+					Snacks.picker.lsp_declarations()
+				end,
 				desc = "Goto Declaration",
 				method = "textDocument/declaration",
 			},
-			{ keys = "gr", func = vim.lsp.buf.references, desc = "References", method = "textDocument/references" },
+			{
+				keys = "gr",
+				func = function()
+					Snacks.picker.lsp_references()
+				end,
+				desc = "References",
+				method = "textDocument/references",
+			},
 			{
 				keys = "gI",
-				func = vim.lsp.buf.implementation,
+				func = function()
+					Snacks.picker.lsp_implementations()
+				end,
 				desc = "Goto Implementation",
 				method = "textDocument/implementation",
 			},
 			{
 				keys = "gy",
-				func = vim.lsp.buf.type_definition,
+				func = function()
+					Snacks.picker.lsp_type_definitions()
+				end,
 				desc = "Type Definition",
 				method = "textDocument/typeDefinition",
 			},
 
+			-- Override Neovim 0.11 gr* defaults
+			{
+				keys = "grr",
+				func = function()
+					Snacks.picker.lsp_references()
+				end,
+				desc = "References",
+				method = "textDocument/references",
+			},
+			{
+				keys = "gri",
+				func = function()
+					Snacks.picker.lsp_implementations()
+				end,
+				desc = "Goto Implementation",
+				method = "textDocument/implementation",
+			},
+			{
+				keys = "grt",
+				func = function()
+					Snacks.picker.lsp_type_definitions()
+				end,
+				desc = "Type Definition",
+				method = "textDocument/typeDefinition",
+			},
+			{
+				keys = "grn",
+				func = function()
+					local modules = require("util.modules")
+					if modules.is_loaded("inc-rename.nvim") then
+						return ":IncRename " .. vim.fn.expand("<cword>")
+					else
+						vim.lsp.buf.rename()
+						return ""
+					end
+				end,
+				expr = true,
+				desc = "Rename",
+				method = "textDocument/rename",
+			},
+			{
+				keys = "gra",
+				func = vim.lsp.buf.code_action,
+				desc = "Code Action",
+				method = "textDocument/codeAction",
+				mode = { "n", "v" },
+			},
+			{
+				keys = "gO",
+				func = function()
+					Snacks.picker.lsp_symbols()
+				end,
+				desc = "Document Symbols",
+				method = "textDocument/documentSymbol",
+			},
+
 			-- Documentation
-			{ keys = "K", func = vim.lsp.buf.hover, desc = "Hover Documentation", method = "textDocument/hover" },
+			{
+				keys = "K",
+				func = vim.lsp.buf.hover,
+				desc = "Hover Documentation",
+				method = "textDocument/hover",
+			},
 			{
 				keys = "gK",
 				func = vim.lsp.buf.signature_help,
 				desc = "Signature Help",
 				method = "textDocument/signatureHelp",
 			},
+			{
+				keys = "<C-s>",
+				func = vim.lsp.buf.signature_help,
+				desc = "Signature Help",
+				method = "textDocument/signatureHelp",
+				mode = "i",
+			},
 
-			-- Code actions and refactoring
+			-- Code actions and refactoring (leader keymaps)
 			{
 				keys = "<leader>ca",
 				func = vim.lsp.buf.code_action,
@@ -155,29 +238,26 @@ return {
 			},
 			{
 				keys = "<leader>cr",
-				func = vim.lsp.buf.rename,
+				func = function()
+					local modules = require("util.modules")
+					if modules.is_loaded("inc-rename.nvim") then
+						return ":IncRename " .. vim.fn.expand("<cword>")
+					else
+						vim.lsp.buf.rename()
+						return ""
+					end
+				end,
+				expr = true,
 				desc = "Rename",
 				method = "textDocument/rename",
 			},
-			{
-				keys = "<leader>cR",
-				func = function()
-					return ":IncRename " .. vim.fn.expand("<cword>")
-				end,
-				desc = "Inc-Rename",
-				expr = true,
-				method = "textDocument/rename",
-			},
-			-- Formatting (only for servers that support it)
-			{
-				keys = "<leader>cf",
-				func = vim.lsp.buf.format,
-				desc = "Format Document",
-				method = "textDocument/formatting",
-			},
 
-			-- Diagnostics (always available - not server-specific)
-			{ keys = "<leader>cd", func = vim.diagnostic.open_float, desc = "Line Diagnostics" },
+			-- Diagnostics (always available)
+			{
+				keys = "<leader>cd",
+				func = vim.diagnostic.open_float,
+				desc = "Line Diagnostics",
+			},
 			{
 				keys = "]d",
 				func = function()
@@ -193,10 +273,10 @@ return {
 				desc = "Prev Diagnostic",
 			},
 		}
-
 		-- Capability-aware keymap registration on LSP attach
 		vim.api.nvim_create_autocmd("LspAttach", {
 			group = vim.api.nvim_create_augroup("lsp_attach", { clear = true }),
+
 			callback = function(event)
 				local client = vim.lsp.get_client_by_id(event.data.client_id)
 				if not client then

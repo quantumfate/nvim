@@ -5,8 +5,7 @@
 
 ## TODO
 
-- [ ] lsp mappings based on capabilities?
-  - [ ] eventually as local buffer mappings?
+- [ ] Fix unknown lsp gr mappings
 
 ## Dependencies
 
