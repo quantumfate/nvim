@@ -115,7 +115,11 @@ return {
 							-- Open file and review with Avante
 							vim.cmd("edit " .. node.path)
 							vim.cmd("AvanteAsk")
-							vim.api.nvim_feedkeys("Review this code for potential issues and suggest improvements:", "n", false)
+							vim.api.nvim_feedkeys(
+								"Review this code for potential issues and suggest improvements:",
+								"n",
+								false
+							)
 						end
 					end,
 					desc = "Avante: Code review",

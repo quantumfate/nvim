@@ -59,21 +59,13 @@ end
 ---@return string|nil method_list Formatted list of registered methods or nil if unavailable
 function lualine_util.get_registered_methods(method, sep)
 	local buf_ft = vim.bo.filetype
-	local ok, method_service =
-		pcall(require, "qvim.lang.null-ls.methodservice." .. method)
+	local ok, method_service = pcall(require, "qvim.lang.null-ls.methodservice." .. method)
 	if ok then
 		local supported_diagnostics = method_service:list_registered(buf_ft)
 		if method == "code_actions" then
-			return lualine_util.unique_list_string_format(
-				supported_diagnostics,
-				sep
-			)
+			return lualine_util.unique_list_string_format(supported_diagnostics, sep)
 		else
-			return lualine_util.unique_list_string_format(
-				supported_diagnostics,
-				sep,
-				2
-			)
+			return lualine_util.unique_list_string_format(supported_diagnostics, sep, 2)
 		end
 	else
 		return nil
@@ -108,7 +100,6 @@ function lualine_util.shorten_branch_name(branch_name, max_length)
 	if #branch_name <= max_length then
 		return branch_name
 	end
-
 
 	local parts = {}
 	for part in string.gmatch(branch_name, "([^-%/]+)") do

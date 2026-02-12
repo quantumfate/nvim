@@ -42,10 +42,10 @@ return {
 		},
 		color_overrides = {},
 		default_integrations = true,
-			auto_integrations = true,
-			integrations = {
-				neo_tree = true,
-			},
+		auto_integrations = true,
+		integrations = {
+			neo_tree = true,
+		},
 
 		custom_highlights = function(colors)
 			return {
