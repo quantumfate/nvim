@@ -9,7 +9,7 @@
 
 return {
 	"akinsho/bufferline.nvim",
-	event = "BufEnter",
+	event = "User FileOpened",
 	dependencies = { "nvim-tree/nvim-web-devicons", "nvim-mini/mini.nvim" },
 	config = function(_, opts)
 		opts.highlights = require("catppuccin.special.bufferline").get_theme()

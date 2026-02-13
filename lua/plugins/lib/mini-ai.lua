@@ -1,6 +1,6 @@
 return {
 	"nvim-mini/mini.ai",
-	event = "VeryLazy",
+	event = "User FileOpened",
 	opts = function()
 		local ai = require("mini.ai")
 		return {

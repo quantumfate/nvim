@@ -15,7 +15,7 @@ return {
 		"nvim-tree/nvim-web-devicons",
 		"catppuccin/nvim",
 	},
-	event = "VimEnter",
+	event = "User FileOpened",
 	opts = function()
 		local color = require("util.plugins.lualine.color")
 		local lualine_components = require("util.plugins.lualine.components")

@@ -34,8 +34,9 @@ return {
 			javascriptreact = { "eslint_d" },
 			typescriptreact = { "eslint_d" },
 			vue = { "eslint_d" },
-			sh = { "shellcheck" },
-			bash = { "shellcheck" },
+			-- bash_ls already does this
+			-- sh = { "shellcheck" },
+			-- bash = { "shellcheck" },
 			markdown = { "markdownlint" },
 			yaml = { "yamllint" },
 			["yaml.ansible"] = { "ansible_lint" },

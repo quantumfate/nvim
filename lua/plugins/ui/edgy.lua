@@ -12,7 +12,6 @@
 
 return {
 	"folke/edgy.nvim",
-	event = "VeryLazy",
 	keys = {
 		{ "<leader>ued", desc = "Edgy: Diagnostics View" },
 		{ "<leader>uel", desc = "Edgy: LSP View" },

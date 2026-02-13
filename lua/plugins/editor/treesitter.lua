@@ -15,7 +15,7 @@ return {
 		version = false,
 		build = ":TSUpdate",
 		branch = "main",
-		event = { "BufReadPost", "BufNewFile", "VeryLazy" },
+		event = { "VeryLazy" },
 		cmd = { "TSUpdate", "TSInstall", "TSUninstall" },
 		opts = {
 			ensure_installed = {
@@ -109,8 +109,7 @@ return {
 	{
 		"nvim-treesitter/nvim-treesitter-textobjects",
 		branch = "main",
-		event = "VeryLazy",
-		dependencies = { "nvim-treesitter/nvim-treesitter" },
+		event = "User FileOpened",
 		config = function()
 			local move = require("nvim-treesitter-textobjects.move")
 
@@ -142,6 +141,11 @@ return {
 	{
 		"windwp/nvim-ts-autotag",
 		event = "BufReadPost",
+		opts = {},
+	},
+	{
+		"folke/ts-comments.nvim",
+		event = "User FileType",
 		opts = {},
 	},
 }

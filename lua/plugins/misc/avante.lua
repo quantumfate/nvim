@@ -3,7 +3,6 @@ return {
 	-- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
 	-- ⚠️ must add this setting! ! !
 	build = "make",
-	event = "VeryLazy",
 	version = false, -- Never set this value to "*"! Never!
 	init = function()
 		vim.opt.laststatus = 3
@@ -214,7 +213,6 @@ This is a [describe your project] project.
 		{
 			-- support for image pasting
 			"HakonHarnes/img-clip.nvim",
-			event = "VeryLazy",
 			opts = {
 				-- recommended settings
 				default = {

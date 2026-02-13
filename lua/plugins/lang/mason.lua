@@ -69,6 +69,7 @@ return {
 	-- Mason: Package manager
 	{
 		"williamboman/mason.nvim",
+		event = "VimEnter",
 		cmd = "Mason",
 		keys = {
 			{ "<leader>um", "<cmd>Mason<cr>", desc = "Mason" },
@@ -99,10 +100,13 @@ return {
 		end,
 	},
 
+	-- The bridges aren't really needed atm
+
 	-- LSP servers
 	{
 		"williamboman/mason-lspconfig.nvim",
 		dependencies = { "mason.nvim" },
+		enabled = false,
 		opts = {
 			ensure_installed = lsp_servers,
 			automatic_installation = false,
@@ -114,6 +118,7 @@ return {
 	{
 		"zapling/mason-conform.nvim",
 		dependencies = { "mason.nvim", "stevearc/conform.nvim" },
+		enabled = false,
 		opts = {
 			ensure_installed = formatters,
 			automatic_installation = false,
@@ -124,6 +129,7 @@ return {
 	{
 		"rshkarin/mason-nvim-lint",
 		dependencies = { "mason.nvim", "mfussenegger/nvim-lint" },
+		enabled = false,
 		opts = {
 			ensure_installed = linters,
 			automatic_installation = false,
@@ -134,9 +140,11 @@ return {
 	{
 		"jay-babu/mason-nvim-dap.nvim",
 		dependencies = { "mason.nvim", "mfussenegger/nvim-dap" },
+		enabled = false,
 		opts = {
 			ensure_installed = dap_adapters,
 			automatic_installation = false,
+			automatic_enable = false,
 			handlers = {},
 		},
 	},
