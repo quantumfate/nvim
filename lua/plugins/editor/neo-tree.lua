@@ -84,58 +84,9 @@ return {
 					end,
 					desc = "Open with System Application",
 				},
-				["P"] = { "toggle_preview", config = { use_float = false } },
-				-- Avante integration mappings
-				["aa"] = {
-					function(state)
-						local node = state.tree:get_node()
-						if node.type == "file" then
-							-- Open file and ask Avante about it
-							vim.cmd("edit " .. node.path)
-							vim.cmd("AvanteAsk")
-						end
-					end,
-					desc = "Avante: Ask about file",
-				},
-				["ae"] = {
-					function(state)
-						local node = state.tree:get_node()
-						if node.type == "file" then
-							-- Open file and edit with Avante
-							vim.cmd("edit " .. node.path)
-							vim.cmd("AvanteEdit")
-						end
-					end,
-					desc = "Avante: Edit file",
-				},
-				["ar"] = {
-					function(state)
-						local node = state.tree:get_node()
-						if node.type == "file" then
-							-- Open file and review with Avante
-							vim.cmd("edit " .. node.path)
-							vim.cmd("AvanteAsk")
-							vim.api.nvim_feedkeys(
-								"Review this code for potential issues and suggest improvements:",
-								"n",
-								false
-							)
-						end
-					end,
-					desc = "Avante: Code review",
-				},
-				["ad"] = {
-					function(state)
-						local node = state.tree:get_node()
-						if node.type == "file" then
-							-- Open file and document with Avante
-							vim.cmd("edit " .. node.path)
-							vim.cmd("AvanteAsk")
-							vim.api.nvim_feedkeys("Add comprehensive documentation to this code:", "n", false)
-						end
-					end,
-					desc = "Avante: Add documentation",
-				},
+				["P"] = { "toggle_preview", config = { use_float = true } },
+				["<a-v>"] = "open_vsplit",
+				["<a-s>"] = "open_split",
 			},
 		},
 		default_component_configs = {

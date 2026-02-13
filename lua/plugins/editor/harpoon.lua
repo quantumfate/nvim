@@ -37,28 +37,28 @@ return {
 			desc = "Harpoon picker",
 		},
 		{
-			"<C-h>",
+			"<S-h>",
 			function()
 				require("harpoon"):list():select(1)
 			end,
 			desc = "Harpoon 1",
 		},
 		{
-			"<C-n>",
+			"<S-n>",
 			function()
 				require("harpoon"):list():select(2)
 			end,
 			desc = "Harpoon 2",
 		},
 		{
-			"<C-t>",
+			"<S-t>",
 			function()
 				require("harpoon"):list():select(3)
 			end,
 			desc = "Harpoon 3",
 		},
 		{
-			"<C-s>",
+			"<S-s>",
 			function()
 				require("harpoon"):list():select(4)
 			end,

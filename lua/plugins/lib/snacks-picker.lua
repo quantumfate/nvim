@@ -10,6 +10,8 @@ return {
 							"toggle_cwd",
 							mode = { "n", "i" },
 						},
+						["<a-v>"] = { "edit_vsplit", mode = { "n", "i" } },
+						["<a-s>"] = { "edit_split", mode = { "n", "i" } },
 						-- Swap Tab/S-Tab with C-j/C-k
 						["<Tab>"] = { "list_down", mode = { "n", "i" } },
 						["<S-Tab>"] = { "list_up", mode = { "n", "i" } },

@@ -84,6 +84,7 @@ return {
 				-- Core groups - always available
 				{ "<leader><tab>", group = "tabs" },
 				{ "<leader>b", group = "buffer" },
+				{ "<leader>h", group = "harpoon" },
 				{ "<leader>bd", group = "delete" },
 				{ "<leader>f", group = "file/find" },
 				{ "<leader>q", group = "quit/session" },
