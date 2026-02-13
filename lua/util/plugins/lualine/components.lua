@@ -256,4 +256,21 @@ return {
 		color = function() return { fg = Snacks.util.color("Special") } end,
 		separator = { left = "" }
 	},
+	harpoon = {
+		function()
+			local harpoon = require("harpoon")
+			local list = harpoon:list()
+			local current = vim.fn.expand("%:p:.")
+
+			for i, item in ipairs(list.items) do
+				if item.value == current then
+					return "󰛢 " .. i
+				end
+			end
+			return ""
+		end,
+		cond = function()
+			return package.loaded["harpoon"] ~= nil
+		end,
+	},
 }

@@ -105,6 +105,7 @@ return {
 					lualine_components.progress,
 				},
 				lualine_z = {
+					lualine_components.harpoon,
 					lualine_components.lsp,
 				},
 			},
