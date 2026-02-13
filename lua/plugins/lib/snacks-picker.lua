@@ -33,7 +33,7 @@ return {
 	},
 	keys = {
 		{
-			"<leader><space>",
+			"<leader><cr>",
 			function()
 				Snacks.picker.smart()
 			end,
