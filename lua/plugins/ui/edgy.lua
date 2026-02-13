@@ -12,6 +12,7 @@
 
 return {
 	"folke/edgy.nvim",
+	event = "LspAttach",
 	keys = {
 		{ "<leader>ued", desc = "Edgy: Diagnostics View" },
 		{ "<leader>uel", desc = "Edgy: LSP View" },

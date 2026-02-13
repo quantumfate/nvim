@@ -1,6 +1,13 @@
 # My neovim config
 
 ![nvim](./assets/nvim.png)
+
+## Minimum effort lazy loading
+
+![lazy](./assets/lazy.png)
+
+## Depugging
+
 ![debug](./assets/depug.png)
 
 ## Dependencies
@@ -14,6 +21,8 @@
 - npm
 - python
 - ripgrep
+
+neovim git ripgrep fd fzf rust nodejs npm
 
 ## Remarks
 
