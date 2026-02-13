@@ -13,6 +13,14 @@ return {
 			edit = {
 				watch = false,
 				force = false,
+				ignore_patterns = {
+					"run_onchange_.*",
+					"run_once_.*",
+					"%.chezmoiignore",
+					"%.chezmoitemplate",
+					"%.sh.tmpl",
+					"%.tmpl",
+				},
 			},
 			notification = {
 				on_open = true,
