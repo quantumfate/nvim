@@ -6,7 +6,7 @@
 
 ![lazy](./assets/lazy.png)
 
-## Depugging
+## Debugging
 
 ![debug](./assets/depug.png)
 
@@ -21,8 +21,6 @@
 - npm
 - python
 - ripgrep
-
-neovim git ripgrep fd fzf rust nodejs npm
 
 ## Remarks
 
