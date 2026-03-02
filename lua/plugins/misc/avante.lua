@@ -12,38 +12,20 @@ return {
 		-- this file can contain specific instructions for your project
 		instructions_file = "avante.md",
 		-- for example
-		provider = "claude",
+		provider = "ollama",
 		providers = {
-			claude = {
-				endpoint = "https://api.anthropic.com",
-				model = "claude-sonnet-4-20250514",
-				timeout = 120000, -- Timeout in milliseconds
-				extra_request_body = {
-					temperature = 0.75,
-					max_tokens = 20480,
-				},
+			ollama = {
+				model = "qwen2.5-coder:32b",
+				is_env_set = require("avante.providers.ollama").check_endpoint_alive,
 			},
 		},
 		file_selector = {
-			provider = "snacks",
-			-- Options override for custom providers
-			-- provider_opts = {},
+			provider = "snacks", -- Options override for custom providers provider_opts = {},
 		},
 		selector = {
 			provider = "snacks",
 			-- provider_opts = {},
 			-- exclude_auto_select = {}, -- List of items to exclude from auto selection
-		},
-		acp_providers = {
-			["claude-code"] = {
-				command = "npx",
-				args = { "@zed-industries/claude-code-acp" },
-				env = {
-					NODE_NO_WARNINGS = "1",
-					ANTHROPIC_API_KEY = os.getenv("AVANTE_ANTHROPIC_API_KEY"),
-					CLAUDE_CODE_OAUTH_TOKEN = os.getenv("AVANTE_CLAUDE_CODE_OAUTH_TOKEN"),
-				},
-			},
 		},
 	},
 	keys = {
@@ -58,32 +40,32 @@ return {
 		{ "<leader>at", "<cmd>AvanteToggle<cr>", desc = "Avante: Toggle" },
 
 		-- Provider switching
-		{
-			"<leader>apc",
-			function()
-				require("avante.config").override({ provider = "claude" })
-				vim.notify("Switched to Claude provider", vim.log.levels.INFO)
-			end,
-			desc = "Avante: Switch to Claude",
-		},
+		--{
+		--	"<leader>apc",
+		--	function()
+		--		require("avante.config").override({ provider = "claude" })
+		--		vim.notify("Switched to Claude provider", vim.log.levels.INFO)
+		--	end,
+		--	desc = "Avante: Switch to Claude",
+		--},
 
-		{
-			"<leader>apo",
-			function()
-				require("avante.config").override({ provider = "openai" })
-				vim.notify("Switched to OpenAI provider", vim.log.levels.INFO)
-			end,
-			desc = "Avante: Switch to OpenAI",
-		},
+		-- {
+		-- 	"<leader>apo",
+		-- 	function()
+		-- 		require("avante.config").override({ provider = "openai" })
+		-- 		vim.notify("Switched to OpenAI provider", vim.log.levels.INFO)
+		-- 	end,
+		-- 	desc = "Avante: Switch to OpenAI",
+		-- },
 
-		{
-			"<leader>apg",
-			function()
-				require("avante.config").override({ provider = "gemini" })
-				vim.notify("Switched to Gemini provider", vim.log.levels.INFO)
-			end,
-			desc = "Avante: Switch to Gemini",
-		},
+		-- {
+		-- 	"<leader>apg",
+		-- 	function()
+		-- 		require("avante.config").override({ provider = "gemini" })
+		-- 		vim.notify("Switched to Gemini provider", vim.log.levels.INFO)
+		-- 	end,
+		-- 	desc = "Avante: Switch to Gemini",
+		-- },
 
 		-- Quick actions
 		{ "<leader>aq", "<cmd>AvanteAsk<cr>", desc = "Avante: Quick Ask" },
