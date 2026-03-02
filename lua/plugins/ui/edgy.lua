@@ -13,14 +13,6 @@
 return {
 	"folke/edgy.nvim",
 	event = "LspAttach",
-	keys = {
-		{ "<leader>ued", desc = "Edgy: Diagnostics View" },
-		{ "<leader>uel", desc = "Edgy: LSP View" },
-		{ "<leader>uef", desc = "Edgy: Focus View" },
-		{ "<leader>ueb", desc = "Edgy: Debug View" },
-		{ "<leader>ue0", desc = "Edgy: Close All" },
-		{ "<leader>ues", desc = "Edgy Select Window" },
-	},
 	init = function()
 		vim.opt.laststatus = 3
 		vim.opt.splitkeep = "screen"
