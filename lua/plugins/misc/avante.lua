@@ -16,7 +16,9 @@ return {
 		providers = {
 			ollama = {
 				model = "qwen2.5-coder:32b",
-				is_env_set = require("avante.providers.ollama").check_endpoint_alive,
+				is_env_set = function()
+					return require("avante.providers.ollama").check_endpoint_alive()
+				end,
 			},
 		},
 		file_selector = {
