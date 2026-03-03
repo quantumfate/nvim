@@ -178,6 +178,10 @@ return {
 	},
 	init = function()
 		local wk = require("which-key")
+		wk.add({
+			{ "<C-f>", "<cmd>silent !tmux neww tms<CR>", desc = "Create a new tms session" },
+			{ "<C-s>", "<cmd>silent !tmux neww tms switch<CR>", desc = "Quick switch sessions" },
+		})
 
 		wk.add({
 			-- Existing navigation...
