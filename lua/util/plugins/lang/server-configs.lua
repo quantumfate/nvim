@@ -277,6 +277,7 @@ local M = {
 		filetypes = { "vue" },
 		root_markers = { "package.json", "vue.config.js" },
 	},
+	qmlls = {},
 }
 
 return M
