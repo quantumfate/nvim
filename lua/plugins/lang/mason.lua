@@ -29,6 +29,7 @@ local lsp_servers = {
 	"ansiblels",
 	"tailwindcss",
 	"bashls",
+	"qmlls",
 }
 
 --- External formatters for languages where LSP doesn't provide formatting

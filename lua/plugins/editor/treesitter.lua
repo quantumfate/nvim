@@ -51,6 +51,7 @@ return {
 				"vue",
 				"xml",
 				"yaml",
+				"qml",
 			},
 			highlight = { enable = true },
 			indent = { enable = true },
