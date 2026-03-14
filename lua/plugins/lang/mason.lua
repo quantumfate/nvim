@@ -42,6 +42,7 @@ local formatters = {
 	"shfmt",
 	"clang-format",
 	"goimports",
+	"rustfmt",
 }
 
 --- External linters for additional code quality checks
