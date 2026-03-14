@@ -55,7 +55,7 @@ return {
 					Snacks.terminal.toggle()
 				end
 			end,
-			desc = "Toggle termminal",
+			desc = "Toggle terminal",
 		},
 	},
 }

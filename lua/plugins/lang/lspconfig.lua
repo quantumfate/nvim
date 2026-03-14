@@ -108,9 +108,9 @@ return {
 		-- Apply server configurations
 		local server_configs = require("util.plugins.lang.server-configs")
 		for server, config in pairs(server_configs) do
-			vim.lsp.config[server] = config
+			local strategy = config.strategy or "force"
+			vim.lsp.config[server] = vim.tbl_deep_extend(strategy, vim.lsp.config[server] or {}, config)
 		end
-
 		-- Enable configured servers
 		local servers = vim.tbl_keys(server_configs)
 		vim.lsp.enable(servers)
@@ -128,7 +128,7 @@ return {
 			local lines = { "# LSP Capabilities for current buffer\n" }
 			for _, client in ipairs(clients) do
 				table.insert(lines, "## " .. client.name .. "\n")
-				local expected = require("util.util.plugins.lang.capabilities")[client.name] or {}
+				local expected = require("util.plugins.lang.capabilities")[client.name] or {}
 
 				for capability, expected_support in pairs(expected) do
 					local method_map = {

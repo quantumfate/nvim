@@ -1,14 +1,15 @@
 ---@class LspServerConfig
----@field cmd string[] Command and arguments to start the language server
----@field filetypes string[] File types this server should handle
----@field root_markers string[] Files/directories that indicate project root
+---@field strategy? string force|keep
+---@field cmd? string[] Command and arguments to start the language server
+---@field filetypes? string[] File types this server should handle
+---@field root_markers? string[] Files/directories that indicate project root
 ---@field settings? table Server-specific settings
 ---@field init_options? table Initialization options passed to server
 ---@field capabilities? table Server capability overrides
 
 -- Server configurations with comprehensive settings
 ---@type table<string, LspServerConfig>
-local M = {
+local configs = {
 	lua_ls = {
 		cmd = { "lua-language-server" },
 		filetypes = { "lua" },
@@ -278,6 +279,12 @@ local M = {
 		root_markers = { "package.json", "vue.config.js" },
 	},
 	qmlls = {},
+	codebook = {},
 }
 
+local M = {}
+for server, config in pairs(configs) do
+	-- merge with vim.lsp.config by default
+	M[server] = setmetatable(config, { __index = { strategy = "force" } })
+end
 return M
