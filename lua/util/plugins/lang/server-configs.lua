@@ -222,13 +222,13 @@ local configs = {
 	},
 	bashls = {
 		cmd = { "bash-language-server", "start" },
-		filetypes = { "sh", "bash" },
 		root_markers = { ".git" },
 		settings = {
 			bashIde = {
-				globPattern = "*@(.sh|.inc|.bash|.command)",
+				globPattern = "*@(.sh|.inc|.bash|.command|PKGBUILD)",
 			},
 		},
+		filetypes = { "sh", "bash", "PKGBUILD" },
 	},
 
 	clangd = {
