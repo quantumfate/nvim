@@ -105,11 +105,27 @@ return {
 			},
 		})
 
+		-- In lspconfig.lua config function, before the server loop:
+		vim.lsp.config("*", {
+			capabilities = require("blink.cmp").get_lsp_capabilities({
+				textDocument = {
+					foldingRange = {
+						dynamicRegistration = false,
+						lineFoldingOnly = true,
+					},
+				},
+				workspace = {
+					didChangeWatchedFiles = {
+						dynamicRegistration = true,
+					},
+				},
+			}, true),
+		})
 		-- Apply server configurations
 		local server_configs = require("util.plugins.lang.server-configs")
+
 		for server, config in pairs(server_configs) do
-			local strategy = config.strategy or "force"
-			vim.lsp.config[server] = vim.tbl_deep_extend(strategy, vim.lsp.config[server] or {}, config)
+			vim.lsp.config[server] = vim.tbl_deep_extend("keep", vim.lsp.config[server] or {}, config)
 		end
 		-- Enable configured servers
 		local servers = vim.tbl_keys(server_configs)

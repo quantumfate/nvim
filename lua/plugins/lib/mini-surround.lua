@@ -1,5 +1,6 @@
 return {
 	"nvim-mini/mini.surround",
+	event = "User FileOpened",
 	opts = {
 		-- Use 'gs' prefix instead of 's' to avoid conflicts
 		mappings = {
