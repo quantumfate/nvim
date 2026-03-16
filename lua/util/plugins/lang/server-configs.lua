@@ -278,7 +278,19 @@ local configs = {
 		filetypes = { "vue" },
 		root_markers = { "package.json", "vue.config.js" },
 	},
-	qmlls = {},
+	qmlls = {
+		handlers = {
+			["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
+				-- filter out known-bad Quickshell import diagnostics
+				if result and result.diagnostics then
+					result.diagnostics = vim.tbl_filter(function(d)
+						return not d.message:find("Type PanelWindow is not creatable.")
+					end, result.diagnostics)
+				end
+				vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx, config)
+			end,
+		},
+	},
 	codebook = {},
 }
 
