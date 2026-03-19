@@ -75,6 +75,7 @@ return {
 				lualine_a = {
 					lualine_components.mode,
 					lualine_components.branch,
+					lualine_components.remote_nvim,
 				},
 				lualine_b = {
 					lualine_components.root,

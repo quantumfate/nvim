@@ -1,6 +1,6 @@
 local util = require("util.plugins.lualine.util")
 
-local window_width_limit = 100
+local window_width_limit = 150
 
 local conditions = {
 	buffer_not_empty = function()
@@ -55,7 +55,7 @@ return {
 		end,
 		padding = { left = 2, right = 1 },
 		cond = function()
-			return not conditions.buffer_is_terminal() and (conditions.hide_in_width() or conditions.no_clients())
+			return not conditions.buffer_is_terminal() and conditions.hide_in_width() and not conditions.no_clients()
 		end,
 		separator = { right = "" },
 	},
@@ -219,7 +219,7 @@ return {
 			return require("nvim-navic").get_location()
 		end,
 		cond = function()
-			return require("nvim-navic").is_available()
+			return require("nvim-navic").is_available() and conditions.hide_in_width()
 		end,
 		padding = { left = 2 },
 	},
@@ -271,6 +271,16 @@ return {
 		end,
 		cond = function()
 			return package.loaded["harpoon"] ~= nil
+		end,
+	},
+	remote_nvim = {
+		function()
+			return vim.g.remote_neovim_host and ("Remote: %s"):format(vim.uv.os_gethostname()) or ""
+		end,
+		padding = { right = 1, left = 1 },
+		separator = { left = "", right = "" },
+		cond = function()
+			return conditions.hide_in_width()
 		end,
 	},
 }

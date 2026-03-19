@@ -21,6 +21,7 @@
 - npm
 - python
 - ripgrep
+- devpod
 
 ## Remarks
 
