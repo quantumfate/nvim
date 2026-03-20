@@ -43,28 +43,32 @@ local autocmds = {
 			end,
 		},
 	},
-	{
-		"VimEnter",
-		{
-			group = "_general_settings",
-			desc = "Disable terminal padding",
-			callback = function()
-				vim.fn.system("kitty @ set-spacing padding=0 > /dev/null 2>&1")
-			end,
-		},
-	},
-	{
-		"VimLeave",
-		{
-			group = "_general_settings",
-			desc = "Disable terminal padding",
-			callback = function()
-				vim.fn.system(
-					"kitty @ set-spacing padding-left=15 padding-right=15 padding-top=20 padding-bottom=20 > /dev/null 2>&1"
-				)
-			end,
-		},
-	},
+	-- {
+	-- 	"VimEnter",
+	-- 	{
+	-- 		group = "_general_settings",
+	-- 		desc = "Disable terminal padding",
+	-- 		callback = function()
+	-- 			vim.fn.system("kitty @ --to $KITTY_LISTEN_ON set-spacing padding=0 > /dev/null 2>&1")
+	-- 			-- vim.fn.system("kitty @ set-spacing padding=0 > /dev/null 2>&1")
+	-- 		end,
+	-- 	},
+	-- },
+	-- {
+	-- 	"VimLeave",
+	-- 	{
+	-- 		group = "_general_settings",
+	-- 		desc = "Disable terminal padding",
+	-- 		callback = function()
+	-- 			vim.fn.system(
+	-- 				"kitty @ --to $KITTY_LISTEN_ON set-spacing padding-left=15 padding-right=15 padding-top=20 padding-bottom=20 > /dev/null 2>&1"
+	-- 			)
+	-- 			-- vim.fn.system(
+	-- 			-- 	"kitty @ set-spacing padding-left=15 padding-right=15 padding-top=20 padding-bottom=20 > /dev/null 2>&1"
+	-- 			-- )
+	-- 		end,
+	-- 	},
+	-- },
 	{ -- taken from AstroNvim
 		"BufEnter",
 		{
