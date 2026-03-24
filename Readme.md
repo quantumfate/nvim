@@ -1,6 +1,6 @@
 # My neovim config
 
-![nvim](./assets/nvim.png)
+![nvim](./assets/nvim-dashboard.png)
 
 ## Minimum effort lazy loading
 
