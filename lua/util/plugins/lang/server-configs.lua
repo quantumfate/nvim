@@ -291,7 +291,7 @@ local configs = {
 			end,
 		},
 	},
-	codebook = {},
+	--codebook = {},
 }
 
 local M = {}

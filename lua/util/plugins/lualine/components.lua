@@ -66,9 +66,9 @@ return {
 	diff = {
 		"diff",
 		symbols = {
-			added = icons.git.LineAdded .. " ",
-			modified = icons.git.LineModified .. " ",
-			removed = icons.git.LineRemoved .. " ",
+			added = icons.git.LineAdded,
+			modified = icons.git.LineModified,
+			removed = icons.git.LineRemoved,
 		},
 		source = function()
 			local gitsigns = vim.b.gitsigns_status_dict
@@ -90,7 +90,7 @@ return {
 				if venv then
 					local icons = require("nvim-web-devicons")
 					local py_icon, _ = icons.get_icon(".py")
-					return string.format(" " .. py_icon .. " (%s)", util.env_cleanup(venv))
+					return string.format(py_icon .. " (%s)", util.env_cleanup(venv))
 				end
 			end
 			return ""
@@ -100,10 +100,10 @@ return {
 	diagnostics = {
 		"diagnostics",
 		symbols = {
-			error = icons.diagnostics.Error .. " ",
-			warn = icons.diagnostics.Warning .. " ",
-			info = icons.diagnostics.Information .. " ",
-			hint = icons.diagnostics.Hint .. " ",
+			error = icons.diagnostics.Error,
+			warn = icons.diagnostics.Warning,
+			info = icons.diagnostics.Information,
+			hint = icons.diagnostics.Hint,
 		},
 		cond = conditions.hide_in_width,
 		padding = { left = 2, right = 2 },
@@ -160,7 +160,7 @@ return {
 	spaces = {
 		function()
 			local shiftwidth = vim.api.nvim_buf_get_option(0, "shiftwidth")
-			return icons.ui.Tab .. " " .. shiftwidth
+			return icons.ui.Tab .. shiftwidth
 		end,
 		padding = 1,
 	},
@@ -205,7 +205,7 @@ return {
 	},
 	wordcount = {
 		function()
-			return "󰈭 " .. vim.fn.wordcount().words
+			return "󰈭" .. vim.fn.wordcount().words
 		end,
 		cond = function()
 			return vim.tbl_contains({ "markdown", "text", "txt" }, vim.bo.filetype)
@@ -242,7 +242,7 @@ return {
 	},
 	-- stylua: ignore
 	debug_status = {
-		function() return "  " .. require("dap").status() end,
+		function() return "" .. require("dap").status() end,
 		cond = function() return package.loaded["dap"] and require("dap").status() ~= "" end,
 		color = function() return { fg = Snacks.util.color("Debug") } end,
 		separator = { left = "" }
@@ -262,7 +262,7 @@ return {
 
 			for i, item in ipairs(list.items) do
 				if item.value == current then
-					return "󰛢 " .. i
+					return "󰛢" .. i
 				end
 			end
 			return ""
@@ -276,7 +276,7 @@ return {
 			return vim.g.remote_neovim_host and ("Remote: %s"):format(vim.uv.os_gethostname()) or ""
 		end,
 		padding = { right = 1, left = 1 },
-		separator = { left = "", right = "" },
+		--separator = { left = "", right = "" },
 		cond = function()
 			return conditions.hide_in_width()
 		end,
