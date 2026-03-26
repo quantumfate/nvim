@@ -11,13 +11,19 @@ local internal = {}
 --
 --]]
 
+-- TODO: currently diagnostics view shows diagnostics of the entire directory/project
+--TODO: implement per buffer diagnostics
+
 --- View definitions mapping view names to their corresponding Trouble commands
 --- Each view can contain multiple commands that will be executed in sequence
 ---@type table<string, string[]>
 internal.views = {
-	diagnostics = { "Trouble diagnostics focus=false", "Trouble symbols focus=false" },
-	lsp = { "Trouble lsp focus=false", "Trouble symbols focus=false" },
-	focus = { "Trouble symbols focus=false" },
+	diagnostics = {
+		"Trouble diagnostics focus=false open_no_results=true",
+		"Trouble symbols focus=false open_no_results=true",
+	},
+	lsp = { "Trouble lsp focus=false open_no_results=true", "Trouble symbols focus=false open_no_results=true" },
+	focus = { "Trouble symbols focus=false open_no_results=true" },
 	debug = { "DapViewOpen" },
 }
 
