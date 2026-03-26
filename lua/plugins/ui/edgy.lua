@@ -159,16 +159,5 @@ return {
 				end, "Edgy: Focus View")
 			end,
 		})
-
-		-- Debug keymaps: register for supported filetypes
-		vim.api.nvim_create_autocmd("FileType", {
-			group = vim.api.nvim_create_augroup("edgy_debug_keymaps", { clear = true }),
-			pattern = { "python", "go", "rust", "javascript", "typescript", "c", "cpp", "java" },
-			callback = function(event)
-				vim.keymap.set("n", "<leader>ueb", function()
-					edgy_util.toggle_view("debug")
-				end, { buffer = event.buf, desc = "Edgy: Debug View" })
-			end,
-		})
 	end,
 }

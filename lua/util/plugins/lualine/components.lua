@@ -281,4 +281,14 @@ return {
 			return conditions.hide_in_width()
 		end,
 	},
+	view = {
+		function()
+			local edgy_util = require("util.plugins.edgy")
+			return "prev: "
+				.. (edgy_util.get_prev_view() or "")
+				.. ", current: "
+				.. (edgy_util.get_current_view() or "")
+		end,
+		separator = { left = "" },
+	},
 }

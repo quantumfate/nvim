@@ -27,7 +27,6 @@ return {
 	{
 		"mfussenegger/nvim-dap",
 		dependencies = {
-			"rcarriga/nvim-dap-ui",
 			"nvim-neotest/nvim-nio",
 			"theHamsta/nvim-dap-virtual-text",
 			"jay-babu/mason-nvim-dap.nvim",
@@ -135,7 +134,6 @@ return {
 		},
 		config = function()
 			local dap = require("dap")
-			local dapui = require("dapui")
 			local edgy_util = require("util.plugins.edgy")
 
 			vim.fn.sign_define("DapBreakpoint", { text = icons.debugging.Breakpoint, texthl = "DiagnosticError" })
@@ -153,47 +151,24 @@ return {
 				{ text = icons.debugging.Stopped, texthl = "DiagnosticOk", linehl = "DapStoppedLine" }
 			)
 
-			-- DAP UI setup - let edgy handle the layout
-			dapui.setup({
-				icons = { expanded = "▾", collapsed = "▸", current_frame = "▸" },
-				layouts = {
-					{
-						elements = {
-							{ id = "scopes", size = 0.4 },
-							{ id = "breakpoints", size = 0.4 },
-							{ id = "stacks", size = 0.4 },
-							{ id = "watches", size = 0.4 },
-						},
-						size = 60,
-						position = "left",
-					},
-					{
-						elements = {
-							{ id = "repl", size = 0.5 },
-							{ id = "console", size = 0.5 },
-						},
-						size = 0.25,
-						position = "bottom",
-					},
-				},
-			})
-
 			-- Virtual text
 			require("nvim-dap-virtual-text").setup({
 				enabled = true,
-				enabled_commands = true,
+				enabled_commands = false,
 			})
 
-			-- Auto open debug view when debugging starts
-			dap.listeners.after.event_initialized["dapui_config"] = function()
+			-- Unfortunately, the way these events are emitted it's the state history of edgy util is completely flushed
+			-- I prefer a working util over compensating for dap
+			dap.listeners.before.attach.dapui_config = function()
 				edgy_util.open_view("debug")
 			end
-
-			-- Auto close debug view when debugging ends
-			dap.listeners.before.event_terminated["dapui_config"] = function()
+			dap.listeners.before.launch.dapui_config = function()
+				edgy_util.open_view("debug")
+			end
+			dap.listeners.before.event_terminated.dapui_config = function()
 				edgy_util.close_all()
 			end
-			dap.listeners.before.event_exited["dapui_config"] = function()
+			dap.listeners.before.event_exited.dapui_config = function()
 				edgy_util.close_all()
 			end
 
@@ -333,5 +308,12 @@ return {
 				},
 			}
 		end,
+	},
+	{
+		"igorlfs/nvim-dap-view",
+		-- let the plugin lazy load itself
+		lazy = false,
+		version = "1.*",
+		opts = {},
 	},
 }
