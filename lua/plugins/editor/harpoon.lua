@@ -2,7 +2,7 @@ return {
 	"ThePrimeagen/harpoon",
 	branch = "harpoon2",
 	event = "User FileOpened",
-	dependencies = { "nvim-lua/plenary.nvim", "folke/snacks.nvim" },
+	dependencies = { "nvim-lua/plenary.nvim" },
 	keys = {
 		{
 			"<leader>ha",
@@ -37,28 +37,28 @@ return {
 			desc = "Harpoon picker",
 		},
 		{
-			"<a-H>",
+			"<c-h>",
 			function()
 				require("harpoon"):list():select(1)
 			end,
 			desc = "Harpoon 1",
 		},
 		{
-			"<a-T>",
+			"<c-t>",
 			function()
 				require("harpoon"):list():select(2)
 			end,
 			desc = "Harpoon 2",
 		},
 		{
-			"<a-N>",
+			"<c-n>",
 			function()
 				require("harpoon"):list():select(3)
 			end,
 			desc = "Harpoon 3",
 		},
 		{
-			"<a-S>",
+			"<c-s>",
 			function()
 				require("harpoon"):list():select(4)
 			end,

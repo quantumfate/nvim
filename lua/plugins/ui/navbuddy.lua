@@ -13,7 +13,7 @@ return {
 		icons = _G.mini_icons_mt,
 	},
 	keys = {
-		{ "<leader>un", "<cmd>Navbuddy<cr>", desc = "Navbuddy" },
+		{ "<leader>pn", "<cmd>Navbuddy<cr>", desc = "Navbuddy" },
 	},
 	config = function(_, opts)
 		local nvim_navic_util = require("util.plugins.navbuddy")

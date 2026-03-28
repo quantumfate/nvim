@@ -112,7 +112,7 @@ return {
 				desc = "Replace Word (Spectre)",
 			},
 			{
-				"<leader>sw",
+				"<leader>sW",
 				function()
 					require("spectre").open_visual()
 				end,

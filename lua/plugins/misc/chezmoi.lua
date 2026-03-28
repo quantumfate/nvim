@@ -2,13 +2,6 @@ return {
 	{
 		"xvzc/chezmoi.nvim",
 		cmd = { "ChezmoiEdit" },
-		keys = {
-			{
-				"<leader>sz",
-				require("util.plugins.chezmoi").pick_chezmoi,
-				desc = "Chezmoi",
-			},
-		},
 		opts = {
 			edit = {
 				watch = false,
@@ -19,7 +12,7 @@ return {
 					"%.chezmoiignore",
 					"%.chezmoitemplate",
 					"%.sh.tmpl",
-					"%.tmpl",
+					"%.sh",
 				},
 			},
 			notification = {

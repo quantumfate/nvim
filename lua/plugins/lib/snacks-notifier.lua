@@ -41,7 +41,7 @@ return {
 				end, p)
 
 				local spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
-				vim.notify(table.concat(msg, "\n"), "info", {
+				vim.notify(table.concat(msg, "\n"), vim.log.levels.INFO, {
 					id = "lsp_progress",
 					title = client.name,
 					opts = function(notif)
@@ -53,16 +53,15 @@ return {
 		})
 	end,
 	keys = {
-
 		{
-			"<leader>snl",
+			"<leader>Nl",
 			function()
 				Snacks.notifier.show_history()
 			end,
 			desc = "Noice Last Message",
 		},
 		{
-			"<leader>snp",
+			"<leader>Np",
 			function()
 				Snacks.picker.notifications()
 			end,

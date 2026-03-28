@@ -74,7 +74,7 @@ return {
 		event = "VimEnter",
 		cmd = "Mason",
 		keys = {
-			{ "<leader>um", "<cmd>Mason<cr>", desc = "Mason" },
+			{ "<leader>pm", "<cmd>Mason<cr>", desc = "Mason" },
 		},
 		build = ":MasonUpdate",
 		opts = {

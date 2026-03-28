@@ -43,7 +43,7 @@ return {
 	},
 	keys = {
 		{
-			"<leader>ut",
+			"<leader>it",
 			function()
 				local ui_util = require("util.ui")
 				if old_cursor_pos then

@@ -75,7 +75,6 @@ return {
 				lualine_a = {
 					lualine_components.mode,
 					lualine_components.branch,
-					lualine_components.remote_nvim,
 				},
 				lualine_b = {
 					lualine_components.root,
@@ -83,8 +82,7 @@ return {
 					lualine_components.path,
 				},
 				lualine_c = {
-					lualine_components.navic,
-					lualine_components.trouble,
+					lualine_components.harpoon,
 				},
 				lualine_x = {
 					Snacks.profiler.status(),
@@ -106,7 +104,6 @@ return {
 					lualine_components.progress,
 				},
 				lualine_z = {
-					lualine_components.harpoon,
 					lualine_components.lsp,
 				},
 			},
@@ -123,8 +120,23 @@ return {
 				},
 				lualine_z = {},
 			},
-			tabline = nil,
-			winbar = {},
+			tabline = {
+				lualine_a = {
+					lualine_components.remote_nvim,
+				},
+				lualine_b = {},
+				lualine_c = {
+					lualine_components.navic,
+				},
+				lualine_x = {
+					lualine_components.view,
+				},
+				lualine_y = {},
+				lualine_z = {
+					-- TODO: edgy view
+				},
+			},
+			winbar = nil,
 			extensions = {
 				"aerial",
 				"assistant",

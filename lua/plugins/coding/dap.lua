@@ -119,6 +119,7 @@ return {
 			{
 				"<leader>de",
 				function()
+					-- TODO: convert to dap view
 					require("dapui").eval()
 				end,
 				desc = "Eval",
@@ -127,6 +128,7 @@ return {
 			{
 				"<leader>dw",
 				function()
+					-- TODO: convert to dap view
 					require("dap.ui.widgets").hover()
 				end,
 				desc = "Widgets",
@@ -159,16 +161,16 @@ return {
 
 			-- Unfortunately, the way these events are emitted it's the state history of edgy util is completely flushed
 			-- I prefer a working util over compensating for dap
-			dap.listeners.before.attach.dapui_config = function()
+			dap.listeners.before.attach.edgy_view = function()
 				edgy_util.open_view("debug")
 			end
-			dap.listeners.before.launch.dapui_config = function()
+			dap.listeners.before.launch.edgy_view = function()
 				edgy_util.open_view("debug")
 			end
-			dap.listeners.before.event_terminated.dapui_config = function()
+			dap.listeners.before.event_terminated.edgy_view = function()
 				edgy_util.close_all()
 			end
-			dap.listeners.before.event_exited.dapui_config = function()
+			dap.listeners.before.event_exited.edgy_view = function()
 				edgy_util.close_all()
 			end
 

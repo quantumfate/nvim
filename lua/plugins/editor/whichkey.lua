@@ -76,6 +76,13 @@ return {
 				{ pattern = "up.*frame", icon = icons.ui.BoldArrowUp, color = "cyan" },
 				{ pattern = "down.*frame", icon = icons.ui.BoldArrowDown, color = "cyan" },
 				{ pattern = "go to line", icon = icons.debugging.StepOver, color = "cyan" },
+				{ pattern = "popups", icon = "󰋲", color = "cyan" },
+				{ pattern = "harpoon", icon = "󰛢", color = "purple" },
+				{ pattern = "interfaces", icon = "", color = "red" },
+				{ pattern = "neogen", icon = "", color = "green" },
+				{ pattern = "explorer", icon = "", color = "green" },
+				{ pattern = "find", icon = "", color = "green" },
+				{ pattern = "grep", icon = "", color = "red" },
 			},
 		},
 		spec = {
@@ -83,30 +90,20 @@ return {
 				mode = { "n", "x" },
 				-- Core groups - always available
 				{ "<leader><tab>", group = "tabs" },
-				{ "<leader>b", group = "buffer" },
 				{ "<leader>h", group = "harpoon" },
-				{ "<leader>bd", group = "delete" },
-				{ "<leader>f", group = "file/find" },
+				{ "<leader>n", group = "neogen" },
+				{ "<leader>f", group = "find" },
 				{ "<leader>q", group = "quit/session" },
-				{ "<leader>s", group = "search" },
+				{ "<leader>s", group = "search/replace" },
 				{ "<leader>t", group = "toggle" },
-				{ "<leader>u", group = "ui" },
+				{ "<leader>i", group = "interfaces" },
+				{ "<leader>p", group = "popups" },
 				{ "<leader>w", group = "windows", proxy = "<c-w>" },
-				{ "<leader>ue", group = "edgy" },
-				{ "<leader>a", group = "avante" },
-				{ "<leader>ap", group = "providers" },
-				{
-					"<leader>ad",
-					group = "diff",
-				},
-				{
-					"<leader>af",
-					group = "file",
-				},
-				{
-					"<leader>at",
-					group = "templates",
-				},
+				{ "<leader>e", group = "explorer" },
+				{ "<leader>G", group = "grep" },
+				{ "<leader>g", group = "git" },
+				{ "<leader>gt", group = "toggle" },
+				{ "<leader>gF", group = "find" },
 				{
 					"<leader>c",
 					group = "code",
@@ -116,24 +113,8 @@ return {
 					group = "debug",
 				},
 				{
-					"<leader>dp",
-					group = "profiler",
-				},
-				{
-					"<leader>g",
-					group = "git",
-				},
-				{
-					"<leader>gh",
-					group = "hunks",
-				},
-				{
 					"<leader>r",
 					group = "refactor",
-				},
-				{
-					"<leader>x",
-					group = "diagnostics/quickfix",
 				},
 				-- Navigation groups - context dependent
 				{
@@ -171,17 +152,17 @@ return {
 		-- 	desc = "Buffer Keymaps (which-key)",
 		-- },
 		{
-			"<leader>ul",
+			"<leader>pl",
 			"<cmd>Lazy<cr>",
 			desc = "Lazy",
 		},
 	},
 	init = function()
 		local wk = require("which-key")
-		wk.add({
-			{ "<C-f>", "<cmd>silent !tmux neww tms<CR>", desc = "Create a new tms session" },
-			{ "<C-s>", "<cmd>silent !tmux neww tms switch<CR>", desc = "Quick switch sessions" },
-		})
+		-- wk.add({
+		-- 	{ "<C-f>", "<cmd>silent !tmux neww tms<CR>", desc = "Create a new tms session" },
+		-- 	{ "<C-s>", "<cmd>silent !tmux neww tms switch<CR>", desc = "Quick switch sessions" },
+		-- })
 
 		wk.add({
 			-- Existing navigation...
@@ -204,22 +185,45 @@ return {
 		})
 
 		wk.add({
-			-- Navigation (your original proxies)
-			{ "<C-h>", "<cmd>wincmd h<cr>", desc = "Left", mode = "n" },
-			{ "<C-j>", "<cmd>wincmd j<cr>", desc = "Down", mode = "n" },
-			{ "<C-k>", "<cmd>wincmd k<cr>", desc = "Up", mode = "n" },
-			{ "<C-l>", "<cmd>wincmd l<cr>", desc = "Right", mode = "n" },
-			{ "<a-x>", "<cmd>close<cr>", desc = "Close", mode = "n" },
+			{ "J", ":m '>+1<CR>gv=gv", desc = "Move selection down", mode = "v" },
+			{ "K", ":m '<-2<CR>gv=gv", desc = "Move selection up", mode = "v" },
 
-			-- Resize mappings (2 lines/columns at a time)
-			{ "<A-h>", "<cmd>vertical resize +2<cr>", desc = "Height +", mode = "n" },
-			{ "<A-j>", "<cmd>resize +2<cr>", desc = "Width +", mode = "n" },
-			{ "<A-k>", "<cmd>resize -2<cr>", desc = "Height -", mode = "n" },
-			{ "<A-l>", "<cmd>vertical resize -2<cr>", desc = "Width -", mode = "n" },
-			-- Working with splits
-			{ "<a-v>", "<cmd>vsplit<cr>", desc = "Vertical split", mode = "n" },
-			{ "<a-s>", "<cmd>split<cr>", desc = "Horizontol split", mode = "n" },
-			{ "<a-cr>", "<cmd>wincmd =<cr>", desc = "Balance windows", mode = "n" }, -- Ctrl+Enter
+			{ "J", "mzJ`z", desc = "Join lines (keep cursor)", mode = "n" },
+			{ "<C-d>", "<C-d>zz", desc = "Scroll down (centered)", mode = "n" },
+			{ "<C-u>", "<C-u>zz", desc = "Scroll up (centered)", mode = "n" },
+			{ "n", "nzzzv", desc = "Next search result (centered)", mode = "n" },
+			{ "N", "Nzzzv", desc = "Prev search result (centered)", mode = "n" },
+
+			{ "<leader>P", [["_dP]], desc = "Paste without yanking selection", mode = "x" },
+
+			{ "<leader>y", [["+y]], desc = "Yank to system clipboard", mode = { "n", "v" } },
+			{ "<leader>Y", [["+Y]], desc = "Yank line to system clipboard", mode = "n" },
+			{ "<leader>D", [["_d]], desc = "Delete to black hole register", mode = { "n", "v" } },
+
+			{ "<C-c>", "<Esc>", desc = "Escape insert mode", mode = "i" },
+
+			{ "Q", "<nop>", desc = "Disable ex mode", mode = "n" },
+			{ "<C-f>", "<cmd>silent !tmux neww tmux-sessionizer<CR>", desc = "Open tmux sessionizer", mode = "n" },
+
+			{ "<C-k>", "<cmd>cnext<CR>zz", desc = "Next quickfix item", mode = "n" },
+			{ "<C-j>", "<cmd>cprev<CR>zz", desc = "Prev quickfix item", mode = "n" },
+			{ "<leader>k", "<cmd>lnext<CR>zz", desc = "Next location list item", mode = "n" },
+			{ "<leader>j", "<cmd>lprev<CR>zz", desc = "Prev location list item", mode = "n" },
+
+			{
+				"<leader>ss",
+				[[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]],
+				desc = "Search and replace word under cursor",
+				mode = "n",
+			},
+			--{ "<leader>x", "<cmd>!chmod +x %<CR>", desc = "Make file executable", mode = "n" },
+
+			-- {
+			-- 	"<leader>ee",
+			-- 	"oif err != nil {<CR>}<Esc>Oreturn err<Esc>",
+			-- 	desc = "Insert Go error handling",
+			-- 	mode = "n",
+			-- },
 		})
 	end,
 }

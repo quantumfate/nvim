@@ -28,41 +28,95 @@ return {
 				delay = 1000,
 				ignore_whitespace = false,
 			},
-			on_attach = function(buffer)
-				local gs = package.loaded.gitsigns
+			on_attach = function(bufnr)
+				local gitsigns = require("gitsigns")
+				local wk = require("which-key")
+				wk.add({
+					-- Navigation
+					{
+						"]c",
+						function()
+							if vim.wo.diff then
+								vim.cmd.normal({ "]c", bang = true })
+							else
+								gitsigns.nav_hunk("next")
+							end
+						end,
+						desc = "Next Hunk",
+						buffer = bufnr,
+					},
+					{
+						"[c",
+						function()
+							if vim.wo.diff then
+								vim.cmd.normal({ "[c", bang = true })
+							else
+								gitsigns.nav_hunk("prev")
+							end
+						end,
+						desc = "Prev Hunk",
+						buffer = bufnr,
+					},
 
-				local function map(mode, l, r, desc)
-					vim.keymap.set(mode, l, r, { buffer = buffer, desc = desc, silent = true })
-				end
+					-- Actions
+					{ "<leader>gs", gitsigns.stage_hunk, desc = "Stage Hunk", buffer = bufnr },
+					{ "<leader>gr", gitsigns.reset_hunk, desc = "Reset Hunk", buffer = bufnr },
+					{
+						"<leader>gs",
+						function()
+							gitsigns.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
+						end,
+						desc = "Stage Hunk",
+						mode = "v",
+						buffer = bufnr,
+					},
+					{
+						"<leader>gr",
+						function()
+							gitsigns.reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
+						end,
+						desc = "Reset Hunk",
+						mode = "v",
+						buffer = bufnr,
+					},
+					{ "<leader>gS", gitsigns.stage_buffer, desc = "Stage Buffer", buffer = bufnr },
+					{ "<leader>gR", gitsigns.reset_buffer, desc = "Reset Buffer", buffer = bufnr },
+					{ "<leader>gp", gitsigns.preview_hunk, desc = "Preview Hunk", buffer = bufnr },
+					{ "<leader>gi", gitsigns.preview_hunk_inline, desc = "Preview Hunk Inline", buffer = bufnr },
+					{
+						"<leader>gb",
+						function()
+							gitsigns.blame_line({ full = true })
+						end,
+						desc = "Blame Line",
+						buffer = bufnr,
+					},
+					{ "<leader>gd", gitsigns.diffthis, desc = "Diff This", buffer = bufnr },
+					{
+						"<leader>gD",
+						function()
+							gitsigns.diffthis("~")
+						end,
+						desc = "Diff This ~",
+						buffer = bufnr,
+					},
+					{
+						"<leader>gQ",
+						function()
+							gitsigns.setqflist("all")
+						end,
+						desc = "Quickfix All Hunks",
+						buffer = bufnr,
+					},
+					{ "<leader>gq", gitsigns.setqflist, desc = "Quickfix Hunks", buffer = bufnr },
 
-                -- stylua: ignore start
-                map("n", "]h", function()
-                    if vim.wo.diff then
-                        vim.cmd.normal({ "]c", bang = true })
-                    else
-                        gs.nav_hunk("next")
-                    end
-                end, "Next Hunk")
-                map("n", "[h", function()
-                    if vim.wo.diff then
-                        vim.cmd.normal({ "[c", bang = true })
-                    else
-                        gs.nav_hunk("prev")
-                    end
-                end, "Prev Hunk")
-                map("n", "]H", function() gs.nav_hunk("last") end, "Last Hunk")
-                map("n", "[H", function() gs.nav_hunk("first") end, "First Hunk")
-                map({ "n", "x" }, "<leader>ghs", ":Gitsigns stage_hunk<CR>", "Stage Hunk")
-                map({ "n", "x" }, "<leader>ghr", ":Gitsigns reset_hunk<CR>", "Reset Hunk")
-                map("n", "<leader>ghS", gs.stage_buffer, "Stage Buffer")
-                map("n", "<leader>ghu", gs.undo_stage_hunk, "Undo Stage Hunk")
-                map("n", "<leader>ghR", gs.reset_buffer, "Reset Buffer")
-                map("n", "<leader>ghp", gs.preview_hunk_inline, "Preview Hunk Inline")
-                map("n", "<leader>ghb", function() gs.blame_line({ full = true }) end, "Blame Line")
-                map("n", "<leader>ghB", function() gs.blame() end, "Blame Buffer")
-                map("n", "<leader>ghd", gs.diffthis, "Diff This")
-                map("n", "<leader>ghD", function() gs.diffthis("~") end, "Diff This ~")
-                map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "GitSigns Select Hunk")
+					-- Toggles
+					{ "<leader>gtb", gitsigns.toggle_current_line_blame, desc = "Toggle Line Blame", buffer = bufnr },
+					{ "<leader>gtw", gitsigns.toggle_word_diff, desc = "Toggle Word Diff", buffer = bufnr },
+
+					-- Text object
+					{ "ih", gitsigns.select_hunk, desc = "Select Hunk", mode = { "o", "x" }, buffer = bufnr },
+				})
 			end,
 		},
 	},
@@ -79,5 +133,85 @@ return {
 				end,
 			}):map("<leader>tG")
 		end,
+		keys = {
+			{
+				"<leader>gFb",
+				function()
+					Snacks.picker.git_branches()
+				end,
+				desc = "Git Branches",
+			},
+			{
+				"<leader>gFl",
+				function()
+					Snacks.picker.git_log()
+				end,
+				desc = "Git Log",
+			},
+			{
+				"<leader>gFL",
+				function()
+					Snacks.picker.git_log_line()
+				end,
+				desc = "Git Log Line",
+			},
+			{
+				"<leader>gFs",
+				function()
+					Snacks.picker.git_status()
+				end,
+				desc = "Git Status",
+			},
+			{
+				"<leader>gFS",
+				function()
+					Snacks.picker.git_stash()
+				end,
+				desc = "Git Stash",
+			},
+			{
+				"<leader>gFd",
+				function()
+					Snacks.picker.git_diff()
+				end,
+				desc = "Git Diff (Hunks)",
+			},
+			{
+				"<leader>gFf",
+				function()
+					Snacks.picker.git_log_file()
+				end,
+				desc = "Git Log File",
+			},
+			-- gh
+			{
+				"<leader>gFi",
+				function()
+					Snacks.picker.gh_issue()
+				end,
+				desc = "GitHub Issues (open)",
+			},
+			{
+				"<leader>gFI",
+				function()
+					Snacks.picker.gh_issue({ state = "all" })
+				end,
+				desc = "GitHub Issues (all)",
+			},
+			{
+				"<leader>gFp",
+				function()
+					Snacks.picker.gh_pr()
+				end,
+				desc = "GitHub Pull Requests (open)",
+			},
+			{
+				"<leader>gFP",
+				function()
+					Snacks.picker.gh_pr({ state = "all" })
+				end,
+				desc = "GitHub Pull Requests (all)",
+			},
+		},
 	},
 }

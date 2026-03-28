@@ -9,6 +9,7 @@
 
 return {
 	"akinsho/bufferline.nvim",
+	enabled = false,
 	event = "User FileOpened",
 	dependencies = { "nvim-tree/nvim-web-devicons", "nvim-mini/mini.nvim" },
 	config = function(_, opts)
@@ -54,10 +55,12 @@ return {
 	},
 	opts = {
 		options = {
-            -- stylua: ignore
-            close_command = function(n) Snacks.bufdelete(n) end,
-            -- stylua: ignore
-            right_mouse_command = function(n) Snacks.bufdelete(n) end,
+			close_command = function(n)
+				Snacks.bufdelete(n)
+			end,
+			right_mouse_command = function(n)
+				Snacks.bufdelete(n)
+			end,
 			diagnostics = "nvim_lsp",
 			always_show_bufferline = false,
 			diagnostics_indicator = function(_, _, diag)
@@ -78,8 +81,7 @@ return {
 				},
 			},
 			get_element_icon = function(opts)
-                -- stylua: ignore
-                return require("mini.icons").get("filetype", opts.filetype)
+				return require("mini.icons").get("filetype", opts.filetype)
 			end,
 		},
 	},

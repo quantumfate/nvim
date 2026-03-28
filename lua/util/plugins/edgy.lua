@@ -5,26 +5,57 @@ local M = {}
 
 local internal = {}
 
+local trouble = {
+	diagnostics_local = "Trouble diagnostics filter.buf=0 focus=false open_no_results=true",
+	lsp = "Trouble lsp focus=false open_no_results=true",
+	diagnostics_all = "Trouble diagnostics focus=false open_no_results=true",
+	symbols = "Trouble symbols focus=false open_no_results=true",
+	loclist = "Trouble loclist focus=false open_no_results=true",
+	qflist = "Trouble qflist focus=false open_no_results=true",
+}
+
 --[[
 --
 -- Configuration
 --
 --]]
 
--- TODO: currently diagnostics view shows diagnostics of the entire directory/project
---TODO: implement per buffer diagnostics
+--- Wraps a setmetatable call
+---@param view_content table
+---@param pretty_name string
+---@return table
+local function meta_wrapper(view_content, pretty_name)
+	return setmetatable(view_content, {
+		__index = {
+			pretty_name = pretty_name,
+		},
+	})
+end
 
 --- View definitions mapping view names to their corresponding Trouble commands
 --- Each view can contain multiple commands that will be executed in sequence
----@type table<string, string[]>
+---@class edgy.internal.views table<string, string[]>
 internal.views = {
-	diagnostics = {
-		"Trouble diagnostics focus=false open_no_results=true",
-		"Trouble symbols focus=false open_no_results=true",
-	},
-	lsp = { "Trouble lsp focus=false open_no_results=true", "Trouble symbols focus=false open_no_results=true" },
-	focus = { "Trouble symbols focus=false open_no_results=true" },
-	debug = { "DapViewOpen" },
+	full_trouble = meta_wrapper({
+		trouble.diagnostics_local,
+		trouble.symbols,
+		trouble.lsp,
+	}, "Full Trouble"),
+	project_diagnostics = meta_wrapper({
+		trouble.diagnostics_all,
+	}, "Project Diagnostics"),
+	diagnostics = meta_wrapper({
+		trouble.diagnostics_local,
+		trouble.symbols,
+	}, "Local Diagnostics"),
+	list_trouble = meta_wrapper({
+		trouble.symbols,
+		trouble.qflist,
+		trouble.loclist,
+	}, "QuickFix"),
+	lsp = meta_wrapper({ trouble.symbols, trouble.lsp }, "LSP"),
+	symbols = meta_wrapper({ trouble.symbols }, "Symbols"),
+	debug = meta_wrapper({ "DapViewOpen" }, "Debug"),
 }
 
 --- Defines close action commands for a plugin
@@ -130,6 +161,12 @@ end
 -- API
 --
 --]]
+
+---@return string pretty_name Name in a pretty format or an empty string
+function M.get_pretty_view_string()
+	local pretty_name = internal.views[state.current].pretty_name
+	return pretty_name and " " .. pretty_name or ""
+end
 
 ---Returns the view saved as current view
 ---@return string
