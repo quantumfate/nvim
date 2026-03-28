@@ -162,6 +162,9 @@ return {
 					Title = { fg = colors.mauve },
 
 					MoreMsg = { fg = colors.teal },
+					NvimDapViewTabFill = { bg = colors.base },
+					NvimDapViewTab = { fg = colors.overlay1, bg = colors.base },
+					NvimDapViewTabSelected = { fg = colors.mauve },
 				}
 			end,
 		},

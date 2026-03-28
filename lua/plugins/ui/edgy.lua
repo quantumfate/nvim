@@ -49,8 +49,11 @@ return {
 							and not vim.w[win].trouble_preview
 					end,
 				},
-				--TODO: debug view
-				-- DAP UI bottom panels
+				{
+					ft = "dap-view",
+					title = "Debug",
+					size = { height = 0.3 },
+				},
 				{
 					ft = "dapui_console",
 					title = "Console",

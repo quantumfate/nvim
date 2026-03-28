@@ -98,6 +98,15 @@ local autocmds = {
 			end,
 		},
 	},
+	{
+		{ "FileType" },
+		{
+			pattern = { "dap-view", "dap-view-term", "dap-repl" }, -- dap-repl is set by `nvim-dap`
+			callback = function(args)
+				vim.keymap.set("n", "q", "<C-w>q", { buffer = args.buf })
+			end,
+		},
+	},
 }
 for _, entry in ipairs(autocmds) do
 	local event = entry[1]

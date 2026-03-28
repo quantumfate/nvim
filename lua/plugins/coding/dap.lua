@@ -316,6 +316,13 @@ return {
 		-- let the plugin lazy load itself
 		lazy = false,
 		version = "1.*",
-		opts = {},
+		opts = {
+			winbar = {
+				controls = {
+					enabled = true,
+					position = "right",
+				},
+			},
+		},
 	},
 }
