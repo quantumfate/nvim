@@ -83,6 +83,7 @@ return {
 				{ pattern = "explorer", icon = "", color = "green" },
 				{ pattern = "find", icon = "", color = "green" },
 				{ pattern = "grep", icon = "", color = "red" },
+				{ pattern = "test", icon = "󰂓", color = "red" },
 			},
 		},
 		spec = {
@@ -101,6 +102,7 @@ return {
 				{ "<leader>w", group = "windows", proxy = "<c-w>" },
 				{ "<leader>e", group = "explorer" },
 				{ "<leader>G", group = "grep" },
+				{ "<leader>T", group = "test" },
 				{ "<leader>g", group = "git" },
 				{ "<leader>gt", group = "toggle" },
 				{ "<leader>gF", group = "find" },
