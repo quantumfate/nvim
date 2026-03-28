@@ -103,7 +103,11 @@ local autocmds = {
 		{
 			pattern = { "dap-view", "dap-view-term", "dap-repl" }, -- dap-repl is set by `nvim-dap`
 			callback = function(args)
-				vim.keymap.set("n", "q", "<C-w>q", { buffer = args.buf })
+				vim.keymap.set("n", "q", function()
+					local edgy = require("util.plugins.edgy")
+					edgy.close_all()
+					vim.notify("current: " .. vim.inspect(edgy.get_current_view()))
+				end, { buffer = args.buf, nowait = true })
 			end,
 		},
 	},
