@@ -82,6 +82,7 @@ return {
 				{ pattern = "neogen", icon = "", color = "green" },
 				{ pattern = "explorer", icon = "", color = "green" },
 				{ pattern = "find", icon = "", color = "green" },
+				{ pattern = "lsp", icon = "", color = "green" },
 				{ pattern = "grep", icon = "", color = "red" },
 				{ pattern = "test", icon = "󰂓", color = "red" },
 			},
@@ -94,6 +95,8 @@ return {
 				{ "<leader>h", group = "harpoon" },
 				{ "<leader>n", group = "neogen" },
 				{ "<leader>f", group = "find" },
+				{ "<leader>fl", group = "lsp" },
+				{ "<leader>fg", group = "git" },
 				{ "<leader>q", group = "quit/session" },
 				{ "<leader>s", group = "search/replace" },
 				{ "<leader>t", group = "toggle" },
@@ -197,9 +200,6 @@ return {
 			{ "N", "Nzzzv", desc = "Prev search result (centered)", mode = "n" },
 
 			{ "<leader>P", [["_dP]], desc = "Paste without yanking selection", mode = "x" },
-
-			{ "<leader>y", [["+y]], desc = "Yank to system clipboard", mode = { "n", "v" } },
-			{ "<leader>Y", [["+Y]], desc = "Yank line to system clipboard", mode = "n" },
 			{ "<leader>D", [["_d]], desc = "Delete to black hole register", mode = { "n", "v" } },
 
 			{ "<C-c>", "<Esc>", desc = "Escape insert mode", mode = "i" },
@@ -216,6 +216,14 @@ return {
 				"<leader>ss",
 				[[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]],
 				desc = "Search and replace word under cursor",
+				mode = "n",
+			},
+			{
+				"<leader>sn",
+				function()
+					vim.cmd("nohlsearch")
+				end,
+				desc = "Remove current search pattern",
 				mode = "n",
 			},
 			--{ "<leader>x", "<cmd>!chmod +x %<CR>", desc = "Make file executable", mode = "n" },

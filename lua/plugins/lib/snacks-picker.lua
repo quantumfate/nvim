@@ -35,6 +35,13 @@ return {
 		{
 			"<leader><cr>",
 			function()
+				Snacks.picker.smart({ filter = { cwd = require("util.root")() } })
+			end,
+			desc = "Find files based on current project root",
+		},
+		{
+			"<leader>fs",
+			function()
 				Snacks.picker.smart()
 			end,
 			desc = "Smart Find Files",
@@ -88,6 +95,114 @@ return {
 				Snacks.picker.lazy()
 			end,
 			desc = "Search for Plugin Spec",
+		},
+		-- git
+		{
+			"<leader>fgb",
+			function()
+				Snacks.picker.git_branches()
+			end,
+			desc = "Git Branches",
+		},
+		{
+			"<leader>fgl",
+			function()
+				Snacks.picker.git_log()
+			end,
+			desc = "Git Log",
+		},
+		{
+			"<leader>fgL",
+			function()
+				Snacks.picker.git_log_line()
+			end,
+			desc = "Git Log Line",
+		},
+		{
+			"<leader>fgs",
+			function()
+				Snacks.picker.git_status()
+			end,
+			desc = "Git Status",
+		},
+		{
+			"<leader>fgS",
+			function()
+				Snacks.picker.git_stash()
+			end,
+			desc = "Git Stash",
+		},
+		{
+			"<leader>fgd",
+			function()
+				Snacks.picker.git_diff()
+			end,
+			desc = "Git Diff (Hunks)",
+		},
+		{
+			"<leader>fgf",
+			function()
+				Snacks.picker.git_log_file()
+			end,
+			desc = "Git Log File",
+		},
+		-- gh
+		{
+			"<leader>fgi",
+			function()
+				Snacks.picker.gh_issue()
+			end,
+			desc = "GitHub Issues (open)",
+		},
+		{
+			"<leader>fgI",
+			function()
+				Snacks.picker.gh_issue({ state = "all" })
+			end,
+			desc = "GitHub Issues (all)",
+		},
+		{
+			"<leader>fgp",
+			function()
+				Snacks.picker.gh_pr()
+			end,
+			desc = "GitHub Pull Requests (open)",
+		},
+		{
+			"<leader>fgP",
+			function()
+				Snacks.picker.gh_pr({ state = "all" })
+			end,
+			desc = "GitHub Pull Requests (all)",
+		},
+		--lsp
+		{
+			"<leader>flw",
+			function()
+				Snacks.picker.lsp_workspace_symbols()
+			end,
+			desc = "LSP workspace symbols",
+		},
+		{
+			"<leader>fls",
+			function()
+				Snacks.picker.treesitter()
+			end,
+			desc = "Treesitter symbols",
+		},
+		{
+			"<leader>fld",
+			function()
+				Snacks.picker.lsp_type_definitions()
+			end,
+			desc = "LSP type definitions",
+		},
+		{
+			"<leader>fll",
+			function()
+				Snacks.picker.lsp_symbols()
+			end,
+			desc = "LSP document symbols",
 		},
 		-- LSP
 		-- {
