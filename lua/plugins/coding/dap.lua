@@ -26,10 +26,24 @@
 return {
 	{
 		"mfussenegger/nvim-dap",
+		lazy = true,
 		dependencies = {
 			"nvim-neotest/nvim-nio",
 			"theHamsta/nvim-dap-virtual-text",
 			"jay-babu/mason-nvim-dap.nvim",
+			{
+				"igorlfs/nvim-dap-view",
+				-- let the plugin lazy load itself
+				version = "1.*",
+				opts = {
+					winbar = {
+						controls = {
+							enabled = true,
+							position = "right",
+						},
+					},
+				},
+			},
 		},
 		keys = {
 			-- Breakpoints
@@ -357,19 +371,5 @@ return {
 				},
 			}
 		end,
-	},
-	{
-		"igorlfs/nvim-dap-view",
-		-- let the plugin lazy load itself
-		lazy = false,
-		version = "1.*",
-		opts = {
-			winbar = {
-				controls = {
-					enabled = true,
-					position = "right",
-				},
-			},
-		},
 	},
 }

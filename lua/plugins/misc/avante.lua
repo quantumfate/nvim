@@ -192,6 +192,7 @@ This is a [describe your project] project.
 		dependencies = {
 			"nvim-lua/plenary.nvim",
 			"MunifTanjim/nui.nvim",
+			"Kaiser-Yang/blink-cmp-avante",
 			"nvim-mini/mini.pick", -- for file_selector provider mini.pick
 			"ibhagwan/fzf-lua", -- for file_selector provider fzf
 			"folke/snacks.nvim", -- for input provider snacks

@@ -109,7 +109,9 @@ return {
 			},
 			inactive_sections = {
 				lualine_a = {},
-				lualine_b = {},
+				lualine_b = {
+					lualine_components.path,
+				},
 				lualine_c = {},
 				lualine_x = {
 					lualine_components.filetype,
