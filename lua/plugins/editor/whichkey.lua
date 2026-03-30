@@ -64,6 +64,8 @@ return {
 				{ pattern = "step out", icon = icons.debugging.StepOut, color = "cyan" },
 				{ pattern = "pause", icon = icons.debugging.Pause, color = "yellow" },
 				{ pattern = "terminate", icon = icons.debugging.Terminate, color = "red" },
+				{ pattern = "stack up", icon = "", color = "purple" },
+				{ pattern = "stack down", icon = "", color = "purple" },
 				{ pattern = "disconnect", icon = icons.debugging.Disconnect, color = "red" },
 				{ pattern = "restart", icon = icons.debugging.Restart, color = "orange" },
 				{ pattern = "run to cursor", icon = icons.debugging.Continue, color = "green" },
@@ -85,6 +87,9 @@ return {
 				{ pattern = "lsp", icon = "", color = "green" },
 				{ pattern = "grep", icon = "", color = "red" },
 				{ pattern = "test", icon = "󰂓", color = "red" },
+				{ pattern = "session", icon = "", color = "blue" },
+				{ pattern = "breakpoints", icon = "", color = "blue" },
+				{ pattern = "exception breakpoints", icon = "", color = "blue" },
 			},
 		},
 		spec = {
@@ -102,7 +107,7 @@ return {
 				{ "<leader>t", group = "toggle" },
 				{ "<leader>i", group = "interfaces" },
 				{ "<leader>p", group = "popups" },
-				{ "<leader>w", group = "windows", proxy = "<c-w>" },
+				{ "<leader>w", group = "windows" },
 				{ "<leader>e", group = "explorer" },
 				{ "<leader>G", group = "grep" },
 				{ "<leader>T", group = "test" },
@@ -117,6 +122,20 @@ return {
 					"<leader>d",
 					group = "debug",
 				},
+				{
+					"<leader>db",
+					group = "breakpoints",
+				},
+				{
+					"<leader>dbe",
+					group = "exception breakpoints",
+				},
+
+				{
+					"<leader>dS",
+					group = "session",
+				},
+
 				{
 					"<leader>r",
 					group = "refactor",

@@ -60,6 +60,33 @@ return {
 			end,
 			desc = "Command History",
 		},
+		{
+			"<leader>fb",
+			function()
+				local breakpoints = require("dap.breakpoints").get()
+				local items = {}
+				for bufnr, buf_bps in pairs(breakpoints) do
+					for _, bp in ipairs(buf_bps) do
+						local filename = vim.api.nvim_buf_get_name(bufnr)
+						items[#items + 1] = {
+							text = filename .. ":" .. bp.line,
+							file = filename,
+							pos = { bp.line, 0 },
+						}
+					end
+				end
+				Snacks.picker.pick({
+					title = "Breakpoints",
+					items = items,
+					confirm = function(picker, item)
+						picker:close()
+						vim.cmd("edit " .. item.file)
+						vim.api.nvim_win_set_cursor(0, item.pos)
+					end,
+				})
+			end,
+			desc = "List breakpoints",
+		},
 		-- find
 		{
 			"<leader>fi",

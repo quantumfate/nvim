@@ -32,34 +32,57 @@ return {
 			"jay-babu/mason-nvim-dap.nvim",
 		},
 		keys = {
+			-- Breakpoints
 			{
-				"<leader>db",
+				"<leader>dbt",
 				function()
 					require("dap").toggle_breakpoint()
 				end,
 				desc = "Toggle Breakpoint",
 			},
 			{
-				"<leader>dB",
+				"<leader>dbc",
 				function()
 					require("dap").set_breakpoint(vim.fn.input("Condition: "))
 				end,
 				desc = "Conditional Breakpoint",
 			},
 			{
-				"<leader>dc",
+				"<leader>dbn",
 				function()
-					require("dap").continue()
+					require("dap").set_breakpoint(nil, vim.fn.input("Hit Condition: "))
 				end,
-				desc = "Continue",
+				desc = "Stop after this breakpoint was hit n times",
 			},
 			{
-				"<leader>dC",
+				"<leader>dbC",
 				function()
-					require("dap").run_to_cursor()
+					require("dap").clear_breakpoints()
 				end,
-				desc = "Run to Cursor",
+				desc = "Clear all Breakpoints",
 			},
+			{
+				"<leader>dbed",
+				function()
+					require("dap").set_exception_breakpoints("default")
+				end,
+				desc = "Use default settings of debug adapter",
+			},
+			{
+				"<leader>dbea",
+				function()
+					require("dap").set_exception_breakpoints()
+				end,
+				desc = "Ask on which kinds of exceptions to stop",
+			},
+			{
+				"<leader>dbeq",
+				function()
+					require("dap").set_exception_breakpoints()
+				end,
+				desc = "Exit Debug session on exception",
+			},
+			-- stepping
 			{
 				"<leader>di",
 				function()
@@ -82,56 +105,80 @@ return {
 				desc = "Step Out",
 			},
 			{
-				"<leader>dp",
+				"<leader>du",
+				function()
+					require("dap").up()
+				end,
+				desc = "Stack up",
+			},
+			{
+				"<leader>dd",
+				function()
+					require("dap").down()
+				end,
+				desc = "Stack down",
+			},
+			-- session
+			{
+				"<leader>dSp",
 				function()
 					require("dap").pause()
 				end,
 				desc = "Pause",
 			},
+
 			{
-				"<leader>dr",
+				"<leader>dSr",
 				function()
-					require("dap").repl.toggle()
+					require("dap").restart()
 				end,
-				desc = "Toggle REPL",
+				desc = "Restart the current session",
 			},
 			{
-				"<leader>ds",
-				function()
-					require("dap").session()
-				end,
-				desc = "Session",
-			},
-			{
-				"<leader>dt",
+				"<leader>dSt",
 				function()
 					require("dap").terminate()
 				end,
 				desc = "Terminate",
 			},
 			{
-				"<leader>du",
+				"<leader>dSc",
 				function()
-					require("util.plugins.edgy").toggle_view("debug")
+					require("dap").continue()
 				end,
-				desc = "Toggle Debug View",
+				desc = "Continue",
 			},
+
 			{
-				"<leader>de",
+				"<leader>dSC",
 				function()
-					-- TODO: convert to dap view
-					require("dapui").eval()
+					require("dap").run_to_cursor()
 				end,
-				desc = "Eval",
-				mode = { "n", "v" },
+				desc = "Run to Cursor",
 			},
+			-- Add the word under cursor to watch list
 			{
 				"<leader>dw",
 				function()
-					-- TODO: convert to dap view
+					require("dap-view").add_expr()
+				end,
+				desc = "Watch expression under cursor",
+			},
+			-- Add visual selection to watch list (works in visual mode)
+			{
+				"<leader>dw",
+				function()
+					require("dap-view").add_expr()
+				end,
+				mode = "v",
+				desc = "Watch selection",
+			},
+			{
+				"<leader>dk",
+				function()
 					require("dap.ui.widgets").hover()
 				end,
-				desc = "Widgets",
+				desc = "View Value for Expression under the cursor",
 			},
 		},
 		config = function()

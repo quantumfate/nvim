@@ -168,6 +168,10 @@ return {
 						vim.keymap.set("n", key, fn, { buffer = buf, desc = desc })
 					end
 
+					map("<leader>iD", function()
+						edgy_util.toggle_view("debug")
+					end, "Debug")
+
 					map("<leader>ia", function()
 						edgy_util.toggle_view("full_trouble")
 					end, "Diagnostics, Symbols and LSP")
