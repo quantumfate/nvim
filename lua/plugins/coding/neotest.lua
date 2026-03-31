@@ -8,28 +8,171 @@ return {
 		"rouge8/neotest-rust",
 		"nvim-neotest/neotest-jest",
 		"fredrikaverpil/neotest-golang",
+		"folke/trouble.nvim",
 	},
 	opts = {
 		adapters = {
-			["neotest-rust"] = {},
 			["neotest-python"] = {
 				runner = "unittest",
 				python = function()
 					return require("util.root").get() .. "/.venv/bin/python"
 				end,
+				env = {
+					NO_COLOR = "1",
+					TERM = "dumb",
+				},
 			},
 			["neotest-golang"] = {
-				go_test_args = { "-v", "-race", "-timeout", "30s" },
-				dap_go_enabled = true, -- enables DAP integration with go-delve
+				go_test_args = { "-v", "-race", "-count=1", "-timeout=60s" },
+				dap_go_enabled = true,
+				env = {
+					NO_COLOR = "1",
+					TERM = "dumb",
+				},
+			},
+			["neotest-rust"] = {
+				args = { "--color=never" },
 			},
 			["neotest-jest"] = {
-				jestCommand = "npx jest",
+				jestCommand = "npx jest --no-color",
 				cwd = function()
 					return require("util.root").get()
 				end,
 			},
 		},
+		-- Example for loading neotest-golang with a custom config
+		-- adapters = {
+		--   ["neotest-golang"] = {
+		--     go_test_args = { "-v", "-race", "-count=1", "-timeout=60s" },
+		--     dap_go_enabled = true,
+		--   },
+		-- },
+
+		status = { virtual_text = true },
+		output = { open_on_run = true },
+		quickfix = {
+			open = function()
+				require("trouble").open({ mode = "quickfix", focus = false })
+			end,
+		},
 	},
+	config = function(_, opts)
+		-- Strip ANSI codes from adapter results before neotest sees them
+		local function wrap_adapter(adapter)
+			local original_results = adapter.results
+			adapter.results = function(spec, result, tree)
+				local results = original_results(spec, result, tree)
+				for pos_id, r in pairs(results or {}) do
+					if r.short then
+						r.short = r.short:gsub("\27%[[%d;]*m", "")
+					end
+					if r.errors then
+						for _, err in ipairs(r.errors) do
+							if err.message then
+								err.message = err.message:gsub("\27%[[%d;]*m", "")
+							end
+						end
+					end
+					if r.output and type(r.output) == "string" then
+						local f = io.open(r.output, "r")
+						if f then
+							local content = f:read("*a")
+							f:close()
+							local cleaned = content:gsub("\27%[[%d;]*m", "")
+							if cleaned ~= content then
+								local fw = io.open(r.output, "w")
+								if fw then
+									fw:write(cleaned)
+									fw:close()
+								end
+							end
+						end
+					end
+				end
+				return results
+			end
+			return adapter
+		end
+
+		local neotest_ns = vim.api.nvim_create_namespace("neotest")
+		vim.diagnostic.config({
+			virtual_text = {
+				format = function(diagnostic)
+					local message = diagnostic
+						.message
+						:gsub("\27%[[%d;]*m", "") -- strip ANSI escape codes
+						:gsub("\n", " ")
+						:gsub("\t", " ")
+						:gsub("%s+", " ")
+						:gsub("^%s+", "")
+					return message
+				end,
+			},
+		}, neotest_ns)
+
+		opts.consumers = opts.consumers or {}
+		-- Refresh and auto close trouble after running tests
+		opts.consumers.trouble = function(client)
+			client.listeners.results = function(adapter_id, results, partial)
+				if partial then
+					return
+				end
+				local tree = assert(client:get_position(nil, { adapter = adapter_id }))
+
+				local failed = 0
+				for pos_id, result in pairs(results) do
+					if result.status == "failed" and tree:get_key(pos_id) then
+						failed = failed + 1
+					end
+				end
+				vim.schedule(function()
+					local trouble = require("trouble")
+					local edgy_util = require("util.plugins.edgy")
+					if edgy_util.get_current_view() == edgy_util.views.neotest then
+						if failed == 0 then
+							edgy_util.restore_prev_view()
+						end
+					else
+						if failed ~= 0 then
+							edgy_util.open_view("neotest")
+						end
+					end
+				end)
+				return {}
+			end
+		end
+
+		if opts.adapters then
+			local adapters = {}
+			for name, config in pairs(opts.adapters or {}) do
+				if type(name) == "number" then
+					if type(config) == "string" then
+						config = require(config)
+					end
+					adapters[#adapters + 1] = config
+				elseif config ~= false then
+					local adapter = require(name)
+					if type(config) == "table" and not vim.tbl_isempty(config) then
+						local meta = getmetatable(adapter)
+						if adapter.setup then
+							adapter.setup(config)
+						elseif adapter.adapter then
+							adapter.adapter(config)
+							adapter = adapter.adapter
+						elseif meta and meta.__call then
+							adapter = adapter(config)
+						else
+							error("Adapter " .. name .. " does not support setup")
+						end
+					end
+					adapters[#adapters + 1] = wrap_adapter(adapter)
+				end
+			end
+			opts.adapters = adapters
+		end
+
+		require("neotest").setup(opts)
+	end,
 	keys = {
 		{
 			"<leader>Td",

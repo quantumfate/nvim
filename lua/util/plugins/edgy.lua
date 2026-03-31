@@ -1,6 +1,7 @@
 --- Edgy utility module for managing Trouble panel views. Provides functionality to open, close
 --- and toggle different diagnostic and LSP views. Also manages a history of views internally.
 ---@class util.plugins.edgy
+---@field views EdgyUtilViews
 local M = {}
 
 local internal = {}
@@ -12,6 +13,7 @@ local trouble = {
 	symbols = "Trouble symbols focus=false open_no_results=true",
 	loclist = "Trouble loclist focus=false open_no_results=true",
 	qflist = "Trouble qflist focus=false open_no_results=true",
+	neotest_qflist = "Trouble quickfix focus=false open_no_results=true",
 }
 
 --[[
@@ -53,6 +55,10 @@ internal.views = {
 		trouble.qflist,
 		trouble.loclist,
 	}, "QuickFix"),
+	neotest = meta_wrapper({
+		"Neotest summary",
+		trouble.neotest_qflist,
+	}, "Neotest"),
 	lsp = meta_wrapper({ trouble.symbols, trouble.lsp }, "LSP"),
 	symbols = meta_wrapper({ trouble.symbols }, "Symbols"),
 	debug = meta_wrapper({ "DapViewOpen" }, "Debug"),
@@ -63,6 +69,7 @@ internal.views = {
 internal.generic_close = {
 	dap_view = "DapViewClose",
 	neo_tree = "Neotree close",
+	neotest_summary = "Neotest summary",
 }
 
 --- Strings to be concatenated with "Trouble close"
@@ -78,6 +85,7 @@ internal.trouble_modes = {
 	"lsp_incoming_calls",
 	"lsp_outgoing_calls",
 	"qflist",
+	"quickfix",
 	"loclist",
 }
 
@@ -161,6 +169,19 @@ end
 -- API
 --
 --]]
+
+--- An Enum mapping internal views
+---@class EdgyUtilViews
+M.views = {
+	full_trouble = "full_trouble",
+	project_diagnostics = "project_diagnostics",
+	diagnostics = "diagnostics",
+	list_trouble = "list_trouble",
+	neotest = "neotest",
+	lsp = "lsp",
+	symbols = "symbols",
+	debug = "debug",
+}
 
 ---@return string pretty_name Name in a pretty format or an empty string
 function M.get_pretty_view_string()

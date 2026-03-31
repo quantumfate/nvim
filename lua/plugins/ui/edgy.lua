@@ -21,6 +21,8 @@ return {
 		opts = {
 			exit_when_last = true,
 			bottom = {
+				{ title = "Spectre", ft = "spectre_panel", size = { height = 0.4 } },
+				{ title = "Neotest Output", ft = "neotest-output-panel", size = { height = 15 } },
 				{
 					ft = "trouble",
 					title = "Diagnostics",
@@ -30,7 +32,16 @@ return {
 					end,
 					size = { height = 0.3 },
 				},
-				{ ft = "qf", title = "QuickFix" },
+				-- { ft = "qf", title = "QuickFix" },
+				{
+					ft = "trouble",
+					title = "QuickFix List",
+					open = "Trouble qflist",
+					filter = function(_, win)
+						return vim.w[win].trouble and vim.w[win].trouble.mode == "quickfix"
+					end,
+					size = { height = 0.3 },
+				},
 				{
 					ft = "help",
 					size = { height = 20 },
@@ -87,8 +98,10 @@ return {
 					title = "Watches",
 					size = { width = 60 },
 				},
+				"neo-tree",
 			},
 			right = {
+				{ title = "Neotest Summary", ft = "neotest-summary" },
 				{
 					ft = "trouble",
 					title = "Symbols",
@@ -116,6 +129,7 @@ return {
 					end,
 					size = { height = 0.3 },
 				},
+
 				{
 					ft = "trouble",
 					title = "Location List",
@@ -138,6 +152,38 @@ return {
 			},
 		},
 		config = function(_, opts)
+			-- neo-tree might not be loaded yet, but we can still read its spec
+			local lazy_config = require("lazy.core.config")
+			local has_neotree = lazy_config.spec.plugins["neo-tree.nvim"] ~= nil
+
+			if has_neotree then
+				local pos = {
+					filesystem = "left",
+					buffers = "top",
+					git_status = "right",
+					document_symbols = "bottom",
+					diagnostics = "bottom",
+				}
+				-- Get neo-tree opts from the lazy spec
+				local neotree_opts =
+					require("lazy.core.plugin").values(lazy_config.spec.plugins["neo-tree.nvim"], "opts", false)
+				local sources = (neotree_opts or {}).sources or { "filesystem" }
+				local root_fn = require("util.root").get
+
+				for i, v in ipairs(sources) do
+					table.insert(opts.left, i, {
+						title = "Neo-Tree " .. v:gsub("_", " "):gsub("^%l", string.upper),
+						ft = "neo-tree",
+						filter = function(buf)
+							return vim.b[buf].neo_tree_source == v
+						end,
+						pinned = true,
+						open = function()
+							vim.cmd(("Neotree show position=%s %s dir=%s"):format(pos[v] or "bottom", v, root_fn()))
+						end,
+					})
+				end
+			end
 			require("edgy").setup(opts)
 			local edgy_util = require("util.plugins.edgy")
 
@@ -169,31 +215,35 @@ return {
 					end
 
 					map("<leader>iD", function()
-						edgy_util.toggle_view("debug")
+						edgy_util.toggle_view(edgy_util.views.debug)
 					end, "Debug")
 
 					map("<leader>ia", function()
-						edgy_util.toggle_view("full_trouble")
+						edgy_util.toggle_view(edgy_util.views.full_trouble)
 					end, "Diagnostics, Symbols and LSP")
 
 					map("<leader>id", function()
-						edgy_util.toggle_view("diagnostics")
+						edgy_util.toggle_view(edgy_util.views.diagnostics)
 					end, "Diagnostics and Symbols")
 
 					map("<leader>ip", function()
-						edgy_util.toggle_view("project_diagnostics")
+						edgy_util.toggle_view(edgy_util.views.project_diagnostics)
 					end, "Project Wide Diagnostics")
 
 					map("<leader>il", function()
-						edgy_util.toggle_view("lsp")
+						edgy_util.toggle_view(edgy_util.views.lsp)
 					end, "Symbols and LSP")
 
+					map("<leader>in", function()
+						edgy_util.toggle_view(edgy_util.views.neotest)
+					end, "Neotest")
+
 					map("<leader>it", function()
-						edgy_util.toggle_view("list_trouble")
+						edgy_util.toggle_view(edgy_util.views.list_trouble)
 					end, "Symbols, Local- and Quickfix list")
 
 					map("<leader>if", function()
-						edgy_util.toggle_view("symbols")
+						edgy_util.toggle_view(edgy_util.views.symbols)
 					end, "Symbols")
 				end,
 			})

@@ -86,8 +86,6 @@ return {
 						desc = "Open with System Application",
 					},
 					["P"] = { "toggle_preview", config = { use_float = true } },
-					["<a-v>"] = "open_vsplit",
-					["<a-s>"] = "open_split",
 				},
 			},
 			default_component_configs = {
