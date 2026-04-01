@@ -83,24 +83,6 @@ return {
 					should_show_items = function(ctx)
 						return ctx.trigger.initial_kind ~= "trigger_character"
 					end,
-					opts = {
-						friendly_snippets = true, -- default
-
-						-- TODO: see the list of frameworks in: https://github.com/rafamadriz/friendly-snippets/tree/main/snippets/frameworks
-						-- and search for possible languages in: https://github.com/rafamadriz/friendly-snippets/blob/main/package.json
-						-- the following is just an example, you should only enable the frameworks that you use
-						extended_filetypes = {
-							markdown = { "jekyll" },
-							sh = { "shelldoc" },
-							cpp = { "cppdoc" },
-							c = { "cdoc" },
-							lua = { "luadoc" },
-							rust = { "rustdoc" },
-							python = { "pydoc", "debug", "unittest", "comprehension" },
-							js = { "jsdoc" },
-							ts = { "tsdoc" },
-						},
-					},
 				},
 				path = {
 					opts = {
@@ -110,32 +92,6 @@ return {
 						end,
 					},
 				},
-				-- avante = {
-				-- 	module = "blink-cmp-avante",
-				-- 	name = "Avante",
-				-- 	opts = {
-				-- 		command = {
-				-- 			get_kind_name = function(_)
-				-- 				return "AvanteCmd"
-				-- 			end,
-				-- 		},
-				-- 		mention = {
-				-- 			get_kind_name = function(_)
-				-- 				return "AvanteMention"
-				-- 			end,
-				-- 		},
-				-- 		shortcut = {
-				-- 			get_kind_name = function(_)
-				-- 				return "AvanteShortcut"
-				-- 			end,
-				-- 		},
-				-- 		kind_icons = {
-				-- 			AvanteCmd = " ",
-				-- 			AvanteMention = " ",
-				-- 			AvanteShortcut = " ",
-				-- 		},
-				-- 	},
-				-- },
 			},
 		},
 		completion = {

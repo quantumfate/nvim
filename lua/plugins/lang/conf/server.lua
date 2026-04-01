@@ -9,7 +9,7 @@
 
 -- Server configurations with comprehensive settings
 ---@type table<string, LspServerConfig>
-local configs = {
+local M = {
 	lua_ls = {
 		cmd = { "lua-language-server" },
 		filetypes = { "lua" },
@@ -121,13 +121,11 @@ local configs = {
 		},
 	},
 
-	servers = {
-		bacon_ls = {
-			enabled = diagnostics == "bacon-ls",
-		},
-		-- it's managed by rustaceanvim
-		rust_analyzer = { enabled = false },
+	bacon_ls = {
+		enabled = true,
 	},
+	-- it's managed by rustaceanvim
+	rust_analyzer = { enabled = false },
 	gopls = {
 		cmd = { "gopls" },
 		filetypes = { "go", "gomod", "gowork", "gotmpl" },
@@ -243,9 +241,4 @@ local configs = {
 	--codebook = {},
 }
 
-local M = {}
-for server, config in pairs(configs) do
-	-- merge with vim.lsp.config by default
-	M[server] = setmetatable(config, { __index = { strategy = "force" } })
-end
 return M

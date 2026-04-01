@@ -7,9 +7,10 @@ return {
 	"neovim/nvim-lspconfig",
 	event = { "BufReadPre", "BufNewFile" },
 	dependencies = {
+		"folke/lazydev.nvim", -- Make sure this loads first
 		"mason.nvim",
 		"mason-lspconfig.nvim",
-		"folke/lazydev.nvim", -- Make sure this loads first
+		"saghen/blink.cmp",
 	},
 	config = function()
 		vim.api.nvim_create_autocmd("LspAttach", {
@@ -125,13 +126,13 @@ return {
 						dynamicRegistration = true,
 					},
 				},
-			}, true),
+			}),
 		})
 		-- Apply server configurations
 		local server_configs = require("plugins.lang.conf.server")
 
 		for server, config in pairs(server_configs) do
-			vim.lsp.config[server] = vim.tbl_deep_extend("keep", vim.lsp.config[server] or {}, config)
+			vim.lsp.config[server] = vim.tbl_deep_extend("force", vim.lsp.config[server] or {}, config)
 		end
 		-- Enable configured servers
 		local servers = vim.tbl_keys(server_configs)
