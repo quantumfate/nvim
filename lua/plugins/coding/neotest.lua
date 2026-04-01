@@ -30,9 +30,7 @@ return {
 					TERM = "dumb",
 				},
 			},
-			["neotest-rust"] = {
-				args = { "--color=never" },
-			},
+			["rustaceanvim.neotest"] = {},
 			["neotest-jest"] = {
 				jestCommand = "npx jest --no-color",
 				cwd = function()

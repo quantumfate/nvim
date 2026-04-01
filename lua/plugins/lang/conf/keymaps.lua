@@ -112,7 +112,13 @@ local M = {
 	-- Documentation
 	{
 		keys = "K",
-		func = vim.lsp.buf.hover,
+		func = function()
+			if vim.bo.filetype == "rust" then
+				vim.cmd.RustLsp({ "hover", "actions" })
+			else
+				vim.lsp.buf.hover()
+			end
+		end,
 		desc = "Hover Documentation",
 		method = "textDocument/hover",
 	},
@@ -133,7 +139,13 @@ local M = {
 	-- Code actions and refactoring (leader keymaps)
 	{
 		keys = "<leader>ca",
-		func = vim.lsp.buf.code_action,
+		func = function()
+			if vim.bo.filetype == "rust" then
+				vim.cmd.RustLsp("codeAction")
+			else
+				vim.lsp.buf.code_action()
+			end
+		end,
 		desc = "Code Action",
 		method = "textDocument/codeAction",
 		mode = { "n", "v" },

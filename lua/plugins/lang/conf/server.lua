@@ -121,64 +121,13 @@ local configs = {
 		},
 	},
 
-	rust_analyzer = {
-		cmd = { "rust-analyzer" },
-		filetypes = { "rust" },
-		root_markers = { "Cargo.toml", "rust-project.json" },
-		settings = {
-			["rust-analyzer"] = {
-				cargo = {
-					allFeatures = true,
-					loadOutDirsFromCheck = true,
-				},
-				checkOnSave = {
-					command = "clippy",
-					extraArgs = { "--no-deps" },
-				},
-				procMacro = {
-					enable = true,
-					ignored = {
-						["async-trait"] = { "async_trait" },
-						["napi-derive"] = { "napi" },
-						["async-recursion"] = { "async_recursion" },
-					},
-				},
-				inlayHints = {
-					bindingModeHints = {
-						enable = false,
-					},
-					chainingHints = {
-						enable = true,
-					},
-					closingBraceHints = {
-						enable = true,
-						minLines = 25,
-					},
-					closureReturnTypeHints = {
-						enable = "never",
-					},
-					lifetimeElisionHints = {
-						enable = "never",
-						useParameterNames = false,
-					},
-					maxLength = 25,
-					parameterHints = {
-						enable = true,
-					},
-					reborrowHints = {
-						enable = "never",
-					},
-					renderColons = true,
-					typeHints = {
-						enable = true,
-						hideClosureInitialization = false,
-						hideNamedConstructor = false,
-					},
-				},
-			},
+	servers = {
+		bacon_ls = {
+			enabled = diagnostics == "bacon-ls",
 		},
+		-- it's managed by rustaceanvim
+		rust_analyzer = { enabled = false },
 	},
-
 	gopls = {
 		cmd = { "gopls" },
 		filetypes = { "go", "gomod", "gowork", "gotmpl" },

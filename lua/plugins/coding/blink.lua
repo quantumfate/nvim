@@ -32,12 +32,13 @@ return {
 	build = "cargo build --release",
 	event = { "CmdlineEnter", "User FileOpened" },
 
-	---@type table
 	opts = {
 		keymap = {
 			preset = "none",
-			["<Tab>"] = { "snippet_forward", "select_next", "fallback" },
-			["<S-Tab>"] = { "snippet_backward", "select_prev", "fallback" },
+			--- Order of "select_next" and "snippet_forward" is really important
+			--- as it fixes tab annoyances with the completion menu and snippet templates
+			["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
+			["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
 			["<CR>"] = { "accept", "fallback" },
 			["<C-space>"] = { "show", "show_documentation", "hide_documentation" },
 			["<C-e>"] = { "cancel", "fallback" },
@@ -46,10 +47,11 @@ return {
 		},
 		cmdline = {
 			keymap = {
-				preset = "none",
-				["<Tab>"] = { "select_next", "fallback" },
-				["<S-Tab>"] = { "select_prev", "fallback" },
+				preset = "cmdline",
+				["<Tab>"] = { "select_next", "show", "fallback" },
+				["<S-Tab>"] = { "select_prev", "show", "fallback" },
 				["<CR>"] = { "fallback" },
+				["<space>"] = { "accept", "fallback" },
 				["<C-CR>"] = { "accept", "fallback" },
 				["<C-e>"] = { "cancel", "fallback" },
 			},
@@ -75,6 +77,38 @@ return {
 					module = "lazydev.integrations.blink",
 					-- make lazydev completions top priority (see `:h blink.cmp`)
 					score_offset = 100,
+				},
+				snippets = {
+					--- Hide snippets after trigger character
+					should_show_items = function(ctx)
+						return ctx.trigger.initial_kind ~= "trigger_character"
+					end,
+					opts = {
+						friendly_snippets = true, -- default
+
+						-- TODO: see the list of frameworks in: https://github.com/rafamadriz/friendly-snippets/tree/main/snippets/frameworks
+						-- and search for possible languages in: https://github.com/rafamadriz/friendly-snippets/blob/main/package.json
+						-- the following is just an example, you should only enable the frameworks that you use
+						extended_filetypes = {
+							markdown = { "jekyll" },
+							sh = { "shelldoc" },
+							cpp = { "cppdoc" },
+							c = { "cdoc" },
+							lua = { "luadoc" },
+							rust = { "rustdoc" },
+							python = { "pydoc", "debug", "unittest", "comprehension" },
+							js = { "jsdoc" },
+							ts = { "tsdoc" },
+						},
+					},
+				},
+				path = {
+					opts = {
+						--- Path completion from cwd instead of current buffer's directory
+						get_cwd = function(_)
+							return require("util.root").get()
+						end,
+					},
 				},
 				-- avante = {
 				-- 	module = "blink-cmp-avante",

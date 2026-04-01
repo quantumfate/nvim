@@ -40,6 +40,7 @@ return {
 				"query",
 				"regex",
 				"rust",
+				"ron",
 				"scss",
 				"svelte",
 				"toml",
