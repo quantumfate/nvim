@@ -8,6 +8,7 @@ return {
 		"rouge8/neotest-rust",
 		"nvim-neotest/neotest-jest",
 		"fredrikaverpil/neotest-golang",
+		"MisanthropicBit/neotest-busted",
 		"folke/trouble.nvim",
 	},
 	opts = {
@@ -31,6 +32,10 @@ return {
 				},
 			},
 			["rustaceanvim.neotest"] = {},
+			["neotest-busted"] = {
+				minimal_init = "tests/minimal_init.lua",
+				local_luarocks_only = false, -- Default local_luarocks_only = true blocks ~/.luarocks lookup (init.lua:96-98). User has no project-local lua_modules/, so nil returned.
+			},
 			["neotest-jest"] = {
 				jestCommand = "npx jest --no-color",
 				cwd = function()

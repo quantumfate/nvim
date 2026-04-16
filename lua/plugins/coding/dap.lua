@@ -272,6 +272,25 @@ return {
 				edgy_util.close_all()
 			end
 
+			-- Lua (local-lua-debugger-vscode, used by neotest-busted)
+			dap.adapters["local-lua"] = {
+				type = "executable",
+				command = "node",
+				args = {
+					vim.fn.stdpath("data") .. "/mason/packages/local-lua-debugger-vscode/extension/extension/debugAdapter.js",
+				},
+				enrich_config = function(config, on_config)
+					if not config["extensionPath"] then
+						config.extensionPath = vim.fn.stdpath("data") .. "/mason/packages/local-lua-debugger-vscode/extension/"
+					end
+					config.program = config.program or {}
+					if not config.program.lua then
+						config.program.lua = vim.fn.exepath("nlua")
+					end
+					on_config(config)
+				end,
+			}
+
 			-- Python (debugpy)
 			dap.adapters.python = function(cb, config)
 				if config.request == "attach" then
