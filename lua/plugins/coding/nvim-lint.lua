@@ -34,6 +34,7 @@ return {
 			javascriptreact = { "eslint_d" },
 			typescriptreact = { "eslint_d" },
 			vue = { "eslint_d" },
+			svelte = { "eslint_d" },
 			-- bash_ls already does this
 			-- sh = { "shellcheck" },
 			-- bash = { "shellcheck" },

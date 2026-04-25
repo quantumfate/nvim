@@ -137,5 +137,64 @@ return {
 		-- Enable configured servers
 		local servers = vim.tbl_keys(server_configs)
 		vim.lsp.enable(servers)
+
+		vim.api.nvim_create_user_command("LspInfo", function()
+			vim.cmd("checkhealth vim.lsp")
+		end, { desc = "Show LSP info" })
+
+		vim.api.nvim_create_user_command("LspLog", function()
+			vim.cmd.edit(vim.lsp.get_log_path())
+		end, { desc = "Open LSP log" })
+
+		vim.api.nvim_create_user_command("LspStart", function(opts)
+			local names = #opts.fargs > 0 and opts.fargs or servers
+			vim.lsp.enable(names)
+		end, {
+			nargs = "*",
+			desc = "Enable LSP server(s)",
+			complete = function()
+				return servers
+			end,
+		})
+
+		vim.api.nvim_create_user_command("LspStop", function(opts)
+			local clients = #opts.fargs > 0 and vim.lsp.get_clients({ name = opts.fargs[1] })
+				or vim.lsp.get_clients({ bufnr = 0 })
+			for _, c in ipairs(clients) do
+				vim.lsp.stop_client(c.id)
+			end
+		end, {
+			nargs = "?",
+			desc = "Stop LSP client(s) (default: current buffer)",
+			complete = function()
+				return vim.tbl_map(function(c)
+					return c.name
+				end, vim.lsp.get_clients())
+			end,
+		})
+
+		vim.api.nvim_create_user_command("LspRestart", function(opts)
+			local targets = #opts.fargs > 0 and opts.fargs
+				or vim.tbl_map(function(c)
+					return c.name
+				end, vim.lsp.get_clients({ bufnr = 0 }))
+			for _, name in ipairs(targets) do
+				for _, c in ipairs(vim.lsp.get_clients({ name = name })) do
+					vim.lsp.stop_client(c.id)
+				end
+			end
+			vim.defer_fn(function()
+				vim.lsp.enable(#targets > 0 and targets or servers)
+				vim.cmd("edit")
+			end, 100)
+		end, {
+			nargs = "*",
+			desc = "Restart LSP client(s) (default: current buffer)",
+			complete = function()
+				return vim.tbl_map(function(c)
+					return c.name
+				end, vim.lsp.get_clients())
+			end,
+		})
 	end,
 }

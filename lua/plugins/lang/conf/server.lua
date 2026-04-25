@@ -217,7 +217,41 @@ local M = {
 	tailwindcss = {
 		cmd = { "tailwindcss-language-server", "--stdio" },
 		filetypes = { "html", "css", "javascript", "javascriptreact", "typescript", "typescriptreact", "vue", "svelte" },
-		root_markers = { "tailwind.config.js", "tailwind.config.ts", "tailwind.config.cjs", "tailwind.config.mjs" },
+		root_markers = {
+			"tailwind.config.js",
+			"tailwind.config.ts",
+			"tailwind.config.cjs",
+			"tailwind.config.mjs",
+			"postcss.config.js",
+			"postcss.config.cjs",
+		},
+	},
+
+	svelte = {
+		cmd = { "svelteserver", "--stdio" },
+		filetypes = { "svelte" },
+		root_markers = { "package.json", "svelte.config.js", "svelte.config.ts", ".git" },
+		settings = {
+			svelte = {
+				plugin = {
+					html = { completions = { enable = true, emmet = false } },
+					svelte = { completions = { enable = true }, format = { enable = false } },
+					css = { completions = { enable = true, emmet = true } },
+				},
+			},
+		},
+	},
+
+	taplo = {
+		cmd = { "taplo", "lsp", "stdio" },
+		filetypes = { "toml" },
+		root_markers = { ".taplo.toml", "taplo.toml", "Cargo.toml", ".git" },
+	},
+
+	marksman = {
+		cmd = { "marksman", "server" },
+		filetypes = { "markdown", "markdown.mdx" },
+		root_markers = { ".marksman.toml", ".git" },
 	},
 
 	vuels = {

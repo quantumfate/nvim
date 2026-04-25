@@ -205,7 +205,7 @@ return {
 	},
 	wordcount = {
 		function()
-			return "󰈭" .. vim.fn.wordcount().words
+			return "󰈭 " .. vim.fn.wordcount().words
 		end,
 		cond = function()
 			return vim.tbl_contains({ "markdown", "text", "txt" }, vim.bo.filetype)

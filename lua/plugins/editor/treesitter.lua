@@ -42,6 +42,7 @@ return {
 				"rust",
 				"ron",
 				"scss",
+				"sql",
 				"svelte",
 				"toml",
 				"tsx",

@@ -30,6 +30,9 @@ local lsp_servers = {
 	"tailwindcss",
 	"bashls",
 	"qmlls",
+	"svelte-language-server",
+	"taplo",
+	"marksman",
 }
 
 --- External formatters for languages where LSP doesn't provide formatting

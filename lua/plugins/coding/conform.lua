@@ -65,6 +65,7 @@ return {
 			javascriptreact = { "prettierd", "prettier" },
 			typescriptreact = { "prettierd", "prettier" },
 			vue = { "prettierd", "prettier" },
+			svelte = { "prettierd", "prettier" },
 			json = { "prettierd", "prettier" },
 			jsonc = { "prettierd", "prettier" },
 			yaml = { "prettierd", "prettier" },
@@ -78,6 +79,7 @@ return {
 			fish = { "fish_indent" },
 			go = { "goimports", "gofmt" },
 			rust = { "rustfmt" },
+			toml = { "taplo" },
 			c = { "clang-format" },
 			cpp = { "clang-format" },
 			objc = { "clang-format" },
@@ -104,6 +106,11 @@ return {
 			injected = { options = { ignore_errors = true } },
 			shfmt = {
 				prepend_args = { "-i", "4" }, -- 4 space indent
+			},
+			prettierd = {
+				env = {
+					PRETTIERD_LOCAL_PRETTIER_ONLY = "1",
+				},
 			},
 		},
 	},
