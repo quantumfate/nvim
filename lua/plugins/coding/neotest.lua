@@ -7,6 +7,7 @@ return {
 		"nvim-neotest/neotest-python",
 		"rouge8/neotest-rust",
 		"nvim-neotest/neotest-jest",
+		"marilari88/neotest-vitest",
 		"fredrikaverpil/neotest-golang",
 		"MisanthropicBit/neotest-busted",
 		"folke/trouble.nvim",
@@ -40,6 +41,13 @@ return {
 				jestCommand = "npx jest --no-color",
 				cwd = function()
 					return require("util.root").get()
+				end,
+			},
+			["neotest-vitest"] = {
+				-- Vitest auto-detects vite.config.ts upward from each test file,
+				-- so cwd defaults work in the pnpm monorepo (web/ has the config).
+				filter_dir = function(name)
+					return name ~= "node_modules" and name ~= "build" and name ~= ".svelte-kit"
 				end,
 			},
 		},
