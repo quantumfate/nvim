@@ -78,7 +78,7 @@ return {
 				{ pattern = "up.*frame", icon = icons.ui.BoldArrowUp, color = "cyan" },
 				{ pattern = "down.*frame", icon = icons.ui.BoldArrowDown, color = "cyan" },
 				{ pattern = "go to line", icon = icons.debugging.StepOver, color = "cyan" },
-				{ pattern = "popups", icon = "󰋲", color = "cyan" },
+				{ pattern = "preview", icon = "󰋲", color = "cyan" },
 				{ pattern = "harpoon", icon = "󰛢", color = "purple" },
 				{ pattern = "interfaces", icon = "", color = "red" },
 				{ pattern = "neogen", icon = "", color = "green" },
@@ -176,7 +176,7 @@ return {
 		-- 	desc = "Buffer Keymaps (which-key)",
 		-- },
 		{
-			"<leader>pl",
+			"<leader>il",
 			"<cmd>Lazy<cr>",
 			desc = "Lazy",
 		},
@@ -206,6 +206,36 @@ return {
 			{ "<leader>wv", "<cmd>vsplit<cr>", desc = "Vertical split" },
 			{ "<leader>ws", "<cmd>split<cr>", desc = "Horizontal split" },
 			{ "<leader>w=", "<cmd>wincmd =<cr>", desc = "Balance" },
+
+			-- Swap with neighbor split (file buffers only, skips trouble/edgy/etc.)
+			{
+				"<leader>w<",
+				function()
+					require("util.win-swap").swap("h")
+				end,
+				desc = "Swap with left split",
+			},
+			{
+				"<leader>w>",
+				function()
+					require("util.win-swap").swap("l")
+				end,
+				desc = "Swap with right split",
+			},
+			{
+				"<leader>w-",
+				function()
+					require("util.win-swap").swap("k")
+				end,
+				desc = "Swap with above split",
+			},
+			{
+				"<leader>w+",
+				function()
+					require("util.win-swap").swap("j")
+				end,
+				desc = "Swap with below split",
+			},
 		})
 
 		wk.add({

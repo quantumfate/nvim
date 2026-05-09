@@ -15,13 +15,14 @@ return {
 	opts = {
 		adapters = {
 			["neotest-python"] = {
-				runner = "unittest",
 				python = function()
 					return require("util.root").get() .. "/.venv/bin/python"
 				end,
+				args = { "-v" },
 				env = {
 					NO_COLOR = "1",
 					TERM = "dumb",
+					PYTHONPATH = "src",
 				},
 			},
 			["neotest-golang"] = {

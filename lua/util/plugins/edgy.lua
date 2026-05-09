@@ -26,10 +26,11 @@ local trouble = {
 ---@param view_content table
 ---@param pretty_name string
 ---@return table
-local function meta_wrapper(view_content, pretty_name)
+local function meta_wrapper(view_content, pretty_name, solo)
 	return setmetatable(view_content, {
 		__index = {
 			pretty_name = pretty_name,
+			solo = solo or false,
 		},
 	})
 end
@@ -61,7 +62,7 @@ internal.views = {
 	}, "Neotest"),
 	lsp = meta_wrapper({ trouble.symbols, trouble.lsp }, "LSP"),
 	symbols = meta_wrapper({ trouble.symbols }, "Symbols"),
-	debug = meta_wrapper({ "DapViewOpen" }, "Debug"),
+	debug = meta_wrapper({ "DapViewOpen" }, "Debug", true),
 }
 
 --- Defines close action commands for a plugin
@@ -155,12 +156,16 @@ local function do_open(name)
 		Snacks.notify.error("Unknown edgy view: " .. name)
 		return false
 	end
-	if #vim.api.nvim_tabpage_list_wins(0) > 1 then
+	if view.solo and #vim.api.nvim_tabpage_list_wins(0) > 1 then
 		exec("only")
 	end
 	for _, cmd in ipairs(view) do
 		exec(cmd)
 	end
+	vim.defer_fn(function()
+		pcall(vim.cmd, "wincmd =")
+		pcall(require("edgy.editor").equalize)
+	end, 150)
 	return true
 end
 
