@@ -46,6 +46,7 @@ local formatters = {
 	"clang-format",
 	"goimports",
 	"rustfmt",
+	"deno",
 }
 
 --- External linters for additional code quality checks

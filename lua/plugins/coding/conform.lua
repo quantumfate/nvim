@@ -60,8 +60,8 @@ return {
 		formatters_by_ft = {
 			lua = { "stylua" },
 			python = { "ruff_format", "black" },
-			javascript = { "prettierd", "prettier" },
-			typescript = { "prettierd", "prettier" },
+			javascript = { "deno_fmt", "prettierd", "prettier" },
+			typescript = { "deno_fmt", "prettierd", "prettier" },
 			javascriptreact = { "prettierd", "prettier" },
 			typescriptreact = { "prettierd", "prettier" },
 			vue = { "prettierd", "prettier" },
@@ -78,6 +78,7 @@ return {
 			bash = { "shfmt" },
 			fish = { "fish_indent" },
 			go = { "goimports", "gofmt" },
+			just = { "just" },
 			rust = { "rustfmt" },
 			toml = { "taplo" },
 			c = { "clang-format" },

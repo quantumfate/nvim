@@ -18,7 +18,7 @@ return {
 	config = function(_, opts)
 		local nvim_navic_util = require("util.plugins.navbuddy")
 		nvim_navic_util.override_comment()
-		nvim_navic_util.override_telescope(require("lua.plugins.lib.snacks-picker").opts)
+		nvim_navic_util.override_telescope(require("plugins.lib.snacks-picker").opts)
 		require("nvim-navbuddy").setup(opts)
 	end,
 }
