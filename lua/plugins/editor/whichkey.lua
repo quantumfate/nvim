@@ -176,7 +176,7 @@ return {
 		-- 	desc = "Buffer Keymaps (which-key)",
 		-- },
 		{
-			"<leader>il",
+			"<leader>iL",
 			"<cmd>Lazy<cr>",
 			desc = "Lazy",
 		},
