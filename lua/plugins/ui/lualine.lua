@@ -78,8 +78,8 @@ return {
 				},
 				lualine_b = {
 					lualine_components.root,
-					lualine_components.filetype,
-					lualine_components.path,
+					lualine_components.view,
+					lualine_components.remote_nvim,
 				},
 				lualine_c = {
 					lualine_components.harpoon,
@@ -122,23 +122,37 @@ return {
 				},
 				lualine_z = {},
 			},
-			tabline = {
-				lualine_a = {
-					lualine_components.remote_nvim,
+			-- tabline = {
+			-- 	lualine_a = {
+			-- lualine_components.remote_nvim,
+			-- 	},
+			-- 	lualine_b = {},
+			-- 	lualine_c = {},
+			-- 	lualine_x = {},
+			-- 	lualine_y = {},
+			-- 	lualine_z = {
+			-- 		-- TODO: edgy view
+			-- 	},
+			-- },
+			winbar = {
+				lualine_b = {
+					lualine_components.filetype,
 				},
-				lualine_b = {},
 				lualine_c = {
+					lualine_components.path,
 					lualine_components.navic,
 				},
-				lualine_x = {
-					lualine_components.view,
+			},
+			inactive_winbar = {
+				lualine_b = {
+					lualine_components.filetype,
 				},
-				lualine_y = {},
-				lualine_z = {
-					-- TODO: edgy view
+				lualine_c = {
+					lualine_components.path,
+					lualine_components.navic,
 				},
 			},
-			winbar = nil,
+
 			extensions = {
 				"aerial",
 				"assistant",

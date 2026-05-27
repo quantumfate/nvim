@@ -57,7 +57,6 @@ return {
 		cond = function()
 			return not conditions.buffer_is_terminal() and conditions.hide_in_width() and not conditions.no_clients()
 		end,
-		separator = { right = "" },
 	},
 	path = {
 		require("util.plugins.lualine.util").get_path(),
@@ -175,7 +174,6 @@ return {
 		cond = nil,
 		padding = { left = 2, right = 1 },
 		icon_only = true,
-		separator = { right = "" }, -- override both
 	},
 	searchcount = {
 		function()
