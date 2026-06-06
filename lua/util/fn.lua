@@ -57,6 +57,7 @@ end
 --- Generate a random UUID string
 --- Creates a version 4 UUID following the standard format
 ---@return string uuid A randomly generated UUID string
+---@return integer count A randomly generated UUID string
 function M.gen_uuid()
 	local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
 	return template:gsub("[xy]", function(c)

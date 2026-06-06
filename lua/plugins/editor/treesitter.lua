@@ -73,6 +73,17 @@ return {
 				ts.install(to_install)
 			end
 
+			local ts_util = require("util.plugins.treesitter")
+			vim.treesitter.query.add_directive("downcase!", ts_util.case_directive(string.lower), { force = true })
+			vim.treesitter.query.add_directive("upcase!", ts_util.case_directive(string.upper), { force = true })
+
+			vim.keymap.set({ "x", "o" }, "af", function()
+				ts_util.select_function("function.outer")
+			end, { desc = "around function" })
+			vim.keymap.set({ "x", "o" }, "if", function()
+				ts_util.select_function("function.inner")
+			end, { desc = "inside function" })
+
 			-- FileType autocmd for highlight, indent, and folds
 			vim.api.nvim_create_autocmd("FileType", {
 				group = vim.api.nvim_create_augroup("treesitter_setup", { clear = true }),
