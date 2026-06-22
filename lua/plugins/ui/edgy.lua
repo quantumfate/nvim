@@ -218,6 +218,10 @@ return {
 						edgy_util.toggle_view(edgy_util.views.debug)
 					end, "Debug")
 
+					map("<leader>ie", function()
+						vim.cmd("wincmd =")
+					end, "Equalize Windows")
+
 					map("<leader>ia", function()
 						edgy_util.toggle_view(edgy_util.views.full_trouble)
 					end, "Diagnostics, Symbols and LSP")

@@ -149,7 +149,6 @@ return {
 				},
 				lualine_c = {
 					lualine_components.path,
-					lualine_components.navic,
 				},
 			},
 

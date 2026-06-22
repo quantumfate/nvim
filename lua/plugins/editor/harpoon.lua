@@ -65,12 +65,16 @@ return {
 			desc = "Harpoon 4",
 		},
 	},
-	opts = {
-		menu = {
-			width = vim.api.nvim_win_get_width(0) - 4,
-		},
-		settings = {
-			save_on_toggle = true,
-		},
-	},
+	opts = function()
+		local opts = {
+			menu = {
+				width = vim.api.nvim_win_get_width(0) - 4,
+			},
+			settings = {
+				save_on_toggle = true,
+			},
+		}
+		local harpoon2 = require("harpoon")
+		harpoon2:setup(opts)
+	end,
 }

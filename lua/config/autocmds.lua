@@ -16,7 +16,7 @@ local autocmds = {
 			pattern = "*",
 			desc = "Highlight text on yank",
 			callback = function()
-				vim.highlight.on_yank({ higroup = "Search", timeout = 100 })
+				vim.hl.hl_op({ higroup = "Search", timeout = 100 })
 			end,
 		},
 	},

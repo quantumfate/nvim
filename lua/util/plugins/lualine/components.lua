@@ -284,7 +284,7 @@ return {
 			local edgy_util = require("util.plugins.edgy")
 			return edgy_util.get_pretty_view_string()
 		end,
-		separator = { left = "" },
+		separator = { left = "", right = icons.ui.BoldDividerLeft },
 	},
 	trouble = require("trouble").statusline({
 		mode = "lsp_document_symbols",
