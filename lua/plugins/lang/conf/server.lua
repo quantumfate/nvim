@@ -260,6 +260,13 @@ local M = {
 		root_markers = { "package.json", "vue.config.js" },
 	},
 	qmlls = {
+		-- Use the system qmlls6 (real Qt 6.11, matches the Qt Quickshell is built
+		-- against) instead of Mason's limited standalone build, and point it at the
+		-- QML import root so `import Quickshell`/`import QtQuick` resolve for
+		-- completion. Quickshell installs its modules under /usr/lib/qt6/qml.
+		cmd = { "qmlls6", "-I", "/usr/lib/qt6/qml" },
+		filetypes = { "qml", "qmljs" },
+		root_markers = { ".qmlls.ini", "shell.qml", ".git" },
 		handlers = {
 			["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
 				-- filter out known-bad Quickshell import diagnostics
