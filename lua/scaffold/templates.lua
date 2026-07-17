@@ -176,19 +176,17 @@ function M.justfile(detection)
 	recipe("test", tools.commands(detection, "test"))
 	recipe("build", tools.commands(detection, "build"))
 
-	-- Aggregate gate reused by pre-commit and CI. Only reference recipes we emitted.
+	-- CI gate: formatting + tests only. Lint stays a separate advisory recipe (and a
+	-- pre-commit hook), since real code carries style warnings that shouldn't block CI.
 	local gate = {}
 	if #tools.commands(detection, "fmt_check") > 0 then
 		table.insert(gate, "fmt-check")
-	end
-	if #tools.commands(detection, "lint") > 0 then
-		table.insert(gate, "lint")
 	end
 	if #tools.commands(detection, "test") > 0 then
 		table.insert(gate, "test")
 	end
 	if #gate > 0 then
-		table.insert(lines, "# Full verification gate (used by pre-commit and CI)")
+		table.insert(lines, "# CI/pre-commit gate: formatting + tests (lint is advisory)")
 		table.insert(lines, "check: " .. table.concat(gate, " "))
 		table.insert(lines, "")
 	end
