@@ -1,7 +1,5 @@
---- Window layout management with capability-aware panel toggling
---- Provides context-sensitive sidebar and bottom panel management
----@class plugins.ui.edgy
----@field setup fun(): nil
+--- Edgy window-layout (lazy.nvim spec): docks Trouble, DAP, Neo-tree and terminals
+--- into edge panels and registers LSP-dependent toggle keymaps.
 
 ---@class EdgyViewConfig
 ---@field ft string Filetype for the panel
@@ -10,10 +8,65 @@
 ---@field filter? fun(buf: integer, win: integer): boolean Filter function for panel visibility
 ---@field size table Size configuration for the panel
 
+--- Panel filter matching a Trouble window in a given mode.
+---@param mode string Trouble mode (e.g. "diagnostics", "symbols")
+---@return fun(buf: integer, win: integer): boolean
+local function trouble_mode_filter(mode)
+	return function(_, win)
+		-- vim.w[win].trouble is set by trouble.nvim on its own windows.
+		return vim.w[win].trouble and vim.w[win].trouble.mode == mode
+	end
+end
+
+--- Docks a pinned left panel per configured Neo-tree source into opts.left.
+---@param opts table Edgy options being assembled
+local function add_neotree_panels(opts)
+	-- Read neo-tree's spec from lazy even before neo-tree itself loads.
+	local lazy_config = require("lazy.core.config")
+	if lazy_config.spec.plugins["neo-tree.nvim"] == nil then
+		return
+	end
+
+	--- Edge each Neo-tree source docks to.
+	local source_position = {
+		filesystem = "left",
+		buffers = "top",
+		git_status = "right",
+		document_symbols = "bottom",
+		diagnostics = "bottom",
+	}
+	local neotree_opts = require("lazy.core.plugin").values(lazy_config.spec.plugins["neo-tree.nvim"], "opts", false)
+	local sources = (neotree_opts or {}).sources or { "filesystem" }
+	local project_root = require("util.root").get
+
+	for i, source in ipairs(sources) do
+		table.insert(opts.left, i, {
+			title = "Neo-Tree " .. source:gsub("_", " "):gsub("^%l", string.upper),
+			ft = "neo-tree",
+			--- Docks only the window showing this specific source.
+			filter = function(buf)
+				return vim.b[buf].neo_tree_source == source
+			end,
+			pinned = true,
+			--- Opens this source at its designated edge, rooted at the project.
+			open = function()
+				vim.cmd(
+					("Neotree show position=%s %s dir=%s"):format(
+						source_position[source] or "bottom",
+						source,
+						project_root()
+					)
+				)
+			end,
+		})
+	end
+end
+
 return {
 	{
 		"folke/edgy.nvim",
 		event = "LspAttach",
+		--- Enables a global statusline and stable splits before edgy loads.
 		init = function()
 			vim.opt.laststatus = 3
 			vim.opt.splitkeep = "screen"
@@ -27,9 +80,7 @@ return {
 					ft = "trouble",
 					title = "Diagnostics",
 					open = "Trouble diagnostics",
-					filter = function(_, win)
-						return vim.w[win].trouble and vim.w[win].trouble.mode == "diagnostics"
-					end,
+					filter = trouble_mode_filter("diagnostics"),
 					size = { height = 0.3 },
 				},
 				-- { ft = "qf", title = "QuickFix" },
@@ -37,14 +88,13 @@ return {
 					ft = "trouble",
 					title = "QuickFix List",
 					open = "Trouble qflist",
-					filter = function(_, win)
-						return vim.w[win].trouble and vim.w[win].trouble.mode == "quickfix"
-					end,
+					filter = trouble_mode_filter("quickfix"),
 					size = { height = 0.3 },
 				},
 				{
 					ft = "help",
 					size = { height = 20 },
+					--- Docks only real help buffers, not help-filetype scratch buffers.
 					filter = function(buf)
 						return vim.bo[buf].buftype == "help"
 					end,
@@ -53,6 +103,7 @@ return {
 					ft = "snacks_terminal",
 					size = { height = 0.3 },
 					title = "%{b:snacks_terminal.id}: %{b:term_title}",
+					--- Docks only bottom, editor-relative Snacks terminals (not previews).
 					filter = function(_buf, win)
 						return vim.w[win].snacks_win
 							and vim.w[win].snacks_win.position == "bottom"
@@ -106,27 +157,21 @@ return {
 					ft = "trouble",
 					title = "Symbols",
 					open = "Trouble symbols focus=false",
-					filter = function(_, win)
-						return vim.w[win].trouble and vim.w[win].trouble.mode == "symbols"
-					end,
+					filter = trouble_mode_filter("symbols"),
 					size = { width = 0.3 },
 				},
 				{
 					ft = "trouble",
 					title = "LSP",
 					open = "Trouble lsp focus=false",
-					filter = function(_, win)
-						return vim.w[win].trouble and vim.w[win].trouble.mode == "lsp"
-					end,
+					filter = trouble_mode_filter("lsp"),
 					size = { width = 0.3 },
 				},
 				{
 					ft = "trouble",
 					title = "QuickFix List",
 					open = "Trouble qflist",
-					filter = function(_, win)
-						return vim.w[win].trouble and vim.w[win].trouble.mode == "qflist"
-					end,
+					filter = trouble_mode_filter("qflist"),
 					size = { height = 0.3 },
 				},
 
@@ -134,9 +179,7 @@ return {
 					ft = "trouble",
 					title = "Location List",
 					open = "Trouble loclist",
-					filter = function(_, win)
-						return vim.w[win].trouble and vim.w[win].trouble.mode == "loclist"
-					end,
+					filter = trouble_mode_filter("loclist"),
 					size = { height = 0.3 },
 				},
 			},
@@ -151,43 +194,13 @@ return {
 				relativenumber = false,
 			},
 		},
+		--- Injects Neo-tree panels, starts edgy, and registers its keymaps.
 		config = function(_, opts)
-			-- neo-tree might not be loaded yet, but we can still read its spec
-			local lazy_config = require("lazy.core.config")
-			local has_neotree = lazy_config.spec.plugins["neo-tree.nvim"] ~= nil
-
-			if has_neotree then
-				local pos = {
-					filesystem = "left",
-					buffers = "top",
-					git_status = "right",
-					document_symbols = "bottom",
-					diagnostics = "bottom",
-				}
-				-- Get neo-tree opts from the lazy spec
-				local neotree_opts =
-					require("lazy.core.plugin").values(lazy_config.spec.plugins["neo-tree.nvim"], "opts", false)
-				local sources = (neotree_opts or {}).sources or { "filesystem" }
-				local root_fn = require("util.root").get
-
-				for i, v in ipairs(sources) do
-					table.insert(opts.left, i, {
-						title = "Neo-Tree " .. v:gsub("_", " "):gsub("^%l", string.upper),
-						ft = "neo-tree",
-						filter = function(buf)
-							return vim.b[buf].neo_tree_source == v
-						end,
-						pinned = true,
-						open = function()
-							vim.cmd(("Neotree show position=%s %s dir=%s"):format(pos[v] or "bottom", v, root_fn()))
-						end,
-					})
-				end
-			end
+			add_neotree_panels(opts)
 			require("edgy").setup(opts)
 			local edgy_util = require("util.plugins.edgy")
 
-			-- Always available
+			-- Panel-management keymaps available regardless of LSP state.
 			require("which-key").add({
 				{
 					"<leader>ic",
@@ -205,7 +218,19 @@ return {
 				},
 			})
 
-			-- LSP-dependent keymaps: register on LspAttach
+			-- View toggles keyed by their trigger; each toggles one edgy view set.
+			local view_toggles = {
+				{ "<leader>iD", "debug", "Debug" },
+				{ "<leader>ia", "full_trouble", "Diagnostics, Symbols and LSP" },
+				{ "<leader>id", "diagnostics", "Diagnostics and Symbols" },
+				{ "<leader>ip", "project_diagnostics", "Project Wide Diagnostics" },
+				{ "<leader>il", "lsp", "Symbols and LSP" },
+				{ "<leader>in", "neotest", "Neotest" },
+				{ "<leader>it", "list_trouble", "Symbols, Local- and Quickfix list" },
+				{ "<leader>if", "symbols", "Symbols" },
+			}
+
+			-- View toggles depend on LSP, so bind them per buffer on LspAttach.
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("edgy_lsp_keymaps", { clear = true }),
 				callback = function(event)
@@ -214,41 +239,16 @@ return {
 						vim.keymap.set("n", key, fn, { buffer = buf, desc = desc })
 					end
 
-					map("<leader>iD", function()
-						edgy_util.toggle_view(edgy_util.views.debug)
-					end, "Debug")
+					for _, toggle in ipairs(view_toggles) do
+						local key, view, desc = toggle[1], toggle[2], toggle[3]
+						map(key, function()
+							edgy_util.toggle_view(edgy_util.views[view])
+						end, desc)
+					end
 
 					map("<leader>ie", function()
 						vim.cmd("wincmd =")
 					end, "Equalize Windows")
-
-					map("<leader>ia", function()
-						edgy_util.toggle_view(edgy_util.views.full_trouble)
-					end, "Diagnostics, Symbols and LSP")
-
-					map("<leader>id", function()
-						edgy_util.toggle_view(edgy_util.views.diagnostics)
-					end, "Diagnostics and Symbols")
-
-					map("<leader>ip", function()
-						edgy_util.toggle_view(edgy_util.views.project_diagnostics)
-					end, "Project Wide Diagnostics")
-
-					map("<leader>il", function()
-						edgy_util.toggle_view(edgy_util.views.lsp)
-					end, "Symbols and LSP")
-
-					map("<leader>in", function()
-						edgy_util.toggle_view(edgy_util.views.neotest)
-					end, "Neotest")
-
-					map("<leader>it", function()
-						edgy_util.toggle_view(edgy_util.views.list_trouble)
-					end, "Symbols, Local- and Quickfix list")
-
-					map("<leader>if", function()
-						edgy_util.toggle_view(edgy_util.views.symbols)
-					end, "Symbols")
 				end,
 			})
 		end,

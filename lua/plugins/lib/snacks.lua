@@ -1,11 +1,10 @@
+-- Core snacks.nvim spec: enables the feature set and wires debug globals on VeryLazy.
+
 return {
 	"folke/snacks.nvim",
 	priority = 1000,
 	lazy = false,
 	opts = {
-		-- your configuration comes here
-		-- or leave it empty to use the default settings
-		-- refer to the configuration section below
 		bigfile = { enabled = true },
 		explorer = { enabled = false },
 		indent = { enabled = true },
@@ -21,11 +20,13 @@ return {
 		toggle = { enabled = true },
 	},
 	keys = {},
+	--- On VeryLazy, install snacks-backed debug globals and route `:=`/print through them.
+	---@return nil
 	init = function()
 		vim.api.nvim_create_autocmd("User", {
 			pattern = "VeryLazy",
 			callback = function()
-				-- Setup some globals for debugging (lazy-loaded)
+				-- External globals: _G.dd/_G.bt are snacks-backed debug helpers used across the config.
 				_G.dd = function(...)
 					Snacks.debug.inspect(...)
 				end
@@ -33,7 +34,7 @@ return {
 					Snacks.debug.backtrace()
 				end
 
-				-- Override print to use snacks for `:=` command
+				-- Route the `:=` command / print through the inspector.
 				if vim.fn.has("nvim-0.11") == 1 then
 					vim._print = function(_, ...)
 						dd(...)

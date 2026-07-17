@@ -1,17 +1,12 @@
---- Table utility functions for advanced table operations and manipulations
---- Provides comprehensive set of functions for searching, transforming, and analyzing tables
+--- Table helpers: search, transform, invert, and count operations.
 ---@class util.fn_t
 ---@alias Table util.fn_t
 local Table = {}
 
-local log = require("qvim.log").qvim
-local fmt = string.format
-
---- Join a table to a string with a delimiter
---- Concatenates table elements into a single string separated by delimiter
----@param t table Table to join into string
----@param d string Delimiter to use between elements
----@return string joined_string The concatenated string result
+--- Joins table elements into a single delimited string.
+---@param t table
+---@param d string Delimiter between elements
+---@return string joined_string
 function Table.join(t, d)
 	local count = #t
 	if count == 1 then
@@ -24,11 +19,10 @@ function Table.join(t, d)
 	return s
 end
 
---- Find the first entry for which the predicate returns true
---- Iterates through table until predicate function returns true
----@param t table Table to search through
----@param predicate function Function called for each entry of t
----@return any|nil entry Entry for which the predicate returned true or nil
+--- Returns the first entry for which the predicate is true, or nil.
+---@param t table
+---@param predicate function
+---@return any|nil entry
 function Table.find_first(t, predicate)
 	for _, entry in pairs(t) do
 		if predicate(entry) then
@@ -38,11 +32,10 @@ function Table.find_first(t, predicate)
 	return nil
 end
 
---- Checks if any entry in a table satisfies a predicate
---- Returns true as soon as any element matches the predicate condition
----@param t table Table to check
----@param predicate fun(entry: any):boolean Function to test each entry
----@return boolean has_match True if any entry satisfies the predicate
+--- True if the predicate holds for any entry.
+---@param t table
+---@param predicate fun(entry: any):boolean
+---@return boolean has_match
 function Table.any(t, predicate)
 	for _, entry in pairs(t) do
 		if predicate(entry) then
@@ -52,10 +45,9 @@ function Table.any(t, predicate)
 	return false
 end
 
---- Inverts the key and value pairs of the given table
---- Creates new table where original values become keys and original keys become values
----@param t table Table to invert
----@return table inverted_table New table with inverted key-value pairs
+--- Returns a new table with keys and values swapped.
+---@param t table
+---@return table inverted_table
 function Table.invert_table(t)
 	local inverted_t = {}
 	for key, value in pairs(t) do
@@ -64,12 +56,11 @@ function Table.invert_table(t)
 	return inverted_t
 end
 
---- Transforms table keys or values using a transformation function
---- Applies transformation to either keys or values based on do_keys parameter
----@param tbl table The table to be transformed
----@param transform_fn function Function to transform each key or value
----@param do_keys boolean If true, transform keys; if false, transform values
----@return table transformed_table New table with transformed elements
+--- Transforms every key (do_keys) or value of a table via transform_fn.
+---@param tbl table
+---@param transform_fn function
+---@param do_keys boolean Transform keys when true, values when false
+---@return table transformed_table
 function Table.transform_to_table(tbl, transform_fn, do_keys)
 	local transformed = {}
 	for k, v in pairs(tbl) do
@@ -82,12 +73,11 @@ function Table.transform_to_table(tbl, transform_fn, do_keys)
 	return transformed
 end
 
---- Checks if a table contains a specific key
---- Optionally searches recursively through nested tables
----@param t table Table to search in
+--- True if the table contains the given key, optionally searching nested tables.
+---@param t table
 ---@param find any Key to search for
----@param recurse boolean|nil Whether to search recursively in nested tables
----@return boolean has_key True if key is found in table
+---@param recurse boolean|nil
+---@return boolean has_key
 function Table.has_any_key(t, find, recurse)
 	if recurse == nil then
 		recurse = false
@@ -105,12 +95,11 @@ function Table.has_any_key(t, find, recurse)
 	return false
 end
 
---- Checks if a table contains a specific value
---- Optionally searches recursively through nested tables
----@param t table Table to search in
+--- True if the table contains the given value, optionally searching nested tables.
+---@param t table
 ---@param find any Value to search for
----@param recurse boolean|nil Whether to search recursively in nested tables
----@return boolean has_value True if value is found in table
+---@param recurse boolean|nil
+---@return boolean has_value
 function Table.has_any_value(t, find, recurse)
 	if recurse == nil then
 		recurse = false
@@ -128,10 +117,9 @@ function Table.has_any_value(t, find, recurse)
 	return false
 end
 
---- Counts the elements in a table regardless of their type
---- Counts all key-value pairs in the table, not just array elements
----@param t table Table to count elements in
----@return integer count Total number of elements in the table
+--- Counts all key-value pairs, not just the array part.
+---@param t table
+---@return integer count
 function Table.length(t)
 	local count = 0
 	for _ in pairs(t) do
@@ -140,11 +128,10 @@ function Table.length(t)
 	return count
 end
 
---- Check if the predicate returns true for at least one entry of the table
---- Convenience function that uses find_first to check for existence
----@param t table The table to check
----@param predicate function The function called for each entry of t
----@return boolean contains True if predicate returned true at least once, false otherwise
+--- True if the predicate holds for at least one entry.
+---@param t table
+---@param predicate function
+---@return boolean contains
 function Table.contains(t, predicate)
 	return Table.find_first(t, predicate) ~= nil
 end

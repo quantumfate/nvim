@@ -1,7 +1,8 @@
+--- render-markdown.nvim: in-buffer rendering of markdown (and vimwiki/Avante) files.
 return {
-	-- Make sure to set this up properly if you have lazy=true
 	"MeanderingProgrammer/render-markdown.nvim",
 	dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-mini/mini.nvim" },
+	-- Parse vimwiki buffers with the markdown parser before returning the render config.
 	opts = function()
 		vim.treesitter.language.register("markdown", "vimwiki")
 		return {

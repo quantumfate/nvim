@@ -1,6 +1,10 @@
+-- mini.ai spec: extra text objects (functions, classes, tags, digits, buffer, calls) plus which-key hints.
+
 return {
 	"nvim-mini/mini.ai",
 	event = "User FileOpened",
+	--- Builds custom text objects, several backed by treesitter queries.
+	---@return table
 	opts = function()
 		local ai = require("mini.ai")
 		return {
@@ -14,16 +18,19 @@ return {
 				c = ai.gen_spec.treesitter({ a = "@class.outer", i = "@class.inner" }), -- class
 				t = { "<([%p%w]-)%f[^<%w][^<>]->.-</%1>", "^<.->().*()</[^/]->$" }, -- tags
 				d = { "%f[%d]%d+" }, -- digits
-				e = { -- Word with case
+				e = { -- word with case
 					{ "%u[%l%d]+%f[^%l%d]", "%f[%S][%l%d]+%f[^%l%d]", "%f[%P][%l%d]+%f[^%l%d]", "^[%l%d]+%f[^%l%d]" },
 					"^().*()$",
 				},
 				g = require("util.plugins.mini").ai_buffer, -- buffer
-				u = ai.gen_spec.function_call(), -- u for "Usage"
-				U = ai.gen_spec.function_call({ name_pattern = "[%w_]" }), -- without dot in function name
+				u = ai.gen_spec.function_call(), -- function call ("usage")
+				U = ai.gen_spec.function_call({ name_pattern = "[%w_]" }), -- call without dotted name
 			},
 		}
 	end,
+	--- Applies the spec, then registers which-key hints once which-key loads.
+	---@param opts table
+	---@return nil
 	config = function(_, opts)
 		local modules_util = require("util.modules")
 		require("mini.ai").setup(opts)

@@ -1,3 +1,5 @@
+--- Navic (lazy.nvim spec): LSP breadcrumb of the symbol path, shown in the winbar.
+
 return {
 	"SmiteshP/nvim-navic",
 	dependencies = {
@@ -6,6 +8,7 @@ return {
 	},
 	event = "User FileOpened",
 	opts = {
+		-- _G.mini_icons_mt is a global icon table set up during mini.nvim init.
 		icons = _G.mini_icons_mt,
 		lsp = {
 			auto_attach = true,
@@ -18,6 +21,7 @@ return {
 		safe_output = true,
 		lazy_update_context = false,
 		click = false,
+		--- Passes breadcrumb text through unchanged.
 		format_text = function(text)
 			return text
 		end,

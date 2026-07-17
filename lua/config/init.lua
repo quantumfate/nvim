@@ -1,8 +1,10 @@
-_G.icons = require("util.icons")
+--- Core config loader: publishes shared globals, then options, autocmds, and scaffolder.
+
+--- Global icon table shared across statusline, diagnostics, and plugin configs.
+_G.icons = require("util.icons") ---@type icons external: global read throughout config
 
 require("config.settings")
 require("config.autocmds")
 
--- Project scaffolder: :ProjectScaffold generates best-practice config for the
--- current project, tailored to its detected ecosystems. See lua/scaffold/.
+-- :ProjectScaffold generates best-practice config for the current project. See lua/scaffold/.
 require("scaffold").setup()

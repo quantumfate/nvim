@@ -1,7 +1,4 @@
---- Enhanced buffer tabline with intelligent buffer management
---- Provides visual buffer navigation with diagnostic integration and capability-aware features
----@class plugins.ui.bufferline
----@field setup fun(): nil
+--- Buffer tabline with diagnostics and buffer-management keymaps (lazy.nvim spec).
 
 ---@class BufferlineConfig
 ---@field options table Buffer display and interaction options
@@ -12,6 +9,7 @@ return {
 	enabled = false,
 	event = "User FileOpened",
 	dependencies = { "nvim-tree/nvim-web-devicons", "nvim-mini/mini.nvim" },
+	--- Injects the catppuccin highlight theme before starting bufferline.
 	config = function(_, opts)
 		opts.highlights = require("catppuccin.special.bufferline").get_theme()
 		require("bufferline").setup(opts)
@@ -55,6 +53,7 @@ return {
 	},
 	opts = {
 		options = {
+			-- Snacks is a global plugin API providing buffer deletion.
 			close_command = function(n)
 				Snacks.bufdelete(n)
 			end,
@@ -63,7 +62,9 @@ return {
 			end,
 			diagnostics = "nvim_lsp",
 			always_show_bufferline = false,
+			--- Renders the error/warning counts on each buffer.
 			diagnostics_indicator = function(_, _, diag)
+				-- `icons` is a global table set up elsewhere in the config.
 				local icons = icons.diagnostics
 				local ret = (diag.error and icons.Error .. diag.error .. " " or "")
 					.. (diag.warning and icons.Warning .. diag.warning or "")
@@ -80,6 +81,7 @@ return {
 					filetype = "snacks_layout_box",
 				},
 			},
+			--- Resolves each buffer's icon from mini.icons by filetype.
 			get_element_icon = function(opts)
 				return require("mini.icons").get("filetype", opts.filetype)
 			end,

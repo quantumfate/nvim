@@ -1,3 +1,5 @@
+-- chezmoi spec: edit-in-place integration for the chezmoi source dir, plus mini.icons glyphs.
+
 return {
 	{
 		"xvzc/chezmoi.nvim",
@@ -24,8 +26,10 @@ return {
 				select = { "<CR>" },
 			},
 		},
+		--- Starts chezmoi's edit watcher when opening a file inside the chezmoi source dir.
+		---@return nil
 		init = function()
-			-- run chezmoi edit on file enter
+			-- External: vim.env.HOME locates the chezmoi source directory.
 			vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 				pattern = { vim.env.HOME .. "/.local/share/chezmoi/*" },
 				callback = function()

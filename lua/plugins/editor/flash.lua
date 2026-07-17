@@ -1,12 +1,13 @@
+--- flash.nvim: label-based motions for jumps, treesitter selection, and picker navigation.
 return {
 	"folke/flash.nvim",
 	opts = {
 		modes = {
 			search = {
-				enabled = false, -- Always enable flash during / and ? search
+				enabled = false, -- flash off during / and ? search
 			},
 			char = {
-				enabled = true, -- Also for f, F, t, T motions
+				enabled = true, -- flash on for f, F, t, T motions
 			},
 		},
 	},
@@ -24,6 +25,8 @@ return {
 						},
 					},
 					actions = {
+						-- Label rows in the Snacks picker list and jump to the chosen one.
+						---@param picker snacks.Picker
 						flash = function(picker)
 							require("flash").jump({
 								pattern = "^",

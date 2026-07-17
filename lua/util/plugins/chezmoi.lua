@@ -1,10 +1,9 @@
---- Chezmoi utility module for dotfile management integration
---- Provides functions for picking and editing chezmoi-managed files
+--- Chezmoi dotfile picker built on the Snacks picker.
 ---@class util.plugins.chezmoi
 local M = {}
 
---- Open a picker to select and edit chezmoi-managed files
---- Lists all chezmoi files and opens selected file in edit mode with watch
+--- Opens a Snacks picker of chezmoi-managed files; edits the chosen one with --watch.
+--- Snacks is a global from snacks.nvim.
 function M.pick_chezmoi()
 	local results = require("chezmoi.commands").list({
 		args = {

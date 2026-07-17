@@ -1,12 +1,10 @@
---- Catppuccin-based color scheme for Lualine
---- Provides mode-specific color configurations using Catppuccin Macchiato palette
+--- Per-mode lualine colors from the Catppuccin Macchiato palette.
 ---@class util.plugins.lualine.color
+-- C / O: pulled from the active catppuccin theme; drives every colour below.
 local C = require("catppuccin.palettes").get_palette("macchiato")
 local O = require("catppuccin").options
 local transparent_bg = O.transparent_background and "NONE" or C.mantle
 
---- Color configuration table for different Vim modes
---- Each mode has specific foreground/background colors and styling
 ---@type table<string, {a: table, b: table, c: table, x: table, y: table, z: table}>
 return {
 	normal = {

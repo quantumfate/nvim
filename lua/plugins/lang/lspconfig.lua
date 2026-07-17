@@ -12,7 +12,9 @@ return {
 		"mason-lspconfig.nvim",
 		"saghen/blink.cmp",
 	},
+	--- Wire capability-gated keymaps on attach, configure diagnostics/capabilities, enable servers.
 	config = function()
+		-- On attach, bind only the keymaps the server actually supports, plus per-client extras.
 		vim.api.nvim_create_autocmd("LspAttach", {
 			group = vim.api.nvim_create_augroup("lsp_attach", { clear = true }),
 			callback = function(event)
@@ -25,8 +27,8 @@ return {
 
 				local keymaps = require("plugins.lang.conf.keymaps")
 
+				-- Bind each keymap only when its LSP method and optional condition hold.
 				for _, map in ipairs(keymaps) do
-					-- Capability check first
 					local ok = true
 					if map.method and not client:supports_method(map.method) then
 						ok = false
@@ -50,7 +52,7 @@ return {
 					end
 				end
 
-				-- Inlay hints toggle
+				-- <leader>th toggles inlay hints when the server provides them.
 				if client:supports_method("textDocument/inlayHint") then
 					vim.keymap.set("n", "<leader>th", function()
 						local enabled = vim.lsp.inlay_hint.is_enabled({ bufnr = buf })
@@ -58,7 +60,7 @@ return {
 					end, { buffer = buf, desc = "Toggle Inlay Hints" })
 				end
 
-				-- Document highlight
+				-- Highlight the symbol under the cursor while it rests, clearing on move.
 				if client:supports_method("textDocument/documentHighlight") then
 					local group = vim.api.nvim_create_augroup("lsp_document_highlight", { clear = false })
 
@@ -85,7 +87,7 @@ return {
 			end,
 		})
 
-		-- Enhanced diagnostics configuration
+		-- Global diagnostics presentation (icons: global glyph table set at startup).
 		vim.diagnostic.config({
 			underline = true,
 			update_in_insert = false,
@@ -112,7 +114,7 @@ return {
 			},
 		})
 
-		-- In lspconfig.lua config function, before the server loop:
+		-- Base capabilities (blink completion + folding-range) shared by every server.
 		vim.lsp.config("*", {
 			capabilities = require("blink.cmp").get_lsp_capabilities({
 				textDocument = {
@@ -128,15 +130,16 @@ return {
 				},
 			}),
 		})
-		-- Apply server configurations
+		-- Merge each server's config over the defaults, then enable them all.
 		local server_configs = require("plugins.lang.conf.server")
 
 		for server, config in pairs(server_configs) do
 			vim.lsp.config[server] = vim.tbl_deep_extend("force", vim.lsp.config[server] or {}, config)
 		end
-		-- Enable configured servers
 		local servers = vim.tbl_keys(server_configs)
 		vim.lsp.enable(servers)
+
+		-- :Lsp* commands for inspecting and controlling clients.
 
 		vim.api.nvim_create_user_command("LspInfo", function()
 			vim.cmd("checkhealth vim.lsp")

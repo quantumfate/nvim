@@ -1,3 +1,4 @@
+--- harpoon: pin a short list of files and jump between them by slot or via a Snacks picker.
 return {
 	"ThePrimeagen/harpoon",
 	branch = "harpoon2",
@@ -20,6 +21,7 @@ return {
 		},
 		{
 			"<leader>hl",
+			-- Browse the harpoon list in a Snacks picker; confirm opens the file. `Snacks` is global.
 			function()
 				local items = {}
 				for i, item in ipairs(require("harpoon"):list().items) do
@@ -65,16 +67,15 @@ return {
 			desc = "Harpoon 4",
 		},
 	},
+	-- Size the harpoon menu to the current window and enable auto-save on toggle.
 	opts = function()
-		local opts = {
+		require("harpoon"):setup({
 			menu = {
 				width = vim.api.nvim_win_get_width(0) - 4,
 			},
 			settings = {
 				save_on_toggle = true,
 			},
-		}
-		local harpoon2 = require("harpoon")
-		harpoon2:setup(opts)
+		})
 	end,
 }

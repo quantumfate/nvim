@@ -1,13 +1,12 @@
---- Mason utility module for package management
---- Provides functions to ensure packages are installed and filter available packages
+--- Mason package helpers guarded by registry availability.
 ---@class util.plugins.mason
 local M = {}
 
---- Install packages only if they exist in Mason's registry
---- Checks each package against the registry and installs missing ones
----@param packages string[] List of package names to ensure are installed
----@return string[] available List of packages that are available in Mason registry
----@return string[] unavailable List of packages not found in Mason registry
+--- Installs each registry-available package if missing; warns about unavailable ones.
+--- Snacks is a global from snacks.nvim.
+---@param packages string[]
+---@return string[] available In-registry packages
+---@return string[] unavailable Packages absent from the registry
 function M.ensure_installed(packages)
 	local registry = require("mason-registry")
 	local available = {}
@@ -16,7 +15,6 @@ function M.ensure_installed(packages)
 	for _, pkg in ipairs(packages) do
 		if registry.has_package(pkg) then
 			table.insert(available, pkg)
-			-- Install if not already installed
 			local p = registry.get_package(pkg)
 			if not p:is_installed() then
 				p:install()
@@ -33,10 +31,9 @@ function M.ensure_installed(packages)
 	return available, unavailable
 end
 
---- Filter list to only Mason-available packages
---- Removes packages that are not available in the Mason registry
----@param packages string[] List of package names to filter
----@return string[] filtered_packages List containing only packages available in Mason
+--- Keeps only packages present in the Mason registry.
+---@param packages string[]
+---@return string[] filtered_packages
 function M.filter_available(packages)
 	local registry = require("mason-registry")
 	return vim.tbl_filter(function(pkg)

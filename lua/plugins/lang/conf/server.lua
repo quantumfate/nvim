@@ -1,3 +1,5 @@
+--- Per-server LSP settings, merged over defaults and enabled by lspconfig.lua.
+
 ---@class LspServerConfig
 ---@field strategy? string force|keep
 ---@field cmd? string[] Command and arguments to start the language server
@@ -7,7 +9,6 @@
 ---@field init_options? table Initialization options passed to server
 ---@field capabilities? table Server capability overrides
 
--- Server configurations with comprehensive settings
 ---@type table<string, LspServerConfig>
 local M = {
 	lua_ls = {

@@ -1,8 +1,9 @@
+-- mini.surround spec: surround actions under a 'gs' prefix to avoid clobbering the 's' motion.
+
 return {
 	"nvim-mini/mini.surround",
 	event = "User FileOpened",
 	opts = {
-		-- Use 'gs' prefix instead of 's' to avoid conflicts
 		mappings = {
 			add = "gsa", -- Add surrounding
 			delete = "gsd", -- Delete surrounding

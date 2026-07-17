@@ -1,3 +1,4 @@
+--- todo-comments.nvim: highlight TODO/FIX/etc. keywords and navigate/search them.
 return {
 	"folke/todo-comments.nvim",
 	event = { "User FileOpened" },
@@ -20,6 +21,7 @@ return {
 		},
 		{
 			"<leader>ft",
+			-- `Snacks` is a global from snacks.nvim.
 			function()
 				Snacks.picker.todo_comments()
 			end,

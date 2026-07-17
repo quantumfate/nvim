@@ -88,7 +88,7 @@ return {
 				},
 				path = {
 					opts = {
-						--- Path completion from cwd instead of current buffer's directory
+						--- Anchor path completion at the project root, not the buffer's directory.
 						get_cwd = function(_)
 							return require("util.root").get()
 						end,
@@ -101,12 +101,11 @@ return {
 				border = "single",
 				draw = {
 					components = {
-						-- customize the drawing of kind icons
+						-- Kind-icon column: swap in a color swatch for LSP color items.
 						kind_icon = {
+							--- Swatch for LSP color items, else the normal kind icon.
 							text = function(ctx)
-								-- default kind icon
 								local icon = ctx.kind_icon
-								-- if LSP source, check for color derived from documentation
 								if ctx.item.source_name == "LSP" then
 									local color_item = require("nvim-highlight-colors").format(
 										ctx.item.documentation,
@@ -118,10 +117,9 @@ return {
 								end
 								return icon .. ctx.icon_gap
 							end,
+							--- Derived color group for LSP color items, else the kind's group.
 							highlight = function(ctx)
-								-- default highlight group
 								local highlight = "BlinkCmpKind" .. ctx.kind
-								-- if LSP source, check for color derived from documentation
 								if ctx.item.source_name == "LSP" then
 									local color_item = require("nvim-highlight-colors").format(
 										ctx.item.documentation,

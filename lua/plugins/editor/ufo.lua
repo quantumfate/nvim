@@ -1,5 +1,4 @@
---- Enhanced code folding with treesitter and LSP integration
---- Provides intelligent folding with capability-aware provider selection and conditional keymaps
+--- nvim-ufo: richer code folding, choosing treesitter/indent providers per buffer.
 ---@class plugins.editor.ufo
 ---@field setup fun(): nil
 
@@ -14,8 +13,8 @@ return {
 	"kevinhwang91/nvim-ufo",
 	dependencies = { "kevinhwang91/promise-async" },
 	event = "BufReadPost",
+	-- Ufo needs folds open and a fold column; set the global fold options it depends on.
 	init = function()
-		-- Configure folding options globally
 		vim.o.foldcolumn = "1"
 		vim.o.foldlevel = 99
 		vim.o.foldlevelstart = 99
@@ -23,9 +22,13 @@ return {
 	end,
 	---@type UfoConfig
 	opts = {
+		-- Pick a fold provider per buffer: explicit overrides, else treesitter when a parser exists.
+		---@param bufnr integer
+		---@param filetype string
+		---@param buftype string
+		---@return string|string[]
 		provider_selector = function(bufnr, filetype, buftype)
-			-- Capability-aware provider selection
-			local ftMap = {
+			local provider_by_filetype = {
 				vim = "indent",
 				python = { "indent" },
 				git = "",
@@ -34,17 +37,13 @@ return {
 				dashboard = "",
 			}
 
-			-- Check if treesitter parser is available for this filetype
+			if provider_by_filetype[filetype] then
+				return provider_by_filetype[filetype]
+			end
+
 			local has_parser =
 				pcall(vim.treesitter.language.inspect, vim.treesitter.language.get_lang(filetype) or filetype)
-
-			if ftMap[filetype] then
-				return ftMap[filetype]
-			elseif has_parser then
-				return { "treesitter", "indent" }
-			else
-				return { "indent" }
-			end
+			return has_parser and { "treesitter", "indent" } or { "indent" }
 		end,
 		open_fold_hl_timeout = 150,
 		close_fold_kinds_for_ft = {
@@ -66,6 +65,13 @@ return {
 				jumpBot = "]",
 			},
 		},
+		-- Render folded-line virtual text, truncating to width and appending a "󰁂 <n>" count suffix.
+		---@param virtText table[] Highlighted { text, hlGroup } chunks of the fold's first line
+		---@param lnum integer First line of the fold
+		---@param endLnum integer Last line of the fold
+		---@param width integer Available column width
+		---@param truncate fun(text: string, width: integer): string
+		---@return table[]
 		fold_virt_text_handler = function(virtText, lnum, endLnum, width, truncate)
 			local newVirtText = {}
 			local suffix = (" 󰁂 %d "):format(endLnum - lnum)
@@ -83,7 +89,7 @@ return {
 					local hlGroup = chunk[2]
 					table.insert(newVirtText, { chunkText, hlGroup })
 					chunkWidth = vim.fn.strdisplaywidth(chunkText)
-					-- Pad if truncated text is shorter than target
+					-- Pad the suffix when truncated text falls short of the target width.
 					if curWidth + chunkWidth < targetWidth then
 						suffix = suffix .. (" "):rep(targetWidth - curWidth - chunkWidth)
 					end
@@ -106,10 +112,10 @@ return {
 		{ "z2", desc = "Close L2 folds" },
 		{ "z3", desc = "Close L3 folds" },
 	},
+	-- Set up ufo and bind its fold controls through which-key.
 	config = function(_, opts)
 		require("ufo").setup(opts)
 
-		-- Register conditional keymaps via which-key
 		require("which-key").add({
 			{
 				"zR",

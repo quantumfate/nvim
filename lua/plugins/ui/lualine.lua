@@ -1,7 +1,5 @@
---- Enhanced statusline with intelligent component display and capability awareness
---- Provides contextual information with performance-optimized updates and conditional visibility
----@class plugins.ui.lualine
----@field setup fun(): nil
+--- Lualine (lazy.nvim spec): statusline and winbar assembled from the shared
+--- component and color helpers in util.plugins.lualine.
 
 ---@class LualineConfig
 ---@field options table Statusline appearance and behavior configuration
@@ -16,14 +14,15 @@ return {
 		"catppuccin/nvim",
 	},
 	event = "User FileOpened",
+	--- Builds the config from the shared color theme and component helpers.
 	opts = function()
 		local color = require("util.plugins.lualine.color")
 		local lualine_components = require("util.plugins.lualine.components")
+		-- `icons` and `Snacks` below are globals set up elsewhere in the config.
 		return {
 			options = {
 				always_divide_middle = true,
 				always_show_tabline = true,
-				-- lualine option configuration
 				component_separators = {
 					left = icons.ui.HollowDividerLeft,
 					right = icons.ui.HollowDividerRight,

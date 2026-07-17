@@ -1,3 +1,4 @@
+--- Aggregate spec: import every plugin category for lazy.nvim.
 return {
 	{ import = "plugins.coding" },
 	{ import = "plugins.editor" },

@@ -17,6 +17,7 @@ return {
 	keys = {
 		{
 			"<leader>cf",
+			--- Format the buffer with conform, falling back to LSP formatting (Snacks: global notifier).
 			function()
 				local buf = vim.api.nvim_get_current_buf()
 				local ft = vim.bo[buf].filetype
@@ -88,13 +89,13 @@ return {
 			["_"] = { "trim_whitespace" },
 			["*"] = { "codespell" },
 		},
+		--- Decide format-on-save per buffer; nil skips it. Honours vim.g/vim.b disable toggles.
 		format_on_save = function(bufnr)
-			-- Disable for certain filetypes
 			local ignore_filetypes = { "sql" }
 			if vim.tbl_contains(ignore_filetypes, vim.bo[bufnr].filetype) then
 				return
 			end
-			-- Disable with a global or buffer-local toggle
+			-- vim.g/vim.b.disable_autoformat: toggles set by the Format* user commands below.
 			if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
 				return
 			end
@@ -115,8 +116,8 @@ return {
 			},
 		},
 	},
+	--- Register :FormatDisable/:FormatEnable/:FormatToggle to control format-on-save.
 	init = function()
-		-- Toggle commands
 		vim.api.nvim_create_user_command("FormatDisable", function(args)
 			if args.bang then
 				vim.b.disable_autoformat = true

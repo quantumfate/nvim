@@ -1,3 +1,4 @@
+--- goto-preview spec: peek definitions/references/etc. in stacked floating windows.
 return {
 	"rmagatti/goto-preview",
 	event = "BufEnter",

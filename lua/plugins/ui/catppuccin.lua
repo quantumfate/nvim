@@ -1,16 +1,19 @@
+--- Catppuccin colorscheme (lazy.nvim spec) with custom highlights for floats,
+--- Noice, Edgy, Trouble, DAP and Neo-tree.
+
 return {
 	"catppuccin/nvim",
 	name = "catppuccin",
 	priority = 1000,
 	lazy = false,
+	--- Applies the options and activates the colorscheme.
 	config = function(_, opts)
 		require("catppuccin").setup(opts)
 		vim.cmd.colorscheme("catppuccin")
 	end,
 	build = ":CatppuccinCompile",
 	opts = {
-		-- catpuccin option configuration
-		flavour = "macchiato", -- latte, frappe, macchiato, macchiato
+		flavour = "macchiato", -- latte, frappe, macchiato, mocha
 		background = { -- :h background
 			light = "latte",
 			dark = "macchiato",
@@ -47,6 +50,8 @@ return {
 			neo_tree = true,
 		},
 
+		--- Palette-driven highlight overrides applied on every flavour.
+		---@param colors table<string, string> Catppuccin palette by name
 		custom_highlights = function(colors)
 			return {
 				NormalFloat = { bg = colors.base },
@@ -93,9 +98,7 @@ return {
 				DapUIVariable = { fg = colors.text },
 				DapUIModifiedValue = { fg = colors.peach, bold = true },
 
-				-- Ufo
-
-				-- Neo-tree theme integration with mauve accent
+				-- Neo-tree, mauve accent
 				NeoTreeNormal = { bg = colors.base },
 				NeoTreeNormalNC = { bg = colors.base },
 				NeoTreeWinSeparator = { fg = colors.mauve, bg = colors.base },
@@ -144,7 +147,9 @@ return {
 				NeoTreeCursorLine = { bg = colors.surface0 },
 			}
 		end,
+		--- Flavour-specific highlight overrides (macchiato only).
 		highlight_overrides = {
+			---@param colors table<string, string> Catppuccin palette by name
 			macchiato = function(colors)
 				return {
 					Pmenu = { fg = colors.mauve, bg = colors.base },

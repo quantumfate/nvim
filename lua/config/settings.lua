@@ -1,4 +1,7 @@
---- https://neovim.io/doc/user/quickref.html#option-list
+--- Editor settings: applies core vim options, filetypes, and diagnostic display.
+
+--- Baseline vim options applied on startup. See https://neovim.io/doc/user/quickref.html#option-list
+---@type table<string, any>
 local default_options = {
 	backup = false, -- creates a backup file
 	clipboard = "unnamedplus", -- allows neovim to access the system clipboard
@@ -43,16 +46,17 @@ local default_options = {
 	relativenumber = true,
 }
 
----  SETTINGS  ---
-vim.opt.spelllang:append("cjk") -- disable spellchecking for asian characters (VIM algorithm does not support it)
-vim.opt.shortmess:append("c") -- don't show redundant messages from ins-completion-menu
-vim.opt.shortmess:append("I") -- don't show the default intro message
+-- Append-style options that must extend (not overwrite) their defaults.
+vim.opt.spelllang:append("cjk") -- skip spellcheck for CJK (unsupported by vim's algorithm)
+vim.opt.shortmess:append("c") -- silence ins-completion-menu messages
+vim.opt.shortmess:append("I") -- silence the default intro message
 vim.opt.whichwrap:append("<,>,[,],h,l")
 
 for k, v in pairs(default_options) do
 	vim.opt[k] = v
 end
 
+-- Register extra filetype detection by extension and filename pattern.
 vim.filetype.add({
 	extension = {
 		tex = "tex",
@@ -63,6 +67,8 @@ vim.filetype.add({
 	},
 })
 
+--- Diagnostic display: gutter signs, virtual text, and float styling.
+--- `icons` is the global set in config/init.lua.
 local default_diagnostic_config = {
 	signs = {
 		active = true,

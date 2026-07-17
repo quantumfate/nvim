@@ -1,3 +1,5 @@
+--- neotest spec: multi-language test runner wired to trouble and the edgy layout,
+--- with ANSI escape codes stripped from every adapter's output.
 return {
 	"nvim-neotest/neotest",
 	dependencies = {
@@ -68,8 +70,9 @@ return {
 			end,
 		},
 	},
+	--- Strip ANSI from every adapter, wire the trouble consumer, then set up neotest.
 	config = function(_, opts)
-		-- Strip ANSI codes from adapter results before neotest sees them
+		-- Wrap an adapter's `results` so ANSI escape codes are stripped from messages and output files.
 		local function wrap_adapter(adapter)
 			local original_results = adapter.results
 			adapter.results = function(spec, result, tree)
@@ -106,6 +109,7 @@ return {
 			return adapter
 		end
 
+		-- Collapse neotest's virtual-text diagnostics to a single clean line.
 		local neotest_ns = vim.api.nvim_create_namespace("neotest")
 		vim.diagnostic.config({
 			virtual_text = {
@@ -123,7 +127,7 @@ return {
 		}, neotest_ns)
 
 		opts.consumers = opts.consumers or {}
-		-- Refresh and auto close trouble after running tests
+		-- Consumer that opens the edgy trouble view on failures and closes it when all pass.
 		opts.consumers.trouble = function(client)
 			client.listeners.results = function(adapter_id, results, partial)
 				if partial then
@@ -154,6 +158,7 @@ return {
 			end
 		end
 
+		-- Turn the adapter config map into instantiated, ANSI-wrapped adapter instances.
 		if opts.adapters then
 			local adapters = {}
 			for name, config in pairs(opts.adapters or {}) do

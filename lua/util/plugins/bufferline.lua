@@ -1,13 +1,11 @@
---- Bufferline utility module for buffer management
---- Provides enhanced buffer deletion functionality with safety checks and window management
+--- Buffer deletion with prompts for modified/terminal buffers and window reassignment.
 ---@class util.plugins.bufferline
 local bufferline = {
-	--- Safely close a buffer with confirmation prompts and window management
-	--- Handles modified buffers, terminal buffers, and maintains proper window state
-	---@param self util.plugins.bufferline The bufferline instance
-	---@param kill_command string|nil Buffer deletion command (default: "bd")
-	---@param bufnr integer|nil Buffer number to close (default: current buffer)
-	---@param force boolean|nil Whether to force close without confirmation
+	--- Closes a buffer, prompting before losing changes and moving windows to a neighbor buffer.
+	---@param self util.plugins.bufferline
+	---@param kill_command string|nil Deletion command (default "bd")
+	---@param bufnr integer|nil Buffer to close (default current)
+	---@param force boolean|nil Skip confirmation
 	buf_kill = function(self, kill_command, bufnr, force)
 		kill_command = kill_command or "bd"
 

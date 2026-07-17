@@ -1,5 +1,4 @@
---- Icon definitions module for consistent iconography throughout the configuration
---- Provides organized icon collections for different use cases like LSP kinds, git status, UI elements, etc.
+--- Shared Nerd Font glyph collections, grouped by use (LSP kinds, git, ui, diagnostics, etc.).
 ---@class icons
 ---@field kind kind LSP completion item kind icons
 ---@field git git Git status and operation icons

@@ -1,3 +1,4 @@
+--- inc-rename.nvim: LSP rename with a live inline preview of the edit.
 ---@class plugins.editor.inc_rename
 
 ---@class IncRenameConfig

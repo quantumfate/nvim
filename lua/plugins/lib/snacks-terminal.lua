@@ -1,3 +1,7 @@
+-- snacks.terminal spec: stacked terminal with in-terminal keymaps and a cursor-restoring toggle.
+
+-- Module-level mutable state: saved window/cursor position while the toggle terminal is open (nil when closed).
+---@type table|nil
 local old_cursor_pos = nil
 
 return {
@@ -8,9 +12,10 @@ return {
 				filetype = "snacks_terminal",
 			},
 			wo = {},
-			stack = true, -- when enabled, multiple split windows with the same position will be stacked together (useful for terminals)
+			stack = true, -- stack split windows sharing a position
 			keys = {
 				q = "hide",
+				-- Opens the file path under the cursor, hiding the terminal first.
 				gf = function(self)
 					local f = vim.fn.findfile(vim.fn.expand("<cfile>"), "**")
 					if f == "" then
@@ -24,6 +29,7 @@ return {
 				end,
 				term_normal = {
 					"<esc>",
+					-- Double-tap <esc> within 200ms to leave terminal mode; a single tap passes through.
 					function(self)
 						self.esc_timer = self.esc_timer or (vim.uv or vim.loop).new_timer()
 						if self.esc_timer:is_active() then
@@ -44,6 +50,7 @@ return {
 	keys = {
 		{
 			"<leader>iT",
+			-- Toggles the terminal, saving the cursor on open and restoring it on close.
 			function()
 				local ui_util = require("util.ui")
 				if old_cursor_pos then

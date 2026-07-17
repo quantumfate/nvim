@@ -1,5 +1,4 @@
---- Advanced syntax highlighting and code analysis with treesitter
---- Provides intelligent parsing for multiple languages with lazy-loading optimization
+--- nvim-treesitter stack: parsers plus highlight/indent/fold wiring, textobjects, autotag, comments.
 ---@class plugins.editor.treesitter
 ---@field setup fun(): nil
 
@@ -59,11 +58,11 @@ return {
 			indent = { enable = true },
 			folds = { enable = true },
 		},
+		-- Install missing parsers, register custom query directives/textobjects, and enable per-buffer.
 		config = function(_, opts)
 			local ts = require("nvim-treesitter")
 			ts.setup(opts)
 
-			-- Install missing parsers
 			local installed = ts.get_installed and ts.get_installed() or {}
 			local to_install = vim.tbl_filter(function(lang)
 				return not vim.tbl_contains(installed, lang)
@@ -73,6 +72,7 @@ return {
 				ts.install(to_install)
 			end
 
+			-- Custom query directives and function textobjects from the local util module.
 			local ts_util = require("util.plugins.treesitter")
 			vim.treesitter.query.add_directive("downcase!", ts_util.case_directive(string.lower), { force = true })
 			vim.treesitter.query.add_directive("upcase!", ts_util.case_directive(string.upper), { force = true })
@@ -84,27 +84,24 @@ return {
 				ts_util.select_function("function.inner")
 			end, { desc = "inside function" })
 
-			-- FileType autocmd for highlight, indent, and folds
+			-- Enable highlighting and treesitter folds for any buffer with an available parser.
 			vim.api.nvim_create_autocmd("FileType", {
 				group = vim.api.nvim_create_augroup("treesitter_setup", { clear = true }),
 				callback = function(ev)
 					local buf = ev.buf
 					local ft = ev.match
 
-					-- Check if treesitter parser exists for this filetype
 					local lang = vim.treesitter.language.get_lang(ft)
 					local has_parser = pcall(vim.treesitter.language.inspect, lang or ft)
-
 					if not has_parser then
 						return
 					end
 
-					-- Enable highlighting
 					if opts.highlight and opts.highlight.enable ~= false then
 						pcall(vim.treesitter.start, buf)
 					end
 
-					-- Enable treesitter-based folds
+					-- Switch manual folding over to the treesitter fold expression.
 					if opts.folds and opts.folds.enable ~= false then
 						if vim.wo[0].foldmethod == "manual" then
 							vim.wo[0].foldmethod = "expr"
@@ -119,7 +116,7 @@ return {
 		end,
 	},
 
-	-- Textobjects
+	-- Treesitter textobjects: jump between functions/classes/parameters.
 	{
 		"nvim-treesitter/nvim-treesitter-textobjects",
 		branch = "main",
@@ -127,6 +124,11 @@ return {
 		config = function()
 			local move = require("nvim-treesitter-textobjects.move")
 
+			-- Bind a normal/visual/operator key to a textobject move method.
+			---@param key string
+			---@param query string Textobject capture, e.g. "@function.outer"
+			---@param method string Move function name on the move module
+			---@param desc string
 			local function map(key, query, method, desc)
 				vim.keymap.set({ "n", "x", "o" }, key, function()
 					move[method](query, "textobjects")
@@ -151,12 +153,13 @@ return {
 		end,
 	},
 
-	-- Auto close HTML/JSX tags
+	-- Auto close/rename HTML/JSX tags.
 	{
 		"windwp/nvim-ts-autotag",
 		event = "BufReadPost",
 		opts = {},
 	},
+	-- Treesitter-aware commentstring per language.
 	{
 		"folke/ts-comments.nvim",
 		event = "User FileType",

@@ -1,5 +1,4 @@
---- Session management with intelligent persistence and capability-aware loading
---- Provides automatic session saving and restoration with conditional availability
+--- persistence.nvim: save and restore editing sessions, keyed per directory and git branch.
 ---@class plugins.editor.persistence
 ---@field setup fun(): nil
 
@@ -23,10 +22,10 @@ return {
 		{ "<leader>qS", desc = "Select Session" },
 		{ "<leader>qd", desc = "Don't Save Current Session" },
 	},
+	-- Set up persistence and bind the session actions through which-key.
 	config = function(_, opts)
 		require("persistence").setup(opts)
 
-		-- Register conditional keymaps via which-key
 		require("which-key").add({
 			{
 				"<leader>qs",

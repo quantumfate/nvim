@@ -1,5 +1,4 @@
---- Advanced search and replace with live preview and project-wide operations
---- Provides powerful find/replace functionality with capability-aware conditional loading
+--- nvim-spectre: project-wide search and replace with a live-updating results buffer.
 ---@class plugins.editor.spectre
 ---@field setup fun(): nil
 
@@ -92,10 +91,10 @@ return {
 		{ "<leader>sw", mode = "v", desc = "Replace Selection (Spectre)" },
 		{ "<leader>sf", desc = "Replace in Current File (Spectre)" },
 	},
+	-- Set up spectre and bind its entry points through which-key.
 	config = function(_, opts)
 		require("spectre").setup(opts)
 
-		-- Register conditional keymaps via which-key
 		require("which-key").add({
 			{
 				"<leader>sr",

@@ -1,7 +1,9 @@
-local total_width = vim.api.nvim_win_get_width(0)
+--- which-key.nvim: popup key hints, leader group labels, and the config's window/editor keymaps.
 
--- Height in character cells
+-- Window dimensions sampled at load time to place the which-key popup.
+local total_width = vim.api.nvim_win_get_width(0)
 local total_height = vim.api.nvim_win_get_height(0)
+
 return {
 	"folke/which-key.nvim",
 	event = "VeryLazy",
@@ -9,25 +11,25 @@ return {
 	opts = {
 		preset = "helix",
 		plugins = {
-			marks = false, -- shows a list of your marks on ' and `
-			registers = true, -- shows your registers on " in NORMAL or <C-r> in INSERT mode
-			-- the presets plugin, adds help for a bunch of default keybindings in Neovim
-			-- No actual key bindings are created
+			marks = false,
+			registers = true, -- show registers on " and <C-r>
 			spelling = {
-				enabled = false, -- enabling this will show WhichKey when pressing z= to select spelling suggestions
-				suggestions = 20, -- how many suggestions should be shown in the list?
+				enabled = false,
+				suggestions = 20,
 			},
+			-- Built-in help presets; none create keymaps.
 			presets = {
-				operators = false, -- adds help for operators like d, y, ...
-				motions = false, -- adds help for motions
-				text_objects = false, -- help for text objects triggered after entering an operator
-				windows = false, -- default bindings on <c-w>
-				nav = false, -- misc bindings to work with windows
-				z = true, -- bindings for folds, spelling and others prefixed with z
-				g = false, -- bindings for prefixed with g
+				operators = false,
+				motions = false,
+				text_objects = false,
+				windows = false,
+				nav = false,
+				z = true, -- fold/spelling bindings prefixed with z
+				g = false,
 			},
 		},
 		defaults = {},
+		-- Hide mappings that carry no description.
 		filter = function(mapping)
 			return mapping.desc ~= ""
 		end,
@@ -35,26 +37,23 @@ return {
 			no_overlap = true,
 			width = 100,
 			height = { min = 4, max = 50 },
-			col = math.floor(total_width * 0.6), -- Center horizontally
-			row = math.floor(total_height * 0.7), -- 25% from top
-			-- border = "none",
-			padding = { 2, 3 }, -- extra window padding [top/bottom, right/left]
+			col = math.floor(total_width * 0.6),
+			row = math.floor(total_height * 0.7),
+			padding = { 2, 3 }, -- [top/bottom, right/left]
 			title = true,
 			title_pos = "center",
 			zindex = 1000,
-			-- Additional vim.wo and vim.bo options
 			bo = {},
-			wo = {
-				-- winblend = 10, -- value between 0-100 0 for fully opaque and 100 for fully transparent
-			},
+			wo = {},
 		},
 		layout = {
-			width = { min = 20 }, -- min and max width of the columns
-			spacing = 3, -- spacing between columns
+			width = { min = 20 },
+			spacing = 3,
 		},
 		icons = {
+			-- Icon per label pattern; `icons` is a global from the config's util.icons module.
 			rules = {
-				-- Debugging icons (more specific patterns first)
+				-- Debugging (more specific patterns first)
 				{ pattern = "conditional breakpoint", icon = icons.debugging.BreakpointCondition, color = "yellow" },
 				{ pattern = "breakpoint", icon = icons.debugging.Breakpoint, color = "red" },
 				{ pattern = "log point", icon = icons.debugging.BreakpointLog, color = "blue" },
@@ -92,10 +91,11 @@ return {
 				{ pattern = "exception breakpoints", icon = "", color = "blue" },
 			},
 		},
+		-- Leader-key group labels shown in the which-key popup.
 		spec = {
 			{
 				mode = { "n", "x" },
-				-- Core groups - always available
+				-- Core groups
 				{ "<leader><tab>", group = "tabs" },
 				{ "<leader>h", group = "harpoon" },
 				{ "<leader>n", group = "neogen" },
@@ -140,7 +140,7 @@ return {
 					"<leader>r",
 					group = "refactor",
 				},
-				-- Navigation groups - context dependent
+				-- Navigation groups
 				{
 					"[",
 					group = "prev",
@@ -168,28 +168,18 @@ return {
 		},
 	},
 	keys = {
-		-- {
-		-- 	"<leader>?",
-		-- 	function()
-		-- 		require("which-key").show({ global = false })
-		-- 	end,
-		-- 	desc = "Buffer Keymaps (which-key)",
-		-- },
 		{
 			"<leader>iL",
 			"<cmd>Lazy<cr>",
 			desc = "Lazy",
 		},
 	},
+	-- Register the config's window-management and editing keymaps once which-key loads.
 	init = function()
 		local wk = require("which-key")
-		-- wk.add({
-		-- 	{ "<C-f>", "<cmd>silent !tmux neww tms<CR>", desc = "Create a new tms session" },
-		-- 	{ "<C-s>", "<cmd>silent !tmux neww tms switch<CR>", desc = "Quick switch sessions" },
-		-- })
 
+		-- Window navigation, resize, splits, and split swapping.
 		wk.add({
-			-- Existing navigation...
 			{ "<leader>wh", "<cmd>wincmd h<cr>", desc = "Left" },
 			{ "<leader>wj", "<cmd>wincmd j<cr>", desc = "Down" },
 			{ "<leader>wk", "<cmd>wincmd k<cr>", desc = "Up" },
@@ -238,6 +228,7 @@ return {
 			},
 		})
 
+		-- Editing, movement, search, and register keymaps.
 		wk.add({
 			{ "J", ":m '>+1<CR>gv=gv", desc = "Move selection down", mode = "v" },
 			{ "K", ":m '<-2<CR>gv=gv", desc = "Move selection up", mode = "v" },
@@ -275,14 +266,6 @@ return {
 				desc = "Remove current search pattern",
 				mode = "n",
 			},
-			--{ "<leader>x", "<cmd>!chmod +x %<CR>", desc = "Make file executable", mode = "n" },
-
-			-- {
-			-- 	"<leader>ee",
-			-- 	"oif err != nil {<CR>}<Esc>Oreturn err<Esc>",
-			-- 	desc = "Insert Go error handling",
-			-- 	mode = "n",
-			-- },
 		})
 	end,
 }

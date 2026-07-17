@@ -1,12 +1,10 @@
---- General utility functions for string manipulation and data operations
---- Provides commonly used helper functions for various data transformations
+--- String and table helpers used across the config.
 ---@class util.fn
 local M = {}
 
---- Replaces hyphens with underscores in a string
---- Normalizes string format for consistent naming conventions
----@param val string|nil The string value to normalize
----@return string|nil normalized_val The normalized string or original value if not a string
+--- Replaces hyphens with underscores; passes non-strings through unchanged.
+---@param val string|nil
+---@return string|nil normalized_val
 function M.normalize(val)
 	if val and type(val) == "string" then
 		if not string.find(val, "-") then
@@ -17,10 +15,9 @@ function M.normalize(val)
 	return val
 end
 
---- Recursively creates a shallow copy of a given table
---- Creates a new table with copied values, recursively handling nested tables
----@param t table The table to copy
----@return table copy A shallow copy of the input table
+--- Recursively copies a table, cloning nested tables.
+---@param t table
+---@return table copy
 function M.shallow_table_copy(t)
 	local copy = {}
 	for k, v in pairs(t) do
@@ -33,18 +30,16 @@ function M.shallow_table_copy(t)
 	return copy
 end
 
---- Checks if a string is empty or nil
---- Utility function for string validation
----@param s string The string to check
----@return boolean is_empty True if string is nil or empty, false otherwise
+--- True if the string is nil or empty.
+---@param s string
+---@return boolean is_empty
 function M.isempty(s)
 	return s == nil or s == ""
 end
 
---- Safely get a buffer option with error handling
---- Wraps vim.api.nvim_buf_get_option in pcall for safe access
----@param opt string The buffer option name to retrieve
----@return any|nil option_value The buffer option value or nil if error occurred
+--- Reads a buffer option on the current buffer, returning nil on error.
+---@param opt string
+---@return any|nil option_value
 function M.get_buf_option(opt)
 	local status_ok, buf_option = pcall(vim.api.nvim_buf_get_option, 0, opt)
 	if not status_ok then
@@ -54,16 +49,15 @@ function M.get_buf_option(opt)
 	end
 end
 
---- Generate a random UUID string
---- Creates a version 4 UUID following the standard format
----@return string uuid A randomly generated UUID string
----@return integer count A randomly generated UUID string
+--- Generates a random version-4 UUID string.
+---@return string uuid
+---@return integer substitutions gsub replacement count
 function M.gen_uuid()
 	local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
 	return template:gsub("[xy]", function(c)
 		local v = math.random(0, 15)
 		if c == "y" then
-			v = (v & 0x3) | 0x8 -- 8..b for variant
+			v = (v & 0x3) | 0x8 -- variant bits: 8..b
 		end
 		return string.format("%x", v)
 	end)

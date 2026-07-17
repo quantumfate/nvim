@@ -1,3 +1,4 @@
+--- neogen: generate annotation/docstring skeletons (file, class, function, type) via LuaSnip.
 return {
 	"danymat/neogen",
 	dependencies = {
@@ -7,8 +8,6 @@ return {
 	opts = {
 		snippet_engine = "luasnip",
 	},
-	-- Uncomment next line if you want to follow only stable versions
-	-- version = "*"
 	keys = {
 		{
 			"<leader>nF",

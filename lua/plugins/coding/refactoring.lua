@@ -1,5 +1,4 @@
----@class plugins.coding.refactoring
----@field supported_filetypes string[] List of supported programming languages
+--- refactoring.nvim spec: language-aware extract/inline refactors with buffer-local keymaps.
 
 ---@class plugins.coding.refactoring.Config
 ---@field prompt_func_return_type table<string, boolean> Languages requiring return type prompts
@@ -8,7 +7,11 @@
 ---@field print_var_statements table Custom print variable statement configurations
 ---@field show_success_message boolean Whether to show success notifications
 
+--- Filetypes offered any refactor.
+---@type string[]
 local supported_ft = { "lua", "python", "go", "rust", "javascript", "typescript", "c", "cpp", "java" }
+--- Subset that also supports block-level extraction.
+---@type string[]
 local block_ft = { "go", "rust", "c", "cpp", "java" }
 
 return {
@@ -42,24 +45,24 @@ return {
 		print_var_statements = {},
 		show_success_message = true,
 	},
+	--- Register refactoring keymaps per buffer once its filetype is known.
 	config = function(_, opts)
 		require("refactoring").setup(opts)
 
-		-- Register buffer-local keymaps for supported filetypes
 		vim.api.nvim_create_autocmd("FileType", {
 			group = vim.api.nvim_create_augroup("refactoring_keymaps", { clear = true }),
 			pattern = supported_ft,
 			callback = function(event)
 				local buf = event.buf
 
-				-- Check treesitter is available
+				-- Refactors need a treesitter parse; skip buffers without one.
 				if not pcall(vim.treesitter.get_parser, buf) then
 					return
 				end
 
 				local wk = require("which-key")
 
-				-- Base refactoring keymaps
+				-- Extract/inline/debug refactors available in every supported filetype.
 				wk.add({
 					buffer = buf,
 					{ "<leader>r", group = "refactor" },
@@ -143,7 +146,7 @@ return {
 					},
 				})
 
-				-- Block refactors only for supported languages
+				-- Block-extraction refactors, added only for languages that support them.
 				local ft = vim.bo[buf].filetype
 				if vim.tbl_contains(block_ft, ft) then
 					wk.add({

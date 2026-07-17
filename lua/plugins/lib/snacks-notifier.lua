@@ -1,14 +1,15 @@
+-- snacks.notifier spec: renders LSP progress as a single spinner notification per client.
+
 return {
 	"folke/snacks.nvim",
 	---@type snacks.Config
 	opts = {
-		notifier = {
-			-- your notifier configuration comes here
-			-- or leave it empty to use the default settings
-			-- refer to the configuration section below
-		},
+		notifier = {}, -- defaults
 	},
+	--- Aggregates LspProgress events into per-client notifications.
+	---@return nil
 	init = function()
+		-- Per-client progress messages; keyed by client id, entries auto-created on access.
 		local progress = vim.defaulttable()
 		vim.api.nvim_create_autocmd("LspProgress", {
 			---@param ev {data: {client_id: integer, params: lsp.ProgressParams}}
@@ -20,6 +21,7 @@ return {
 				end
 				local p = progress[client.id]
 
+				-- Upsert this token's entry (append if new), formatting a "[ nn%] title **message**" line.
 				for i = 1, #p + 1 do
 					if i == #p + 1 or p[i].token == ev.data.params.token then
 						p[i] = {
@@ -35,6 +37,7 @@ return {
 					end
 				end
 
+				-- Collect messages to show, and drop finished entries from the retained list.
 				local msg = {} ---@type string[]
 				progress[client.id] = vim.tbl_filter(function(v)
 					return table.insert(msg, v.msg) or not v.done

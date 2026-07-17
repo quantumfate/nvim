@@ -1,3 +1,5 @@
+--- Inline color-code highlighting (hex, rgb, Tailwind) as background swatches.
+
 return {
 	"brenoprata10/nvim-highlight-colors",
 	event = "BufReadPost",

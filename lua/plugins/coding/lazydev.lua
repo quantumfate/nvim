@@ -20,19 +20,15 @@ return {
 			{ path = vim.fn.stdpath("data") .. "/lazy", mods = {} },
 		},
 		integrations = {
-			-- Fixes lspconfig's workspace management for LuaLS
-			-- Only create a new workspace if the buffer is not part
-			-- of an existing workspace or one of its libraries
+			-- Fix LuaLS workspace management: reuse the buffer's existing workspace/library.
 			lspconfig = true,
-			-- add the cmp source for completion of:
-			-- `require "modname"`
-			-- `---@module "modname"`
+			-- cmp/coq completion sources for `require`/`---@module` (blink is used instead).
 			cmp = false,
-			-- same, but for Coq
 			coq = false,
 		},
 		---@type boolean|(fun(root:string):boolean?)
-		-- disable when a .luarc.json file is found
+		--- Disable lazydev when the project ships its own .luarc.json.
+		--- vim.uv: libuv filesystem probe.
 		enabled = function(root_dir)
 			return not vim.uv.fs_stat(root_dir .. "/.luarc.json")
 		end,

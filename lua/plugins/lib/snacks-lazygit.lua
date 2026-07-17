@@ -1,14 +1,13 @@
+-- snacks.lazygit spec: opens lazygit in a floating window (defaults; keymap only).
+
 return {
 	"folke/snacks.nvim",
 	---@type snacks.Config
 	opts = {
-		lazygit = {
-			-- your lazygit configuration comes here
-			-- or leave it empty to use the default settings
-			-- refer to the configuration section below
-		},
+		lazygit = {}, -- defaults
 	},
 	keys = {
+		-- External: Snacks global provides the lazygit launcher.
 		{
 			"<leader>ig",
 			function()

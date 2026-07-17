@@ -1,3 +1,4 @@
+--- neo-tree.nvim: file/buffer/git-status sidebar explorer with LSP-aware move/rename handling.
 return {
 	{
 		"nvim-neo-tree/neo-tree.nvim",
@@ -38,12 +39,12 @@ return {
 				desc = "Buffer Explorer",
 			},
 		},
+		-- Close the explorer when lazy.nvim deactivates the plugin.
 		deactivate = function()
 			vim.cmd([[Neotree close]])
 		end,
+		-- Lazy-load neo-tree via autocmd (not a direct require) so `cwd` is set before load.
 		init = function()
-			-- FIX: use `autocmd` for lazy-loading neo-tree instead of directly requiring it,
-			-- because `cwd` is not set up properly.
 			vim.api.nvim_create_autocmd("BufEnter", {
 				group = vim.api.nvim_create_augroup("Neotree_start_directory", { clear = true }),
 				desc = "Start Neo-tree with directory",
@@ -51,11 +52,10 @@ return {
 				callback = function()
 					if package.loaded["neo-tree"] then
 						return
-					else
-						local stats = vim.uv.fs_stat(vim.fn.argv(0))
-						if stats and stats.type == "directory" then
-							require("neo-tree")
-						end
+					end
+					local stats = vim.uv.fs_stat(vim.fn.argv(0))
+					if stats and stats.type == "directory" then
+						require("neo-tree")
 					end
 				end,
 			})
@@ -72,14 +72,15 @@ return {
 				mappings = {
 					["<space>"] = "none",
 					["Y"] = {
+						-- Yank the selected node's path to the system clipboard.
 						function(state)
-							local node = state.tree:get_node()
-							local path = node:get_id()
+							local path = state.tree:get_node():get_id()
 							vim.fn.setreg("+", path, "c")
 						end,
 						desc = "Copy Path to Clipboard",
 					},
 					["O"] = {
+						-- Open the selected node with the OS default application.
 						function(state)
 							require("lazy.util").open(state.tree:get_node().path, { system = true })
 						end,
@@ -103,7 +104,9 @@ return {
 				},
 			},
 		},
+		-- Wire file move/rename events into LSP updates and refresh git status after lazygit.
 		config = function(_, opts)
+			-- Propagate a tree move/rename to LSP clients. `Snacks` is a global from snacks.nvim.
 			local function on_move(data)
 				Snacks.util.lsp.on_rename(data.source, data.destination)
 			end
@@ -115,6 +118,8 @@ return {
 				{ event = events.FILE_RENAMED, handler = on_move },
 			})
 			require("neo-tree").setup(opts)
+
+			-- Refresh the git_status source when a lazygit terminal closes.
 			vim.api.nvim_create_autocmd("TermClose", {
 				pattern = "*lazygit",
 				callback = function()

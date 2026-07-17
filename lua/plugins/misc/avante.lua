@@ -1,35 +1,34 @@
+-- avante.nvim spec (currently disabled): Ollama-backed AI assistant plus its keymaps and which-key groups.
+
 return {
 	{
 		"yetone/avante.nvim",
-		-- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
-		-- ⚠️ must add this setting! ! !
-		build = "make",
+		build = "make", -- BUILD_FROM_SOURCE=true to build from source
 		enabled = false,
-		version = false, -- Never set this value to "*"! Never!
+		version = false, -- pin a release; never "*"
+		--- Uses a global statusline so avante's UI spans the full width.
+		---@return nil
 		init = function()
 			vim.opt.laststatus = 3
 		end,
 		opts = {
-			-- add any opts here
-			-- this file can contain specific instructions for your project
-			instructions_file = "avante.md",
-			-- for example
+			instructions_file = "avante.md", -- per-project instructions
 			provider = "ollama",
 			providers = {
 				ollama = {
 					model = "qwen2.5-coder:32b",
+					--- Reports the provider as ready only when the Ollama endpoint responds.
+					---@return boolean
 					is_env_set = function()
 						return require("avante.providers.ollama").check_endpoint_alive()
 					end,
 				},
 			},
 			file_selector = {
-				provider = "snacks", -- Options override for custom providers provider_opts = {},
+				provider = "snacks",
 			},
 			selector = {
 				provider = "snacks",
-				-- provider_opts = {},
-				-- exclude_auto_select = {}, -- List of items to exclude from auto selection
 			},
 		},
 		keys = {
@@ -75,11 +74,10 @@ return {
 			{ "<leader>aq", "<cmd>AvanteAsk<cr>", desc = "Avante: Quick Ask" },
 			{
 				"<leader>as",
+				-- Yanks the whole buffer into the unnamed register, then opens an Ask prompt.
 				function()
-					-- Save current context and ask
 					local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-					local content = table.concat(lines, "\n")
-					vim.fn.setreg('"', content)
+					vim.fn.setreg('"', table.concat(lines, "\n"))
 					vim.cmd("AvanteAsk")
 				end,
 				desc = "Avante: Save context and ask",
@@ -88,8 +86,8 @@ return {
 			-- File operations
 			{
 				"<leader>afi",
+				-- Creates avante.md from a template if missing, then opens it.
 				function()
-					-- Create avante instructions file if it doesn't exist
 					local file = vim.fn.getcwd() .. "/avante.md"
 					if vim.fn.filereadable(file) == 0 then
 						local default_content = [[# Avante Instructions
@@ -124,10 +122,9 @@ This is a [describe your project] project.
 			-- Advanced features
 			{
 				"<leader>aex",
+				-- Exports the current conversation to a timestamped markdown file.
 				function()
-					-- Export current conversation
-					local timestamp = os.date("%Y%m%d_%H%M%S")
-					local filename = "avante_export_" .. timestamp .. ".md"
+					local filename = "avante_export_" .. os.date("%Y%m%d_%H%M%S") .. ".md"
 					vim.cmd("AvanteExport " .. filename)
 					vim.notify("Exported to " .. filename, vim.log.levels.INFO)
 				end,
@@ -137,6 +134,7 @@ This is a [describe your project] project.
 			-- Quick templates
 			{
 				"<leader>atr",
+				-- Opens Ask pre-filled with a code-review prompt.
 				function()
 					vim.cmd("AvanteAsk")
 					vim.api.nvim_feedkeys("Review this code for potential issues and suggest improvements:", "n", false)
@@ -146,6 +144,7 @@ This is a [describe your project] project.
 
 			{
 				"<leader>ato",
+				-- Opens Ask pre-filled with an optimization prompt.
 				function()
 					vim.cmd("AvanteAsk")
 					vim.api.nvim_feedkeys("Optimize this code for better performance:", "n", false)
@@ -155,6 +154,7 @@ This is a [describe your project] project.
 
 			{
 				"<leader>atd",
+				-- Opens Ask pre-filled with a documentation prompt.
 				function()
 					vim.cmd("AvanteAsk")
 					vim.api.nvim_feedkeys("Add comprehensive documentation to this code:", "n", false)
@@ -164,6 +164,7 @@ This is a [describe your project] project.
 
 			{
 				"<leader>att",
+				-- Opens Ask pre-filled with a unit-test prompt.
 				function()
 					vim.cmd("AvanteAsk")
 					vim.api.nvim_feedkeys("Write unit tests for this code:", "n", false)
@@ -174,9 +175,9 @@ This is a [describe your project] project.
 			-- Debug and troubleshooting
 			{
 				"<leader>adb",
+				-- Prints the resolved avante config.
 				function()
-					local config = require("avante.config")
-					print(vim.inspect(config))
+					print(vim.inspect(require("avante.config")))
 				end,
 				desc = "Avante: Show config",
 			},

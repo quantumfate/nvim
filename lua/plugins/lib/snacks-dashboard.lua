@@ -1,15 +1,13 @@
+-- snacks.dashboard spec: start screen with quick-action keys and a two-pane layout.
+
 return {
 	"folke/snacks.nvim",
 	opts = {
 		dashboard = {
 			preset = {
-				-- Defaults to a picker that supports `fzf-lua`, `telescope.nvim` and `mini.pick`
-				---@type fun(cmd:string, opts:table)|nil
+				---@type fun(cmd:string, opts:table)|nil Picker backend; nil auto-detects fzf-lua/telescope/mini.pick.
 				pick = nil,
-				-- Used by the `keys` section to show keymaps.
-				-- Set your custom keymaps here.
-				-- When using a function, the `items` argument are the default keymaps.
-				---@type snacks.dashboard.Item[]
+				---@type snacks.dashboard.Item[] Quick-action entries shown in the `keys` section.
 				keys = {
 					{ icon = " ", key = "f", desc = "Find File", action = ":lua Snacks.dashboard.pick('files')" },
 					{ icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
@@ -59,6 +57,7 @@ return {
 					icon = " ",
 					title = "Git Status",
 					section = "terminal",
+					-- External: Snacks global; only show git status inside a repo.
 					enabled = function()
 						return Snacks.git.get_root() ~= nil
 					end,

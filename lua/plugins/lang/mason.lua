@@ -91,13 +91,13 @@ return {
 				},
 			},
 		},
+		--- Set up Mason, then ensure every declared tool is installed once the registry is ready.
 		config = function(_, opts)
 			require("mason").setup(opts)
 
-			-- Collect all packages
 			local all_packages = vim.iter({ lsp_servers, formatters, linters, dap_adapters }):flatten():totable()
 
-			-- Install available packages
+			-- Defer past startup so the registry refresh doesn't block launch.
 			vim.defer_fn(function()
 				require("mason-registry").refresh(function()
 					require("util.plugins.mason").ensure_installed(all_packages)

@@ -1,7 +1,11 @@
+--- Lualine component definitions (branch, diagnostics, lsp, path, ...).
+--- Reads two config-wide globals: `icons` (_G.icons) and `Snacks`.
 local util = require("util.plugins.lualine.util")
 
+--- Below this window width, wide components hide themselves.
 local window_width_limit = 150
 
+--- Predicates gating when components render.
 local conditions = {
 	buffer_not_empty = function()
 		return vim.fn.empty(vim.fn.expand("%:t")) ~= 1
@@ -20,6 +24,7 @@ local conditions = {
 
 local fmt = string.format
 
+--- Current git branch from the gitsigns buffer state, or nil.
 local function gitsigns_head()
 	local gitsigns = vim.b.gitsigns_status_dict
 	if gitsigns then

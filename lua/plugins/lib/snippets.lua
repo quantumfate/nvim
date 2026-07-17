@@ -1,3 +1,5 @@
+-- LuaSnip spec: loads bundled and config snippets and extends filetypes with doc-comment snippets.
+
 return {
 	{
 		"L3MON4D3/LuaSnip",
@@ -6,6 +8,8 @@ return {
 		dependencies = {
 			{
 				"rafamadriz/friendly-snippets",
+				--- Loads VSCode-format snippets from the bundle and the user config dir.
+				---@return nil
 				config = function()
 					require("luasnip.loaders.from_vscode").lazy_load()
 					require("luasnip.loaders.from_vscode").lazy_load({
@@ -15,6 +19,9 @@ return {
 			},
 			"benfowler/telescope-luasnip.nvim",
 		},
+		--- Sets up LuaSnip, lazy-loads every loader format, and maps filetypes to doc snippets.
+		---@param opts table|nil
+		---@return nil
 		config = function(_, opts)
 			local luasnip = require("luasnip")
 
@@ -26,9 +33,8 @@ return {
 				require("luasnip.loaders.from_" .. type).lazy_load()
 			end, { "vscode", "snipmate", "lua" })
 
+			-- Attach per-language doc/comment snippet sets.
 			local extend = luasnip.filetype_extend
-
-			-- Docs / comments
 			extend("typescript", { "tsdoc" })
 			extend("javascript", { "jsdoc" })
 			extend("lua", { "luadoc" })

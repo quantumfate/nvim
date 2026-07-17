@@ -1,3 +1,7 @@
+--- Autocommand definitions and their registration into augroups.
+
+--- Each entry is { event(s), opts }; opts.group names the augroup to create on demand.
+---@type table[]
 local autocmds = {
 	{
 		"InsertEnter",
@@ -112,6 +116,7 @@ local autocmds = {
 		},
 	},
 }
+-- Register each definition, creating its augroup first if it doesn't yet exist.
 for _, entry in ipairs(autocmds) do
 	local event = entry[1]
 	local opts = entry[2]

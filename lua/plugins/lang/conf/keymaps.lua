@@ -8,7 +8,8 @@
 ---@field expr? boolean Whether the function returns a string to execute
 ---@field cond? fun(): boolean Additional condition check
 
---- Standard LSP keymaps with capability checks
+--- Standard LSP keymaps, gated by capability in lspconfig's LspAttach handler.
+--- Navigation entries drive the Snacks picker (global).
 ---@type LspKeymapConfig[]
 local M = {
 	-- Core navigation (using Snacks picker)

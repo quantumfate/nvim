@@ -9,6 +9,7 @@ return {
 	keys = {
 		{
 			"<leader>cl",
+			--- Lint the current buffer, reporting which linters ran (Snacks: global notifier).
 			function()
 				local lint = require("lint")
 				local ft = vim.bo.filetype
@@ -25,6 +26,7 @@ return {
 			desc = "Lint buffer",
 		},
 	},
+	--- Map filetypes to linters and lint automatically on edit/write.
 	config = function()
 		local lint = require("lint")
 
@@ -47,7 +49,7 @@ return {
 			json = { "jsonlint" },
 		}
 
-		-- Auto-lint on events (only if linters exist)
+		-- Lint on enter/write/insert-leave, but only when the filetype has a linter.
 		vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
 			group = vim.api.nvim_create_augroup("nvim-lint", { clear = true }),
 			callback = function()

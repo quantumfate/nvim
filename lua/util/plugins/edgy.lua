@@ -1,9 +1,9 @@
---- Edgy utility module for managing Trouble panel views. Provides functionality to open, close
---- and toggle different diagnostic and LSP views. Also manages a history of views internally.
+--- Opens, closes, and toggles named Trouble/diagnostic/LSP panel views, tracking current/previous.
 ---@class util.plugins.edgy
 ---@field views EdgyUtilViews
 local M = {}
 
+--- Private view definitions, close actions, and predicates (not part of the public API).
 local internal = {}
 
 local trouble = {
@@ -22,9 +22,10 @@ local trouble = {
 --
 --]]
 
---- Wraps a setmetatable call
----@param view_content table
+--- Tags a command list with display metadata (pretty_name, solo) on its metatable.
+---@param view_content table List of commands
 ---@param pretty_name string
+---@param solo boolean|nil Close other windows before opening
 ---@return table
 local function meta_wrapper(view_content, pretty_name, solo)
 	return setmetatable(view_content, {
@@ -35,9 +36,8 @@ local function meta_wrapper(view_content, pretty_name, solo)
 	})
 end
 
---- View definitions mapping view names to their corresponding Trouble commands
---- Each view can contain multiple commands that will be executed in sequence
----@class edgy.internal.views table<string, string[]>
+--- View name -> ordered Trouble/command list (run in sequence), tagged via meta_wrapper.
+---@type table<string, string[]>
 internal.views = {
 	full_trouble = meta_wrapper({
 		trouble.diagnostics_local,

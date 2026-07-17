@@ -1,29 +1,22 @@
---- Navbuddy utility module for enhanced navigation functionality
---- Provides custom actions and overrides for nvim-navbuddy plugin
+--- Custom nvim-navbuddy actions: native commenting and a Snacks-based picker.
 ---@class util.plugins.navbuddy
 local navbuddy_actions = require("nvim-navbuddy.actions")
 
 local M = {
-	--- Override navbuddy's comment function to use Neovim's built-in comment engine
-	--- Uses treesitter and ts-comments for better commenting support
-	---@return table action_config Action configuration with callback and description
+	--- Action that comments the focused node's line range using Neovim's built-in engine.
+	---@return table action_config { callback, description }
 	override_comment = function()
-		-- do the original setup
 		navbuddy_actions.comment()
 
 		return {
+			-- Replicates the original action's window handling, swapping in native commenting.
 			callback = function(display)
-				-- Let original do the setup (fix_end_character_position, window switching, marks)
-				-- But we intercept before it calls Comment.nvim
-
-				-- Manually do what original does, but swap the comment part
 				display.state.leaving_window_for_action = true
 				vim.api.nvim_set_current_win(display.for_win)
 
 				local start_line = display.focus_node.scope["start"].line
 				local end_line = display.focus_node.scope["end"].line
 
-				-- Use native commenting
 				local ok, comment = pcall(require, "vim._comment")
 				if ok and comment.toggle_lines then
 					comment.toggle_lines(start_line, end_line)
@@ -37,10 +30,9 @@ local M = {
 			description = "Comment",
 		}
 	end,
-	--- Override navbuddy's telescope function to use Snacks picker instead
-	--- Replaces telescope picker with Snacks picker for consistent UI
-	---@param _opts table Configuration options for the picker
-	---@return table action_config Action configuration with callback and description
+	--- Action that opens navbuddy's picker via Snacks instead of telescope.
+	---@param _opts table Picker options
+	---@return table action_config { callback, description }
 	override_telescope = function(_opts)
 		return {
 			callback = function(display)

@@ -1,4 +1,12 @@
+--- Treesitter helpers: a text-transform query directive and cursor-aware function
+--- selection for textobjects.
+---@class util.plugins.treesitter
 local M = {}
+
+--- Builds a treesitter query directive that rewrites a capture's text through
+--- `transform`, storing the result in the match metadata.
+---@param transform fun(text: string): string
+---@return fun(match: table, _: any, bufnr: integer, pred: table, metadata: table)
 function M.case_directive(transform)
 	return function(match, _, bufnr, pred, metadata)
 		local id = pred[2]
@@ -18,7 +26,8 @@ function M.case_directive(transform)
 	end
 end
 
--- smallest @function.outer / @function.inner range containing the cursor.
+--- Visually selects the smallest textobject range of `capture` containing the cursor.
+---@param capture string e.g. "function.outer" / "function.inner"
 function M.select_function(capture)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local ok, parser = pcall(vim.treesitter.get_parser, bufnr)
@@ -41,8 +50,10 @@ function M.select_function(capture)
 	local cur = vim.api.nvim_win_get_cursor(0)
 	local crow, ccol = cur[1] - 1, cur[2]
 
+	-- Keep the smallest capture range that still contains the cursor.
 	local best, best_size
 	for _, match in query:iter_matches(root, bufnr, 0, -1, { all = true }) do
+		-- Widest span across all nodes of this match's capture.
 		local min_sr, min_sc, max_er, max_ec
 		for id, nodes in pairs(match) do
 			if query.captures[id] == capture then

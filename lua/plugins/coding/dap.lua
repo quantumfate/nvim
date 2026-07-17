@@ -46,6 +46,7 @@ return {
 			},
 			{
 				"jbyuki/one-small-step-for-vimkind",
+				--- Register the nlua adapter for debugging Neovim's own Lua (via osv).
 				config = function()
 					local dap = require("dap")
 					dap.adapters.nlua = function(callback, conf)
@@ -232,10 +233,12 @@ return {
 				desc = "View Value for Expression under the cursor",
 			},
 		},
+		--- Define breakpoint signs, virtual text, edgy hooks, and per-language adapters/configs.
 		config = function()
 			local dap = require("dap")
 			local edgy_util = require("util.plugins.edgy")
 
+			-- icons: global sign glyph table defined during Neovim startup.
 			vim.fn.sign_define("DapBreakpoint", { text = icons.debugging.Breakpoint, texthl = "DiagnosticError" })
 			vim.fn.sign_define(
 				"DapBreakpointCondition",
@@ -277,11 +280,13 @@ return {
 				type = "executable",
 				command = "node",
 				args = {
-					vim.fn.stdpath("data") .. "/mason/packages/local-lua-debugger-vscode/extension/extension/debugAdapter.js",
+					vim.fn.stdpath("data")
+						.. "/mason/packages/local-lua-debugger-vscode/extension/extension/debugAdapter.js",
 				},
 				enrich_config = function(config, on_config)
 					if not config["extensionPath"] then
-						config.extensionPath = vim.fn.stdpath("data") .. "/mason/packages/local-lua-debugger-vscode/extension/"
+						config.extensionPath = vim.fn.stdpath("data")
+							.. "/mason/packages/local-lua-debugger-vscode/extension/"
 					end
 					config.program = config.program or {}
 					if not config.program.lua then

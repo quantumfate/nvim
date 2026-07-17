@@ -1,11 +1,12 @@
+-- snacks.toggle spec: option toggles and their <leader>t… keymaps, registered on VeryLazy.
+
 return {
 	"folke/snacks.nvim",
 	opts = {
 		toggle = {
-			map = vim.keymap.set, -- keymap.set function to use
-			which_key = true, -- integrate with which-key to show enabled/disabled icons and colors
-			notify = true, -- show a notification when toggling
-			-- icons for enabled/disabled states
+			map = vim.keymap.set,
+			which_key = true, -- show enabled/disabled state via which-key
+			notify = true, -- notify on toggle
 			icon = {
 				enabled = " ",
 				disabled = " ",
@@ -21,9 +22,12 @@ return {
 			},
 		},
 	},
+	--- Registers all toggle keymaps once VeryLazy fires.
+	---@return nil
 	init = function()
 		vim.api.nvim_create_autocmd("User", {
 			pattern = "VeryLazy",
+			-- External: Snacks global exposes the toggle builders.
 			callback = function()
 				Snacks.toggle.option("spell", { name = "Spelling" }):map("<leader>ts")
 				Snacks.toggle.option("wrap", { name = "Wrap" }):map("<leader>tw")

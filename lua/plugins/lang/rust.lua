@@ -1,3 +1,4 @@
+--- rustaceanvim spec: rust-analyzer setup, crates.nvim, and codelldb debugging.
 return {
 	"mrcjkb/rustaceanvim",
 	ft = { "rust" },
@@ -20,6 +21,7 @@ return {
 	},
 	opts = {
 		server = {
+			--- Buffer-local Rust keymaps once rust-analyzer attaches.
 			on_attach = function(_, bufnr)
 				vim.keymap.set("n", "<leader>dr", function()
 					vim.cmd.RustLsp("debuggables")
@@ -70,12 +72,14 @@ return {
 			},
 		},
 	},
+	--- Attach codelldb for DAP and publish the config through vim.g.rustaceanvim.
 	config = function(_, opts)
 		opts.dap = {
 			adapter = function()
 				return require("dap").adapters.codelldb
 			end,
 		}
+		-- vim.g.rustaceanvim: global the plugin reads on load; merge, keeping any prior values.
 		vim.g.rustaceanvim = vim.tbl_deep_extend("keep", vim.g.rustaceanvim or {}, opts or {})
 		if vim.fn.executable("rust-analyzer") == 0 then
 			vim.notify(

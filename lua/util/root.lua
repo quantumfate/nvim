@@ -1,12 +1,5 @@
--- lua/util/root.lua
--- Project root directory detection utility.
---
--- This module provides functions to detect the root directory of a project
--- using multiple strategies: LSP workspace folders, file pattern matching,
--- and current working directory fallback.
---
--- Adapted from LazyVim's util/root.lua.
-
+--- Project root detection via LSP workspace folders, file patterns, and cwd fallback.
+--- Adapted from LazyVim's util/root.lua. Callable: `require("util.root")()` == `.get()`.
 ---@class util.root
 ---@overload fun(): string
 local M = setmetatable({}, {
@@ -23,57 +16,31 @@ local M = setmetatable({}, {
 
 ---@alias util.RootSpec string|string[]|util.RootFn
 
---- Default root detection specification.
---- Order matters: first match wins.
+--- Default detection spec, tried in order; first match wins.
 ---@type util.RootSpec[]
 M.spec = { "lsp", { ".git", "lua" }, "cwd" }
 
---- Cache of detected roots per buffer.
+--- Detected root per buffer, cleared by setup()'s autocmds.
 ---@type table<number, string>
 M.cache = {}
 
---- Detector functions for different root detection strategies.
+--- Detection strategies keyed by name; each takes a buffer and returns paths.
 M.detectors = {}
 
 ----------------------------------------------------------------------------------
 -- Detector Functions
 ----------------------------------------------------------------------------------
 
---- Returns the current working directory as a root candidate.
----
---- This is a fallback detector that always succeeds. It returns the directory
---- where Neovim was started from, wrapped in a table for consistency with
---- other detectors.
----
----@return string[] paths A table containing the current working directory path
----
----@usage
---- local roots = M.detectors.cwd()
---- -- Returns: { "/home/user/projects" }
----
----@note This detector always returns a value and never fails.
----@note Useful as a last-resort fallback in the detection chain.
----@note Returns a table (not a string) for API consistency.
+--- Fallback detector: the cwd, always succeeding, wrapped in a table.
+---@return string[] paths
 function M.detectors.cwd()
 	return { vim.uv.cwd() }
 end
 
---- Detects project roots using LSP workspace folders and root directories.
----
---- Queries all LSP clients attached to the buffer and collects root directories
---- from their workspace folders and root_dir configurations. Filters results
---- to only include paths that are parents of the current buffer's path.
----
----@param buf number The buffer number to check LSP clients for
----@return string[] roots LSP root directories filtered to paths containing the buffer's file
----
----@usage
---- local roots = M.detectors.lsp(vim.api.nvim_get_current_buf())
---- -- Returns: { "/home/user/project" } or {}
----
----@note Ignores LSP servers listed in vim.g.root_lsp_ignore (e.g., {"copilot"}).
----@note Checks both workspace_folders and root_dir from each client.
----@note Only returns roots that are parent directories of the buffer's path.
+--- Collects LSP root dirs (workspace folders + root_dir) that contain the buffer's file.
+--- Skips clients named in vim.g.root_lsp_ignore.
+---@param buf number
+---@return string[] roots
 function M.detectors.lsp(buf)
 	local bufpath = M.bufpath(buf)
 	if not bufpath then
@@ -103,24 +70,11 @@ function M.detectors.lsp(buf)
 	end, roots)
 end
 
---- Detects project root by searching for specific files or directories.
----
---- Walks up the directory tree from the buffer's file location, looking for
---- any of the specified patterns. Supports exact matches and wildcard patterns
---- (e.g., "*.sln" matches any file ending in .sln).
----
----@param buf number The buffer number to start the search from
----@param patterns string|string[] Pattern(s) to search for (e.g., ".git", "Makefile", "*.sln")
----@return string[] roots A table containing the directory of the matched pattern, or empty table
----
----@usage
---- local roots = M.detectors.pattern(buf, { ".git", "Makefile" })
---- local roots = M.detectors.pattern(buf, "*.sln")
----
----@note Searches upward from the buffer's file location.
----@note Falls back to cwd if buffer has no associated file.
----@note Wildcards only support suffix matching (e.g., "*.ext").
----@note Returns the parent directory of the match, not the match itself.
+--- Walks upward from the buffer's file for any pattern (exact or "*.ext" suffix),
+--- returning the matched directory. Falls back to cwd for unnamed buffers.
+---@param buf number
+---@param patterns string|string[]
+---@return string[] roots
 function M.detectors.pattern(buf, patterns)
 	patterns = type(patterns) == "string" and { patterns } or patterns
 	local path = M.bufpath(buf) or vim.uv.cwd()
@@ -144,41 +98,22 @@ end
 -- Path Helper Functions
 ----------------------------------------------------------------------------------
 
---- Gets the real filesystem path of a buffer's file.
----
---- Retrieves the full path of the file associated with the given buffer
---- and resolves it to its real path (following symlinks).
----
----@param buf number The buffer number
----@return string|nil path The resolved real path, or nil if buffer has no file
----
----@note Returns nil for unnamed buffers or special buffer types.
----@note Resolves symlinks to get the canonical path.
+--- Real (symlink-resolved) path of the buffer's file, or nil if unnamed.
+---@param buf number
+---@return string|nil path
 function M.bufpath(buf)
 	return M.realpath(vim.api.nvim_buf_get_name(assert(buf)))
 end
 
---- Gets the normalized current working directory.
----
----@return string cwd The normalized current working directory, or empty string on failure
----
----@note Uses vim.uv.cwd() internally.
----@note Returns empty string (not nil) on failure for safety.
+--- Normalized cwd, or empty string on failure.
+---@return string cwd
 function M.cwd()
 	return M.realpath(vim.uv.cwd()) or ""
 end
 
---- Resolves a path to its canonical form.
----
---- Converts a path to its real filesystem path by resolving symlinks
---- and normalizing the format.
----
----@param path string|nil The path to resolve
----@return string|nil realpath The resolved real path, or nil if input was empty/nil
----
----@note Returns nil for empty strings or nil input.
----@note On Windows, skips symlink resolution (fs_realpath not reliable).
----@note Normalizes path separators and removes redundant components.
+--- Resolves a path to its canonical form; skips symlink resolution on Windows.
+---@param path string|nil
+---@return string|nil realpath nil if input was nil/empty
 function M.realpath(path)
 	if path == "" or path == nil then
 		return nil
@@ -187,16 +122,9 @@ function M.realpath(path)
 	return M.norm(path)
 end
 
---- Normalizes a filesystem path.
----
---- Converts a path to a consistent format by resolving . and .. components,
---- normalizing separators, and removing trailing slashes.
----
----@param path string|nil The path to normalize
----@return string|nil normalized The normalized path, or nil if input was nil
----
----@note Uses vim.fs.normalize() internally.
----@note Handles both Unix and Windows path formats.
+--- Normalizes a path via vim.fs.normalize (separators, . and .. components).
+---@param path string|nil
+---@return string|nil normalized
 function M.norm(path)
 	if path == nil then
 		return nil
@@ -204,9 +132,8 @@ function M.norm(path)
 	return vim.fs.normalize(path)
 end
 
---- Checks if the current system is Windows.
----
----@return boolean is_win True if running on Windows, false otherwise
+--- True when running on Windows.
+---@return boolean is_win
 function M.is_win()
 	return vim.fn.has("win32") == 1
 end
@@ -215,23 +142,10 @@ end
 -- Resolution Functions
 ----------------------------------------------------------------------------------
 
---- Converts a root spec into a callable detector function.
----
---- Takes a spec entry (which can be a string detector name, a pattern list,
---- or a custom function) and returns a function that performs the detection.
----
----@param spec util.RootSpec The spec entry to resolve ("lsp", "cwd", patterns, or function)
----@return util.RootFn detector A function that takes a buffer number and returns root path(s)
----
----@usage
---- local detector = M.resolve("lsp")
---- local roots = detector(buf)
----
---- local detector = M.resolve({ ".git", "Makefile" })
---- local roots = detector(buf)
----
----@note Unknown string specs are treated as single-element pattern arrays.
----@note The returned function always takes (buf) and returns string[].
+--- Resolves a spec (detector name, pattern list, or function) into a detector fn.
+--- Unknown string specs fall through to pattern matching.
+---@param spec util.RootSpec
+---@return util.RootFn detector
 function M.resolve(spec)
 	if M.detectors[spec] then
 		return M.detectors[spec]
@@ -243,26 +157,13 @@ function M.resolve(spec)
 	end
 end
 
---- Detects all matching roots for a buffer using the configured spec.
----
---- Iterates through all specs in order, collecting roots from each detector.
---- Can return all matches or stop at the first successful detection.
----
----@param opts? { buf?: number, spec?: util.RootSpec[], all?: boolean } Options table
----@return util.Root[] roots Array of root objects with spec and paths fields
----
----@usage
---- -- Get all matching roots
---- local roots = M.detect({ all = true })
----
---- -- Get first matching root only
---- local roots = M.detect({ all = false, buf = 5 })
----
----@note Paths are deduplicated within each spec result.
----@note Paths are sorted by length (longest/most specific first).
----@note Empty results from detectors are skipped.
+--- Runs each spec's detector, returning matches with deduped, longest-first paths.
+--- Stops at the first match unless opts.all is true.
+---@param opts? { buf?: number, spec?: util.RootSpec[], all?: boolean }
+---@return util.Root[] roots
 function M.detect(opts)
 	opts = opts or {}
+	-- vim.g.root_spec overrides M.spec (set in init.lua).
 	opts.spec = opts.spec or type(vim.g.root_spec) == "table" and vim.g.root_spec or M.spec
 	opts.buf = (opts.buf == nil or opts.buf == 0) and vim.api.nvim_get_current_buf() or opts.buf
 
@@ -300,28 +201,9 @@ end
 -- Main API Functions
 ----------------------------------------------------------------------------------
 
---- Gets the project root directory for a buffer.
----
---- This is the main entry point for root detection. Returns the best matching
---- root directory based on the configured detection spec. Results are cached
---- per buffer for performance.
----
----@param opts? { buf?: number, normalize?: boolean } Options table
----@return string root The detected project root directory, or cwd as fallback
----
----@usage
---- -- Get root for current buffer
---- local root = require("util.root").get()
----
---- -- Get root for specific buffer with normalized path
---- local root = require("util.root").get({ buf = 5, normalize = true })
----
---- -- Use callable syntax (equivalent to .get())
---- local root = require("util.root")()
----
----@note Results are cached per buffer for performance.
----@note Cache is cleared on LspAttach, BufWritePost, DirChanged, BufEnter.
----@note The first successful detection wins (based on spec order).
+--- Main entry point: best-matching project root for a buffer, cached, cwd fallback.
+---@param opts? { buf?: number, normalize?: boolean }
+---@return string root
 function M.get(opts)
 	opts = opts or {}
 	local buf = opts.buf or vim.api.nvim_get_current_buf()
@@ -339,18 +221,8 @@ function M.get(opts)
 	return M.is_win() and ret:gsub("/", "\\") or ret
 end
 
---- Gets the Git repository root for the current project.
----
---- Finds the nearest .git directory starting from the detected project root
---- and returns its parent directory (the actual repository root).
----
----@return string git_root The Git repository root, or project root if no .git found
----
----@usage
---- local git_root = require("util.root").git()
----
----@note Starts search from M.get() result, not from buffer path.
----@note Useful when project root and git root differ (e.g., monorepos).
+--- Git repo root: nearest .git above the detected root, else the project root.
+---@return string git_root
 function M.git()
 	local root = M.get()
 	local git_root = vim.fs.find(".git", { path = root, upward = true })[1]
@@ -358,22 +230,10 @@ function M.git()
 	return ret
 end
 
---- Displays detailed information about root detection for current buffer.
----
---- Shows a notification with all detected roots from each spec, indicating
---- which one is currently selected. Useful for debugging root detection issues.
----
----@return string root The primary detected root path (same as M.get())
----
----@usage
---- :RootInfo
---- -- or
---- require("util.root").info()
----
----@note Shows [x] for the selected root, [ ] for alternatives.
----@note Displays the spec that matched each root.
----@note Shows the current vim.g.root_spec configuration.
+--- Notifies all detected roots ([x] = selected) and the active spec; returns the primary root.
+---@return string root
 function M.info()
+	-- vim.g.root_spec overrides M.spec (set in init.lua).
 	local spec = type(vim.g.root_spec) == "table" and vim.g.root_spec or M.spec
 
 	local roots = M.detect({ all = true })
@@ -400,19 +260,8 @@ function M.info()
 	return roots[1] and roots[1].paths[1] or vim.uv.cwd()
 end
 
---- Sets up the root detection module.
----
---- Creates autocommands to clear the cache when relevant events occur,
---- and creates a user command for displaying root info.
----
----@usage
---- -- In your config/init.lua
---- require("util.root").setup()
----
----@note Creates the :RootInfo command for debugging.
----@note Clears cache on: LspAttach, BufWritePost, DirChanged, BufEnter.
----@note BufEnter is included to handle neo-tree's set_root behavior.
----@note Should be called once during Neovim initialization.
+--- One-time init: registers :RootInfo and cache-clearing autocmds.
+--- BufEnter is included to handle neo-tree's set_root behavior.
 function M.setup()
 	vim.api.nvim_create_user_command("RootInfo", function()
 		M.info()

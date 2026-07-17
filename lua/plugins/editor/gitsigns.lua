@@ -1,3 +1,4 @@
+--- gitsigns.nvim: gutter signs, hunk navigation/staging, and inline blame for git buffers.
 return {
 
 	{
@@ -28,6 +29,8 @@ return {
 				delay = 1000,
 				ignore_whitespace = false,
 			},
+			-- Register buffer-local hunk keymaps once gitsigns attaches to a buffer.
+			---@param bufnr integer
 			on_attach = function(bufnr)
 				local gitsigns = require("gitsigns")
 				local wk = require("which-key")
@@ -122,6 +125,7 @@ return {
 	},
 	{
 		"gitsigns.nvim",
+		-- Add a Snacks toggle for the sign column. `Snacks` is a global set up by snacks.nvim.
 		opts = function()
 			Snacks.toggle({
 				name = "Git Signs",

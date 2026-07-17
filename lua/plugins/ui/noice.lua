@@ -1,7 +1,5 @@
---- Enhanced command-line, messages, and notification UI with capability-aware features
---- Provides modern floating windows for cmdline, messages, and LSP documentation
----@class plugins.ui.noice
----@field setup fun(): nil
+--- Noice (lazy.nvim spec): floating cmdline, message and LSP-doc UI, plus
+--- Tab/S-Tab scrolling of hover docs.
 
 ---@class NoiceConfig
 ---@field views table<string, NoiceView> View configurations for different UI elements
@@ -124,20 +122,23 @@ return {
 			desc = "Noice Picker (Telescope/FzfLua)",
 		},
 	},
+	--- Starts noice and binds Tab/S-Tab to scroll hover docs (falling back to <c-k>).
 	config = function(_, opts)
+		-- Drop noise from lazy's own startup buffer before noice takes over.
 		if vim.o.filetype == "lazy" then
 			vim.cmd([[messages clear]])
 		end
 		require("noice").setup(opts)
-		vim.keymap.set({ "n", "i", "s" }, "<Tab>", function()
-			if not require("noice.lsp").scroll(2) then
-				return "<c-k>"
+
+		-- Scroll LSP hover docs; when there is none, fall through to <c-k>.
+		local function scroll_docs(delta)
+			return function()
+				if not require("noice.lsp").scroll(delta) then
+					return "<c-k>"
+				end
 			end
-		end, { silent = true, expr = true })
-		vim.keymap.set({ "n", "i", "s" }, "<S-Tab>", function()
-			if not require("noice.lsp").scroll(-2) then
-				return "<c-k>"
-			end
-		end, { silent = true, expr = true })
+		end
+		vim.keymap.set({ "n", "i", "s" }, "<Tab>", scroll_docs(2), { silent = true, expr = true })
+		vim.keymap.set({ "n", "i", "s" }, "<S-Tab>", scroll_docs(-2), { silent = true, expr = true })
 	end,
 }
