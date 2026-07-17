@@ -1,14 +1,11 @@
---- Best-practice config file templates for the scaffold module
---- Every string here is consumed by a tool already wired into this Neovim config
---- (conform formatters, nvim-lint linters, or the LSP servers in mason.lua) so a
---- generated file is immediately live without extra setup.
+--- Config-file templates. Each is consumed by a tool already wired into this Neovim
+--- config (conform, nvim-lint, mason LSPs), so generated files are live immediately.
 ---@class scaffold.templates
 local M = {}
 
 local tools = require("scaffold.tools")
 
---- Conventional-commit message template, wired via `git config commit.template`
---- by the generated setup script. Mirrors the lance.nvim convention.
+--- Conventional-commit template, wired via `git config commit.template` by setup.sh.
 M.gitmessage = [[
 type(scope): short description
 
@@ -17,8 +14,7 @@ type(scope): short description
 # Body (optional): what & why, wrap at 72 cols
 ]]
 
---- Baseline editor settings shared by every project. Mirrors the shfmt `-i 4`
---- override in conform.lua and the tab-indented Makefile/Go conventions.
+--- Baseline editor settings; matches the shfmt `-i 4` and tab conventions.
 M.editorconfig = [[
 root = true
 
@@ -44,9 +40,7 @@ indent_size = 4
 indent_style = tab
 ]]
 
---- yamllint config. Relaxes the default 80-char line limit (the source of the
---- warnings in ansible tasks) to a warning at 120 and eases ansible-friendly rules.
---- Consumed by the `yamllint` linter in nvim-lint.lua.
+--- yamllint config; relaxes line-length to a 120 warning. Consumed by nvim-lint.
 M.yamllint = [[
 ---
 extends: default
@@ -62,7 +56,7 @@ rules:
     min-spaces-from-content: 1
 ]]
 
---- stylua config for Lua projects. Consumed by the `stylua` formatter.
+--- stylua config; consumed by the `stylua` formatter.
 M.stylua = [[
 column_width = 120
 line_endings = "Unix"
@@ -72,8 +66,7 @@ quote_style = "AutoPreferDouble"
 call_parentheses = "Always"
 ]]
 
---- prettier config. Consumed by the `prettierd`/`prettier` formatters for
---- js/ts/json/css/markdown/yaml.
+--- prettier config; consumed by the `prettierd`/`prettier` formatters.
 M.prettierrc = [[
 {
   "printWidth": 100,
@@ -83,8 +76,7 @@ M.prettierrc = [[
 }
 ]]
 
---- markdownlint config. Consumed by the `markdownlint` linter. Disables the two
---- rules that fight ordinary prose (line length, inline HTML).
+--- markdownlint config; disables the rules that fight prose. Consumed by markdownlint.
 M.markdownlint = [[
 default: true
 MD013: false
@@ -92,8 +84,7 @@ MD033: false
 MD041: false
 ]]
 
---- ruff config for Python projects that have no pyproject.toml to hang it off.
---- Consumed by the `ruff`/`ruff_format` tooling and basedpyright.
+--- ruff config for projects without a pyproject.toml. Consumed by ruff/basedpyright.
 M.ruff = [[
 line-length = 100
 target-version = "py311"
@@ -102,8 +93,7 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ]]
 
---- clang-format for C/C++ projects. Consumed by the `clang-format` formatter and
---- respected by clangd.
+--- clang-format config; consumed by the formatter and respected by clangd.
 M.clang_format = [[
 ---
 BasedOnStyle: LLVM
@@ -112,13 +102,13 @@ ColumnLimit: 100
 AllowShortFunctionsOnASingleLine: Empty
 ]]
 
---- rustfmt config. Consumed by the `rustfmt` formatter / rust-analyzer.
+--- rustfmt config; consumed by rustfmt / rust-analyzer.
 M.rustfmt = [[
 max_width = 100
 edition = "2021"
 ]]
 
---- Per-ecosystem .gitignore fragments, composed on demand by `M.gitignore`.
+--- Per-ecosystem .gitignore fragments, composed by `M.gitignore`.
 ---@type table<string, string>
 local IGNORE = {
 	os = "# OS / editor\n.DS_Store\n*.swp\n*.swo\n.direnv/\n",
@@ -132,7 +122,7 @@ local IGNORE = {
 	ansible = "# Ansible\n*.retry\n.vault_pass\n",
 }
 
---- Builds a .gitignore covering OS/editor junk plus every detected ecosystem.
+--- .gitignore for OS/editor junk plus every detected ecosystem.
 ---@param detection scaffold.Detection
 ---@return string
 function M.gitignore(detection)
@@ -147,11 +137,9 @@ function M.gitignore(detection)
 	return table.concat(parts, "\n")
 end
 
---- Builds a justfile: the deterministic wiring hub. fmt/fmt-check/lint/test/build
---- recipes aggregate every detected ecosystem's commands (from scaffold.tools),
---- and `check` chains them so pre-commit and CI share one entry point. The three
---- environment recipes (`setup` local, `provision` ansible/system, `dev` nix) make
---- every provisioning path reachable through the same interface.
+--- The justfile: wiring hub. Aggregates each ecosystem's fmt/lint/test/build commands
+--- into recipes, chains them in `check`, and exposes setup/provision/dev as the one
+--- interface to every provisioning path.
 ---@param detection scaffold.Detection
 ---@return string
 function M.justfile(detection)
@@ -164,8 +152,7 @@ function M.justfile(detection)
 		"",
 	}
 
-	--- Emits a recipe from a list of commands, skipping it entirely when empty so
-	--- the justfile never carries dead targets.
+	--- Emits a recipe, or nothing when there are no commands (no dead targets).
 	---@param name string
 	---@param cmds string[]
 	---@param comment? string
@@ -223,9 +210,8 @@ function M.justfile(detection)
 	return table.concat(lines, "\n")
 end
 
---- Builds a .pre-commit-config.yaml. Generic hygiene hooks plus conventional
---- commits, with local hooks that run `just fmt-check`/`just lint` so formatting
---- policy lives in exactly one place (the justfile / scaffold.tools).
+--- .pre-commit-config.yaml: hygiene hooks + conventional commits, with local hooks
+--- that call `just fmt-check`/`just lint` so policy lives only in the justfile.
 ---@param detection scaffold.Detection
 ---@return string
 function M.precommit(detection)
@@ -257,8 +243,7 @@ function M.precommit(detection)
 		"        stages: [commit-msg]",
 	})
 
-	-- Local hooks route formatting/lint through the justfile so there is a single
-	-- source of truth. Emitted only when there is something to check.
+	-- Route fmt/lint through the justfile; emit only when there is something to run.
 	local has_fmt = #tools.commands(detection, "fmt_check") > 0
 	local has_lint = #tools.commands(detection, "lint") > 0
 	if has_fmt or has_lint then
@@ -287,11 +272,8 @@ function M.precommit(detection)
 	return table.concat(L, "\n")
 end
 
---- Builds the Nix flake devShell: the standard, reproducible project toolchain.
---- `nix develop` (or direnv `use flake`) yields an environment pinned by flake.lock,
---- declaratively providing every detected ecosystem's tools. The shellHook installs
---- the shared pre-commit hooks so entering the shell wires the repo too. Packages
---- come from scaffold.tools.packages(_, "nix").
+--- The flake devShell: the standard reproducible toolchain, pinned by flake.lock and
+--- entered via `nix develop`/`use flake`. shellHook installs the pre-commit hooks.
 ---@param detection scaffold.Detection
 ---@return string
 function M.flake(detection)
@@ -328,10 +310,9 @@ function M.flake(detection)
 	}, "\n")
 end
 
---- Builds an ansible playbook that installs the system toolchain. `ansible.builtin.package`
---- auto-selects the host package manager (pacman/apt/dnf/...), and per-OS-family
---- name lists (from scaffold.tools) are selected at runtime via ansible_facts, so a
---- single playbook provisions any distro. Mirrors the nix devShell.
+--- Ansible playbook installing the system toolchain. `ansible.builtin.package` picks
+--- the host's manager; per-OS-family name lists are chosen at runtime via
+--- ansible_facts, so one playbook provisions any distro.
 ---@param detection scaffold.Detection
 ---@return string
 function M.provision(detection)
@@ -363,8 +344,7 @@ function M.provision(detection)
 		"        state: present",
 	})
 
-	-- Per-ecosystem user-level bootstrap (rocks/components/deps), run as the
-	-- invoking user, not root, so files land in their home.
+	-- User-level bootstrap, run as the invoking user so files land in their home.
 	local boots = tools.bootstrap(detection)
 	for _, b in ipairs(boots) do
 		vim.list_extend(L, {
@@ -378,8 +358,7 @@ function M.provision(detection)
 		table.insert(L, "      changed_when: false")
 	end
 
-	-- Wire per-user tool bin dirs onto PATH via the login profile, so binaries
-	-- installed above (and by the package manager) are usable in new shells.
+	-- Put tool bin dirs on PATH via the login profile, so new shells find them.
 	local paths = tools.bin_paths(detection)
 	if #paths > 0 then
 		vim.list_extend(L, {
@@ -468,13 +447,9 @@ body:
       required: false
 ]]
 
---- Builds scripts/setup.sh: the thin local bootstrap. It only wires the repo into
---- the developer's git (hooks + commit template) and enables direnv, then hands
---- off toolchain provisioning to the environments that own it:
----   * system-wide  -> just provision   (ansible)
----   * project/nix  -> just dev          (nix develop, flake devShell)
---- Keeping the toolchain out of this script means there is exactly one declarative
---- place per environment, not an imperative copy here. Adapted from lance.nvim.
+--- scripts/setup.sh: thin local bootstrap. Wires the repo into git (hooks + commit
+--- template) and enables direnv, then defers the toolchain to `just provision`
+--- (system) or `just dev` (nix) so it lives in one declarative place, not here.
 ---@param detection scaffold.Detection
 ---@return string
 function M.setup_sh(detection)
@@ -518,11 +493,9 @@ function M.setup_sh(detection)
 	}, "\n")
 end
 
---- Builds a direnv .envrc: the cross-machine glue. On a nix machine it loads the
---- flake devShell (nix-direnv `use flake`), giving the full pinned toolchain on
---- `cd`; on non-nix machines it just adds the per-user tool bin dirs so
---- ansible-installed binaries resolve. The nix guard keeps the same file valid
---- everywhere.
+--- direnv .envrc: cross-machine glue. Loads the flake devShell on nix machines
+--- (guarded by `has nix`), and always adds the per-user tool bin dirs so
+--- ansible-installed binaries resolve. Same file works everywhere.
 ---@param detection scaffold.Detection
 ---@return string
 function M.envrc(detection)
@@ -545,8 +518,7 @@ function M.envrc(detection)
 	return table.concat(L, "\n")
 end
 
---- CI workflow running `just check` inside the flake devShell, so CI and local
---- environments are identical (same flake.lock).
+--- CI running `just check` inside the flake devShell, so CI matches local (same lock).
 ---@param detection scaffold.Detection
 ---@return string
 function M.ci(detection)

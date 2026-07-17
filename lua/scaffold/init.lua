@@ -1,20 +1,13 @@
---- Project scaffolder: generates best-practice tool, lint, build, hooks, CI, and
---- toolchain-provisioning config for whatever project is currently open, tailored
---- to its detected ecosystems.
----
---- Everything derives from one wiring table (scaffold.tools): the justfile is the
---- hub, and pre-commit, the nix flake devShell, the ansible playbook, and CI all
---- call the same `just` recipes. Generation is non-destructive by default;
---- existing files are skipped unless `--force` is passed.
+--- Project scaffolder. Generates best-practice config for the open project, tailored
+--- to its detected ecosystems. Everything derives from one wiring table
+--- (scaffold.tools); pre-commit, the flake, the ansible playbook, and CI all call the
+--- same `just` recipes. Non-destructive unless `--force`.
 ---
 --- Commands:
----   :ProjectScaffold [scope...] [--force]
----       Generate config. Positional scopes force-include an ecosystem (solving
----       the chicken-and-egg case where you want rust wiring before any .rs file
----       exists) or restrict output to a category. `!`/`--force` overwrites.
----   :ProjectDoctor    Read-only health + hygiene + secret report.
----   :ProjectSanitize  Auto-fix trailing whitespace, final newlines, tracked
----                     junk, and missing script executable bits.
+---   :ProjectScaffold [scope...] [--force]  Generate. A scope force-includes an
+---       ecosystem (rust wiring before any .rs exists) or filters to a category.
+---   :ProjectDoctor    Read-only health, hygiene, and secret report.
+---   :ProjectSanitize  Fix trailing whitespace, newlines, tracked junk, script perms.
 ---@class scaffold
 local M = {}
 
@@ -23,8 +16,7 @@ local templates = require("scaffold.templates")
 local tools = require("scaffold.tools")
 local fs = require("util.fs")
 
---- File categories, used by the `--only`-style positional category filter. Kept
---- distinct from ecosystem names so a single positional arg is unambiguous.
+--- File categories for the positional category filter; kept distinct from eco names.
 ---@type table<string, boolean>
 local CATEGORIES = {
 	meta = true,
@@ -47,15 +39,14 @@ local CATEGORIES = {
 ---@field content string|fun(d: scaffold.Detection, o: scaffold.Opts): string Static text or builder
 ---@field executable? boolean Mark the written file executable (scripts)
 
---- True when the detection found at least one language ecosystem, i.e. this is a
---- real project worth wiring rather than an empty or data-only directory.
+--- True when at least one ecosystem was detected (a real project, not an empty dir).
 ---@param d scaffold.Detection
 ---@return boolean
 local function is_project(d)
 	return next(d.ecosystems) ~= nil
 end
 
---- Convenience: an entry gated on a single ecosystem being present.
+--- Gate for an entry that needs one specific ecosystem present.
 ---@param eco string
 ---@return fun(d: scaffold.Detection): boolean
 local function needs(eco)
@@ -164,8 +155,7 @@ function M.plan(root, opts)
 	opts = normalize_opts(opts)
 	local d = detect.scan(root)
 
-	-- Overlay force-included ecosystems so scopes can be requested before their
-	-- files exist on disk.
+	-- Force-included ecosystems, so a scope can be requested before its files exist.
 	for _, eco in ipairs(opts.ecosystems) do
 		d.ecosystems[eco] = true
 	end
@@ -340,9 +330,7 @@ function M.doctor()
 		table.insert(report, "")
 	end
 
-	-- Unpinned nix env: a flake without a lock resolves floating inputs, defeating
-	-- the reproducibility the flake exists for. We can't write the lock (nix does),
-	-- only flag it.
+	-- A flake without a lock resolves floating inputs; nix writes the lock, we flag it.
 	if
 		vim.uv.fs_stat(fs.join_paths(root, "flake.nix")) ~= nil
 		and vim.uv.fs_stat(fs.join_paths(root, "flake.lock")) == nil
@@ -423,9 +411,8 @@ local function read_text(abs)
 	return data
 end
 
---- Auto-fix pass: strips trailing whitespace, ensures a final newline on tracked
---- text files, unstages tracked build-artefact junk, and sets the executable bit
---- on scripts. Previews the actions and applies on confirmation.
+--- Auto-fix pass (preview then confirm): trailing whitespace, final newlines,
+--- `git rm --cached` for tracked junk, and the executable bit on scripts.
 ---@return nil
 function M.sanitize()
 	local root = require("util.root").get()

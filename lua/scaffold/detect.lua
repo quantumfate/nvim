@@ -1,14 +1,11 @@
---- Project ecosystem detection for the scaffold module
---- Inspects a project root and reports which language ecosystems, build systems,
---- and task runners are present so generators can make best-practice decisions
---- without clobbering conventions the project already established.
+--- Detects which ecosystems, build systems, and task runners a project root uses,
+--- so generators tailor output without clobbering existing conventions.
 ---@class scaffold.detect
 local M = {}
 
 local fs = require("util.fs")
 
---- Root-level marker files that identify an ecosystem or build system.
---- Checked directly (cheap) before falling back to recursive extension scans.
+--- Root-level marker files identifying an ecosystem; checked before extension scans.
 ---@type table<string, string[]>
 local MARKERS = {
 	rust = { "Cargo.toml" },
@@ -20,8 +17,7 @@ local MARKERS = {
 	ansible = { "ansible.cfg", "playbook.yml", "playbook.yaml" },
 }
 
---- Language extensions used when no marker file exists (e.g. a loose script dir).
---- Scanned lazily with an early-exit find so large trees stay cheap.
+--- Fallback extensions for ecosystems without a marker file (e.g. a loose script dir).
 ---@type table<string, string[]>
 local EXTENSIONS = {
 	lua = { "lua" },
@@ -35,9 +31,8 @@ local EXTENSIONS = {
 	nix = { "nix" },
 }
 
---- Build systems and task runners, keyed by the marker file that proves them.
---- `native` build systems come from an ecosystem toolchain; `runner` entries are
---- generic task runners we must not duplicate when emitting a justfile.
+--- Build systems / task runners keyed by marker. `runner` entries block justfile
+--- generation (don't duplicate an entry point); `native` come from an ecosystem.
 ---@type table<string, "runner"|"native">
 local BUILD_MARKERS = {
 	["justfile"] = "runner",
@@ -62,8 +57,7 @@ local function has_file(root, name)
 	return vim.uv.fs_stat(fs.join_paths(root, name)) ~= nil
 end
 
---- Returns true if any file with one of `exts` exists anywhere under `root`.
---- Uses an early-exit find (limit 1) so the scan stops at the first hit.
+--- True if any file with one of `exts` exists under `root` (early-exit scan).
 ---@param root string Absolute project root
 ---@param exts string[] Extensions without the leading dot
 ---@return boolean
@@ -125,8 +119,7 @@ function M.scan(root)
 	return d
 end
 
---- Reports whether a generic task runner (just/make/task) already exists.
---- Used to decide if emitting a justfile would duplicate an existing entry point.
+--- Whether a generic task runner (just/make/task) already exists.
 ---@param d scaffold.Detection
 ---@return boolean
 function M.has_task_runner(d)
