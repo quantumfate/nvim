@@ -43,7 +43,7 @@ M.eco = {
 		fmt_check = { "prettier --check ." },
 		test = { "npm test" },
 		build = { "npm run build" },
-		nix = { "nodejs", "nodePackages.prettier" },
+		nix = { "nodejs", "prettier" },
 		sys = { "nodejs", "npm", "prettier" },
 		bin_paths = { "node_modules/.bin", "$HOME/.npm-global/bin" },
 		bootstrap = { "[ -f package.json ] && npm install >/dev/null 2>&1 || true" },
@@ -96,7 +96,7 @@ M.eco = {
 	markdown = {
 		fmt = { "prettier --write '**/*.md'" },
 		fmt_check = { "prettier --check '**/*.md'" },
-		nix = { "nodePackages.prettier" },
+		nix = { "prettier" },
 		sys = { "prettier" },
 	},
 	nix = {
