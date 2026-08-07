@@ -1,0 +1,69 @@
+{
+	"CLI parser (getopt)": {
+		"prefix": "cli",
+		"description": "CLI argument parser using POSIX getopt",
+		"body": [
+			"#include <getopt.h>",
+			"#include <stdio.h>",
+			"#include <stdlib.h>",
+			"",
+			"static void usage(const char *prog)",
+			"{",
+			"\tfprintf(stderr, \"Usage: %s [OPTIONS]\\n\", prog);",
+			"\tfprintf(stderr, \"  -h            show this help\\n\");",
+			"\tfprintf(stderr, \"  -o <file>     output file\\n\");",
+			"\tfprintf(stderr, \"  -v            verbose\\n\");",
+			"}",
+			"",
+			"int main(int argc, char *argv[])",
+			"{",
+			"\tconst char *output = NULL;",
+			"\tint verbose = 0;",
+			"\tint opt;",
+			"",
+			"\twhile ((opt = getopt(argc, argv, \"ho:v\")) != -1) {",
+			"\t\tswitch (opt) {",
+			"\t\tcase 'h':",
+			"\t\t\tusage(argv[0]);",
+			"\t\t\treturn EXIT_SUCCESS;",
+			"\t\tcase 'o':",
+			"\t\t\toutput = optarg;",
+			"\t\t\tbreak;",
+			"\t\tcase 'v':",
+			"\t\t\tverbose = 1;",
+			"\t\t\tbreak;",
+			"\t\tdefault:",
+			"\t\t\tusage(argv[0]);",
+			"\t\t\treturn EXIT_FAILURE;",
+			"\t\t}",
+			"\t}",
+			"",
+			"\t$0",
+			"\treturn EXIT_SUCCESS;",
+			"}"
+		]
+	},
+	"main": {
+		"prefix": "main",
+		"description": "main with argc/argv",
+		"body": [
+			"int main(int argc, char *argv[])",
+			"{",
+			"\t$0",
+			"\treturn 0;",
+			"}"
+		]
+	},
+	"header guard": {
+		"prefix": "header",
+		"description": "Include guard for a C header",
+		"body": [
+			"#ifndef ${1:HEADER_H}",
+			"#define ${1:HEADER_H}",
+			"",
+			"$0",
+			"",
+			"#endif /* ${1:HEADER_H} */"
+		]
+	}
+}

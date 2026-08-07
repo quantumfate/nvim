@@ -1,0 +1,61 @@
+{
+	"keymap": {
+		"prefix": "keymap",
+		"description": "vim.keymap.set with local function and description",
+		"body": [
+			"vim.keymap.set(\"${1:n}\", \"${2:<leader>x}\", function()",
+			"\t$0",
+			"end, { desc = \"${3:description}\" })"
+		]
+	},
+	"autocmd": {
+		"prefix": "autocmd",
+		"description": "vim.api.nvim_create_autocmd with callback",
+		"body": [
+			"vim.api.nvim_create_autocmd(\"${1:FileType}\", {",
+			"\tpattern = { \"${2:*}\" },",
+			"\tcallback = function()",
+			"\t\t$0",
+			"\tend,",
+			"})"
+		]
+	},
+	"augroup + autocmd": {
+		"prefix": "augroup",
+		"description": "Reusable augroup with an autocmd inside",
+		"body": [
+			"local ${1:group} = vim.api.nvim_create_augroup(\"${2:Name}\", { clear = true })",
+			"",
+			"vim.api.nvim_create_autocmd(\"${3:Event}\", {",
+			"\tgroup = ${1:group},",
+			"\tpattern = { \"${4:*}\" },",
+			"\tcallback = function()",
+			"\t\t$0",
+			"\tend,",
+			"})"
+		]
+	},
+	"set option": {
+		"prefix": "opt",
+		"description": "vim.opt option assignment",
+		"body": [
+			"vim.opt.${1:option} = ${2:value}"
+		]
+	},
+	"notify": {
+		"prefix": "notify",
+		"description": "vim.notify message",
+		"body": [
+			"vim.notify(\"${1:message}\", vim.log.levels.${2:INFO}, { title = \"${3:title}\" })"
+		]
+	},
+	"local function": {
+		"prefix": "fn",
+		"description": "Local function definition",
+		"body": [
+			"local function ${1:name}(${2:...})",
+			"\t$0",
+			"end"
+		]
+	}
+}

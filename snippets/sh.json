@@ -1,0 +1,94 @@
+{
+	"CLI parser (getopts)": {
+		"prefix": ["cli", "getopts"],
+		"description": "Best-practice getopts CLI argument parser with usage, error handling and required-arg validation",
+		"body": [
+			"#!/usr/bin/env bash",
+			"set -Eeuo pipefail",
+			"",
+			"usage() {",
+			"\tcat <<EOF",
+			"Usage: \\$(basename \"\\$0\") [OPTIONS]",
+			"",
+			"Options:",
+			"\t-h, --help      Show this help",
+			"\t-o <file>       Output file",
+			"\t-v              Verbose mode",
+			"EOF",
+			"}",
+			"",
+			"output=\"\"",
+			"verbose=false",
+			"",
+			"# Parse options",
+			"while getopts \"${1::ho:v}\" opt; do",
+			"\tcase \"\\${opt}\" in",
+			"\t\th)",
+			"\t\t\tusage",
+			"\t\t\t;;",
+			"\t\to)",
+			"\t\t\toutput=\"\\${OPTARG}\"",
+			"\t\t\t;;",
+			"\t\tv)",
+			"\t\t\tverbose=true",
+			"\t\t\t;;",
+			"\t\t[?])",
+			"\t\t\techo \"Invalid option: -\\${OPTARG}\" >&2",
+			"\t\t\texit 1",
+			"\t\t\t;;",
+			"\t\t:)",
+			"\t\t\techo \"Option -\\${OPTARG} requires an argument\" >&2",
+			"\t\t\texit 1",
+			"\t\t\t;;",
+			"\tesac",
+			"done",
+			"shift \\$((OPTIND - 1))",
+			"",
+			"if [[ -z \"\\${output}\" ]]; then",
+			"\techo \"Missing required option: -o\" >&2",
+			"\texit 1",
+			"fi",
+			"",
+			"$0"
+		]
+	},
+	"usage function": {
+		"prefix": "usage",
+		"description": "Usage/help function that prints options and exits",
+		"body": [
+			"usage() {",
+			"\tcat <<EOF",
+			"Usage: \\$(basename \"\\$0\") [OPTIONS]",
+			"",
+			"Options:",
+			"\t-h, --help      Show this help",
+			"EOF",
+			"\texit 0",
+			"}"
+		]
+	},
+	"die (error + exit)": {
+		"prefix": "die",
+		"description": "Print an error to stderr and exit non-zero",
+		"body": [
+			"die() {",
+			"\techo \"ERROR: \\$*\" >&2",
+			"\texit 1",
+			"}"
+		]
+	},
+	"colored logging helpers": {
+		"prefix": "log",
+		"description": "info/warn/err logging helpers with colors via tput",
+		"body": [
+			"c_info=\\$(tput setaf 2)",
+			"c_warn=\\$(tput setaf 3)",
+			"c_err=\\$(tput setaf 1)",
+			"c_reset=\\$(tput sgr0)",
+			"",
+			"info() { echo \"\\${c_info}[INFO] \\$*\\${c_reset}\"; }",
+			"warn() { echo \"\\${c_warn}[WARN] \\$*\\${c_reset}\"; }",
+			"err()  { echo \"\\${c_err}[ERR]  \\$*\\${c_reset}\" >&2; }"
+		]
+	}
+}

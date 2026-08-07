@@ -36,7 +36,9 @@ return {
 			-- Attach per-language doc/comment snippet sets.
 			local extend = luasnip.filetype_extend
 			extend("typescript", { "tsdoc" })
+			extend("typescriptreact", { "typescript" })
 			extend("javascript", { "jsdoc" })
+			extend("javascriptreact", { "javascript" })
 			extend("lua", { "luadoc" })
 			extend("python", { "pydoc", "debug", "unittest", "comprehension" })
 			extend("rust", { "rustdoc" })

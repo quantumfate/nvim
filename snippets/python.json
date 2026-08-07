@@ -1,0 +1,63 @@
+{
+	"CLI parser (argparse)": {
+		"prefix": "cli",
+		"description": "CLI argument parser scaffold using argparse",
+		"body": [
+			"#!/usr/bin/env python3",
+			"import argparse",
+			"",
+			"",
+			"def main() -> None:",
+			"\tparser = argparse.ArgumentParser(description=\"${1:description}\")",
+			"\tparser.add_argument(",
+			"\t\t\"-o\", \"--output\",",
+			"\t\ttype=argparse.FileType(\"w\"),",
+			"\t\thelp=\"output file\",",
+			"\t)",
+			"\tparser.add_argument(",
+			"\t\t\"-v\", \"--verbose\",",
+			"\t\taction=\"store_true\",",
+			"\t\thelp=\"verbose output\",",
+			"\t)",
+			"\tparser.add_argument(\"${3:inputs}\", nargs=\"*\", help=\"${4:input files}\")",
+			"\targs = parser.parse_args()",
+			"\t$0",
+			"",
+			"",
+			"if __name__ == \"__main__\":",
+			"\tmain()"
+		]
+	},
+	"main": {
+		"prefix": "main",
+		"description": "Script main with __main__ guard",
+		"body": [
+			"#!/usr/bin/env python3",
+			"",
+			"",
+			"def main() -> None:",
+			"\t$0",
+			"",
+			"",
+			"if __name__ == \"__main__\":",
+			"\tmain()"
+		]
+	},
+	"print debug": {
+		"prefix": "printd",
+		"description": "f-string debug print showing name and value",
+		"body": [
+			"print(f\"{${1:var}=}\")"
+		]
+	},
+	"try/except": {
+		"prefix": "try",
+		"description": "try/except with an exception variable",
+		"body": [
+			"try:",
+			"\t${1:pass}",
+			"except ${2:Exception} as e:",
+			"\t$0"
+		]
+	}
+}

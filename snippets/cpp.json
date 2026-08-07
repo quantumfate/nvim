@@ -1,0 +1,58 @@
+{
+	"CLI parser (getopt)": {
+		"prefix": "cli",
+		"description": "CLI argument parser using POSIX getopt with std::string",
+		"body": [
+			"#include <getopt.h>",
+			"#include <cstdlib>",
+			"#include <iostream>",
+			"#include <string>",
+			"",
+			"static void usage(const char *prog)",
+			"{",
+			"\tstd::cerr << \"Usage: \" << prog << \" [OPTIONS]\\n\"",
+			"\t          << \"  -h            show this help\\n\"",
+			"\t          << \"  -o <file>     output file\\n\"",
+			"\t          << \"  -v            verbose\\n\";",
+			"}",
+			"",
+			"int main(int argc, char *argv[])",
+			"{",
+			"\tstd::string output;",
+			"\tbool verbose = false;",
+			"\tint opt;",
+			"",
+			"\twhile ((opt = getopt(argc, argv, \"ho:v\")) != -1) {",
+			"\t\tswitch (opt) {",
+			"\t\tcase 'h':",
+			"\t\t\tusage(argv[0]);",
+			"\t\t\treturn EXIT_SUCCESS;",
+			"\t\tcase 'o':",
+			"\t\t\toutput = optarg;",
+			"\t\t\tbreak;",
+			"\t\tcase 'v':",
+			"\t\t\tverbose = true;",
+			"\t\t\tbreak;",
+			"\t\tdefault:",
+			"\t\t\tusage(argv[0]);",
+			"\t\t\treturn EXIT_FAILURE;",
+			"\t\t}",
+			"\t}",
+			"",
+			"\t$0",
+			"\treturn EXIT_SUCCESS;",
+			"}"
+		]
+	},
+	"main": {
+		"prefix": "main",
+		"description": "main with argc/argv",
+		"body": [
+			"int main(int argc, char *argv[])",
+			"{",
+			"\t$0",
+			"\treturn 0;",
+			"}"
+		]
+	}
+}

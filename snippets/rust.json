@@ -1,0 +1,67 @@
+{
+	"CLI parser (clap)": {
+		"prefix": "clap",
+		"description": "CLI argument parser scaffold using clap derive",
+		"body": [
+			"use clap::Parser;",
+			"use std::path::PathBuf;",
+			"",
+			"/// ${2:CLI tool}",
+			"#[derive(Debug, Parser)]",
+			"#[command(name = \"${1:app}\", version, about, long_about = None)]",
+			"struct Cli {",
+			"\t/// Output file",
+			"\t#[arg(short, long)]",
+			"\toutput: Option<PathBuf>,",
+			"",
+			"\t/// Verbose mode",
+			"\t#[arg(short, long)]",
+			"\tverbose: bool,",
+			"",
+			"\t/// Positional inputs",
+			"\tinputs: Vec<String>,",
+			"}",
+			"",
+			"fn main() {",
+			"\tlet cli = Cli::parse();",
+			"\tprintln!(\"{cli:?}\");",
+			"\t$0",
+			"}"
+		]
+	},
+	"main": {
+		"prefix": "main",
+		"description": "Minimal fn main",
+		"body": [
+			"fn main() {",
+			"\t$0",
+			"}"
+		]
+	},
+	"unit tests module": {
+		"prefix": "tests",
+		"description": "cfg(test) module with a sample test",
+		"body": [
+			"#[cfg(test)]",
+			"mod tests {",
+			"\tuse super::*;",
+			"",
+			"\t#[test]",
+			"\tfn ${1:test_name}() {",
+			"\t\t$0",
+			"\t}",
+			"}"
+		]
+	},
+	"derivable struct": {
+		"prefix": "struct",
+		"description": "Struct with common derives",
+		"body": [
+			"#[derive(Debug, Clone)]",
+			"struct ${1:Name} {",
+			"\t${2:field}: ${3:Type},",
+			"\t$0",
+			"}"
+		]
+	}
+}

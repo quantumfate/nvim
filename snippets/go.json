@@ -1,0 +1,63 @@
+{
+	"CLI parser (cobra)": {
+		"prefix": "cobra",
+		"description": "Root command scaffold using cobra",
+		"body": [
+			"package main",
+			"",
+			"import (",
+			"\t\"fmt\"",
+			"\t\"os\"",
+			"",
+			"\t\"github.com/spf13/cobra\"",
+			")",
+			"",
+			"func main() {",
+			"\tif err := rootCmd.Execute(); err != nil {",
+			"\t\tfmt.Fprintln(os.Stderr, err)",
+			"\t\tos.Exit(1)",
+			"\t}",
+			"}",
+			"",
+			"var rootCmd = &cobra.Command{",
+			"\tUse:   \"${1:app}\",",
+			"\tShort: \"${2:short description}\",",
+			"\tRun: func(cmd *cobra.Command, args []string) {",
+			"\t\t$0",
+			"\t},",
+			"}"
+		]
+	},
+	"main": {
+		"prefix": "main",
+		"description": "package main with func main",
+		"body": [
+			"package main",
+			"",
+			"import \"fmt\"",
+			"",
+			"func main() {",
+			"\t$0",
+			"}"
+		]
+	},
+	"error check": {
+		"prefix": "err",
+		"description": "If err := ...; err != nil { return }",
+		"body": [
+			"if err := ${1:doSomething}(); err != nil {",
+			"\treturn $0",
+			"}"
+		]
+	},
+	"struct with json tag": {
+		"prefix": "struct",
+		"description": "Struct with a JSON-tagged field",
+		"body": [
+			"type ${1:Name} struct {",
+			"\t${2:Field} ${3:Type} `json:\"${4:tag}\"`",
+			"\t$0",
+			"}"
+		]
+	}
+}

@@ -1,0 +1,33 @@
+{
+	"CLI parser (commander)": {
+		"prefix": "cli",
+		"description": "CLI argument parser scaffold using commander (CommonJS)",
+		"body": [
+			"#!/usr/bin/env node",
+			"const { Command } = require(\"commander\");",
+			"",
+			"const program = new Command();",
+			"",
+			"program",
+			"  .name(\"${1:app}\")",
+			"  .description(\"${2:description}\")",
+			"  .version(\"${3:0.1.0}\")",
+			"  .option(\"-o, --output <file>\", \"output file\")",
+			"  .option(\"-v, --verbose\", \"verbose output\")",
+			"  .argument(\"[file...]\", \"input files\");",
+			"",
+			"program.action((${4:file}, options) => {",
+			"  $0",
+			"});",
+			"",
+			"program.parse();"
+		]
+	},
+	"console.log": {
+		"prefix": "log",
+		"description": "Console.log for debugging",
+		"body": [
+			"console.log(${1:value});"
+		]
+	}
+}
