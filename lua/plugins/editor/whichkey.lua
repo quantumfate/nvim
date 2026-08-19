@@ -33,19 +33,19 @@ return {
 		filter = function(mapping)
 			return mapping.desc ~= ""
 		end,
-		win = {
-			no_overlap = true,
-			width = 100,
-			height = { min = 4, max = 50 },
-			col = math.floor(total_width * 0.6),
-			row = math.floor(total_height * 0.7),
-			padding = { 2, 3 }, -- [top/bottom, right/left]
-			title = true,
-			title_pos = "center",
-			zindex = 1000,
-			bo = {},
-			wo = {},
-		},
+		-- win = {
+		-- 	no_overlap = true,
+		-- 	width = 100,
+		-- 	height = { min = 4, max = 50 },
+		-- 	col = math.floor(total_width * 0.6),
+		-- 	row = math.floor(total_height * 0.7),
+		-- 	padding = { 2, 3 }, -- [top/bottom, right/left]
+		-- 	title = true,
+		-- 	title_pos = "center",
+		-- 	zindex = 1000,
+		-- 	bo = {},
+		-- 	wo = {},
+		-- },
 		layout = {
 			width = { min = 20 },
 			spacing = 3,
@@ -265,6 +265,15 @@ return {
 				end,
 				desc = "Remove current search pattern",
 				mode = "n",
+			},
+		})
+		wk.add({
+			{
+				"<leader>fr",
+				desc = "Copy file path relative of root to clipboard",
+				function()
+					vim.fn.system({ "wl-copy" }, require("util.root").get_relative_fp())
+				end,
 			},
 		})
 	end,

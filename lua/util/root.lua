@@ -260,6 +260,18 @@ function M.info()
 	return roots[1] and roots[1].paths[1] or vim.uv.cwd()
 end
 
+--- Returns the file path of the current file relative to the root of the project
+---@return string
+function M.get_relative_fp()
+	local root = M.get()
+	local fp = vim.api.nvim_buf_get_name(0)
+	local prefix = root .. "/"
+	if fp:sub(1, #prefix) == prefix then
+		return fp:sub(#prefix + 1)
+	end
+	return fp
+end
+
 --- One-time init: registers :RootInfo and cache-clearing autocmds.
 --- BufEnter is included to handle neo-tree's set_root behavior.
 function M.setup()
