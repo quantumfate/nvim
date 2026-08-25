@@ -52,6 +52,7 @@ return {
 				"vue",
 				"xml",
 				"yaml",
+				"zig",
 				"qmljs",
 			},
 			highlight = { enable = true },

@@ -374,6 +374,21 @@ return {
 			dap.configurations.c = dap.configurations.rust
 			dap.configurations.cpp = dap.configurations.rust
 
+			-- Zig (codelldb debugs any ELF binary; sourceLanguages improves stdlib frame rendering)
+			dap.configurations.zig = {
+				{
+					name = "Launch",
+					type = "codelldb",
+					request = "launch",
+					program = function()
+						return vim.fn.input("Path to executable: ", vim.fn.getcwd() .. "/zig-out/bin/", "file")
+					end,
+					cwd = "${workspaceFolder}",
+					stopOnEntry = false,
+					sourceLanguages = { "zig" },
+				},
+			}
+
 			-- JavaScript/TypeScript (js-debug-adapter)
 			dap.adapters["pwa-node"] = {
 				type = "server",

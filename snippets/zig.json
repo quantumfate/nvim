@@ -1,0 +1,94 @@
+{
+	"import std": {
+		"prefix": "std",
+		"description": "Import the standard library",
+		"body": ["const std = @import(\"std\");"]
+	},
+	"main": {
+		"prefix": "main",
+		"description": "Minimal pub fn main",
+		"body": [
+			"pub fn main() !void {",
+			"\t$0",
+			"}"
+		]
+	},
+	"print": {
+		"prefix": "print",
+		"description": "Print to stderr via std.debug.print",
+		"body": [
+			"std.debug.print(\"${1:message}\\n\", .{${2}});"
+		]
+	},
+	"function": {
+		"prefix": "fn",
+		"description": "Function with optional error union return",
+		"body": [
+			"fn ${1:name}(${2:args}) ${3:!void} {",
+			"\t$0",
+			"}"
+		]
+	},
+	"public function": {
+		"prefix": "pfn",
+		"description": "Exported pub fn",
+		"body": [
+			"pub fn ${1:name}(${2:args}) ${3:!void} {",
+			"\t$0",
+			"}"
+		]
+	},
+	"struct": {
+		"prefix": "struct",
+		"description": "Struct declaration with fields",
+		"body": [
+			"const ${1:Name} = struct {",
+			"\t${2:field}: ${3:Type},",
+			"",
+			"\t$0",
+			"};"
+		]
+	},
+	"enum": {
+		"prefix": "enum",
+		"description": "Enum declaration with variants",
+		"body": [
+			"const ${1:Name} = enum {",
+			"\t${2:variant},",
+			"\t$0",
+			"};"
+		]
+	},
+	"error set": {
+		"prefix": "errset",
+		"description": "Error set declaration",
+		"body": [
+			"const ${1:Error} = error{",
+			"\t${2:Invalid},",
+			"\t$0",
+			"};"
+		]
+	},
+	"test block": {
+		"prefix": "test",
+		"description": "Named test block with an expect assertion",
+		"body": [
+			"test \"${1:name}\" {",
+			"\ttry std.testing.expect(${2:condition});",
+			"}"
+		]
+	},
+	"allocator test": {
+		"prefix": "talloc",
+		"description": "Test block with a GPA/arena allocator scaffold",
+		"body": [
+			"test \"${1:name}\" {",
+			"\tvar gpa = std.heap.GeneralPurposeAllocator(.{}){};",
+			"\tdefer _ = gpa.deinit();",
+			"\tconst allocator = gpa.allocator();",
+			"",
+			"\t$0",
+			"}"
+		]
+	}
+}

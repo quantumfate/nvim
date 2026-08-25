@@ -11,6 +11,7 @@ return {
 		"nvim-neotest/neotest-jest",
 		"marilari88/neotest-vitest",
 		"fredrikaverpil/neotest-golang",
+		"lawrence-laz/neotest-zig",
 		"MisanthropicBit/neotest-busted",
 		"folke/trouble.nvim",
 	},
@@ -36,6 +37,10 @@ return {
 				},
 			},
 			["rustaceanvim.neotest"] = {},
+			["neotest-zig"] = {
+				-- Route test-debugging through the shared LLDB-based adapter from dap.lua.
+				dap = { adapter = "codelldb" },
+			},
 			["neotest-busted"] = {
 				minimal_init = "tests/minimal_init.lua",
 				local_luarocks_only = false, -- Default local_luarocks_only = true blocks ~/.luarocks lookup (init.lua:96-98). User has no project-local lua_modules/, so nil returned.

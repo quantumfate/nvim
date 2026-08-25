@@ -33,6 +33,7 @@ local lsp_servers = {
 	"svelte-language-server",
 	"taplo",
 	"marksman",
+	"zls",
 }
 
 --- External formatters for languages where LSP doesn't provide formatting
@@ -115,7 +116,7 @@ return {
 		enabled = false,
 		opts = {
 			ensure_installed = lsp_servers,
-			automatic_installation = false,
+			automatic_installation = true,
 			automatic_enable = false,
 		},
 	},

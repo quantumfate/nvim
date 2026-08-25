@@ -260,6 +260,29 @@ local M = {
 		filetypes = { "vue" },
 		root_markers = { "package.json", "vue.config.js" },
 	},
+	zls = {
+		cmd = { "zls" },
+		filetypes = { "zig", "zir" },
+		root_markers = { "zls.json", "build.zig", "build.zig.zon", ".git" },
+		settings = {
+			-- ZLS 0.16 settings (see `zls --show-config-path` / zigtools schema).
+			zls = {
+				enable_snippets = true,
+				enable_argument_placeholders = true,
+				completion_label_details = true,
+				-- Build-on-save: null by default auto-enables when build.zig declares a
+				-- 'check' step; force it on so plain projects still get compile errors.
+				enable_build_on_save = true,
+				build_on_save_args = { "check" },
+				semantic_tokens = "full",
+				warn_style = false,
+				inlay_hints_show_variable_type_hints = true,
+				inlay_hints_show_parameter_name = true,
+				inlay_hints_exclude_single_argument = true,
+				prefer_ast_check_as_child_process = true,
+			},
+		},
+	},
 	qmlls = {
 		-- Use the system qmlls6 (real Qt 6.11, matches the Qt Quickshell is built
 		-- against) instead of Mason's limited standalone build, and point it at the

@@ -81,6 +81,7 @@ return {
 			go = { "goimports", "gofmt" },
 			just = { "just" },
 			rust = { "rustfmt" },
+			zig = { "zigfmt" },
 			toml = { "taplo" },
 			c = { "clang-format" },
 			cpp = { "clang-format" },
@@ -106,6 +107,12 @@ return {
 		end,
 		formatters = {
 			injected = { options = { ignore_errors = true } },
+			-- Zig ships its formatter with the compiler; reads stdin, writes stdout.
+			zigfmt = {
+				command = "zig",
+				args = { "fmt", "--stdin" },
+				stdin = true,
+			},
 			shfmt = {
 				prepend_args = { "-i", "4" }, -- 4 space indent
 			},

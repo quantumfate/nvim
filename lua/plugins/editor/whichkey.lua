@@ -140,6 +140,7 @@ return {
 					"<leader>r",
 					group = "refactor",
 				},
+				{ "<leader>z", group = "zig" },
 				-- Navigation groups
 				{
 					"[",
