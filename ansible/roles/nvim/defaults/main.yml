@@ -2,13 +2,94 @@
 nvim_app_name: nvim
 nvim_repo_path: "{{ playbook_dir }}/.."
 
+nvim_config_dir: "{{ ansible_facts.user_dir }}/.config/nvim"
+
 nvim_install_packages: true
 nvim_packages:
-  - neovim         
-  - git            
-  - gcc, make      
+  - neovim
+  - git
+  - gcc, make
   - tree-sitter-cli
-  - ripgrep        
-  - fd             
-  - fzf            
-  - curl, wget     
+  - ripgrep
+  - fd
+  - fzf
+  - curl, wget
+
+nvim_install_language_runtimes: true
+nvim_language_runtimes:
+  - nodejs
+  - npm
+  - pnpm
+  - go
+  - rustup
+  - python
+  - uv
+  - lua51
+  - luarocks
+  - zig
+
+nvim_install_lsp_servers: true
+nvim_lsp_servers:
+  - lua-language-server
+  - basedpyright
+  - typescript-language-server
+  - rust-analyzer
+  - gopls
+  - clang
+  - vscode-json-languageserver
+  - yaml-language-server
+  - ansible-language-server
+  - tailwindcss-language-server
+  - bash-language-server
+  - qt6-tools
+  - svelte-language-server
+  - taplo-cli
+  - marksman
+  - zls
+  - vue-language-server
+
+nvim_install_formatters: true
+nvim_formatters:
+  - stylua
+  - prettierd
+  - prettier
+  - python-black
+  - ruff
+  - shfmt
+  - clang
+  - go-tools
+  - go
+  - rustup component rustfmt
+  - deno
+  - fish
+  - just
+  - zig
+  - codespell
+
+nvim_install_linters: true
+nvim_linters:
+  - eslint_d
+  - eslint
+  - shellcheck
+  - markdownlint-cli
+  - yamllint
+  - hadolint-bin
+  - ansible-lint
+  - nodejs-jsonlint
+  - python-cpplint
+
+nvim_install_dap: true
+nvim_dap:
+  - python-debugpy
+  - codelldb-bin
+  - vscode-js-debug-bin
+  - delve
+  - lua51 # TODO: luarocks install nlua
+
+nvim_install_editor_integration_tools: true
+nvim_editor_integration_tools:
+  - lazygit
+  - devpod-bin
+  - tmux
+  - wl-clipboard
+  - pre-commit

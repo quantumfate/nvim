@@ -1,0 +1,59 @@
+---
+# Assembles the package set, then hands the whole list
+# to yay in one transaction (repo + AUR alike).
+
+- name: Build package list
+  ansible.builtin.set_fact:
+    nvim_resolved_packages: >-
+      {{ (common_packages
+          + (nvim_packages if nvim_install_packages else [])
+          + (nvim_language_runtimes if nvim_install_language_runtimes else [])
+          + (nvim_lsp_servers if nvim_install_lsp_servers else [])
+          + (nvim_formatters if nvim_install_formatters else [])
+          + (nvim_linters if nvim_install_linters else [])
+          + (nvim_dap if nvim_install_dap else [])
+          + (nvim_editor_integration_tools if nvim_install_editor_integration_tools else []))
+         | unique }}
+
+- name: Install packages
+  kewlfft.aur.aur:
+    name: "{{ nvim_resolved_packages }}"
+    use: yay
+    state: present
+  become: false
+
+- name: Manage the config directory
+  when: (nvim_repo_path | realpath) != (nvim_config_dir | realpath)
+  block:
+    - name: Check whether the config target exists
+      ansible.builtin.stat:
+        path: "{{ nvim_config_dir }}"
+      register: nvim_config_dir_stat
+
+    - name: Probe the config target for uncommitted changes
+      ansible.builtin.command: git -C {{ nvim_config_dir }} status --porcelain
+      register: config_dir_dirty
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      when: nvim_config_dir_stat.stat.exists and not nvim_config_dir_stat.stat.islnk
+
+    - name: Abort — config target is a git checkout with uncommitted changes
+      ansible.builtin.fail:
+        msg: >-
+          {{ nvim_config_dir }} has uncommitted changes; commit or move them
+          before re-linking the config.
+      when: config_dir_dirty is defined and config_dir_dirty.stdout | length > 0
+
+    - name: Remove the old config target
+      ansible.builtin.file:
+        path: "{{ nvim_config_dir }}"
+        state: absent
+      when: nvim_config_dir_stat.stat.exists and not nvim_config_dir_stat.stat.islnk
+
+    - name: Symlink the config into place
+      ansible.builtin.file:
+        src: "{{ nvim_repo_path | realpath }}"
+        dest: "{{ nvim_config_dir }}"
+        state: link
+        force: true

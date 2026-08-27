@@ -1,3 +1,0 @@
----
-- name: x
-  ansible.builtin.debug: msg: hi
