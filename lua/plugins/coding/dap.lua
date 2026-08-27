@@ -30,7 +30,6 @@ return {
 		dependencies = {
 			"nvim-neotest/nvim-nio",
 			"theHamsta/nvim-dap-virtual-text",
-			"jay-babu/mason-nvim-dap.nvim",
 			{
 				"igorlfs/nvim-dap-view",
 				-- let the plugin lazy load itself
@@ -275,18 +274,20 @@ return {
 				edgy_util.close_all()
 			end
 
+			-- Adapters ship as system packages (see lua/toolchain/registry.lua); the two
+			-- node-based ones are addressed by path rather than by a `dap` executable.
+			local js_debug_server = "/usr/lib/js-debug/dapDebugServer.js"
+			-- No distro package exists for this one; the ansible role builds it here.
+			local local_lua_debugger = vim.fs.joinpath(vim.fn.stdpath("data"), "dap", "local-lua-debugger-vscode")
+
 			-- Lua (local-lua-debugger-vscode, used by neotest-busted)
 			dap.adapters["local-lua"] = {
 				type = "executable",
 				command = "node",
-				args = {
-					vim.fn.stdpath("data")
-						.. "/mason/packages/local-lua-debugger-vscode/extension/extension/debugAdapter.js",
-				},
+				args = { local_lua_debugger .. "/extension/debugAdapter.js" },
 				enrich_config = function(config, on_config)
 					if not config["extensionPath"] then
-						config.extensionPath = vim.fn.stdpath("data")
-							.. "/mason/packages/local-lua-debugger-vscode/extension/"
+						config.extensionPath = local_lua_debugger .. "/"
 					end
 					config.program = config.program or {}
 					if not config.program.lua then
@@ -397,7 +398,7 @@ return {
 				executable = {
 					command = "node",
 					args = {
-						vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
+						js_debug_server,
 						"${port}",
 					},
 				},

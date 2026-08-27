@@ -1,0 +1,20 @@
+---
+# Maps one home-directory file to the path that should actually be edited: its
+# chezmoi source file when chezmoi manages it, the file itself otherwise.
+
+- name: "Ask chezmoi about {{ nvim_target_file | basename }}"
+  ansible.builtin.command: chezmoi source-path {{ nvim_target_file }}
+  register: nvim_chezmoi_source
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  become: false
+
+- name: "Record the edit target for {{ nvim_target_file | basename }}"
+  ansible.builtin.set_fact:
+    nvim_edit_paths: >-
+      {{ (nvim_edit_paths | default({}))
+         | combine({nvim_target_file: (nvim_chezmoi_source.stdout | trim
+                                       if nvim_chezmoi_source.rc == 0
+                                       else nvim_target_file)}) }}
+    nvim_chezmoi_managed: "{{ (nvim_chezmoi_managed | default(false)) or nvim_chezmoi_source.rc == 0 }}"

@@ -8,8 +8,6 @@ return {
 	event = { "BufReadPre", "BufNewFile" },
 	dependencies = {
 		"folke/lazydev.nvim", -- Make sure this loads first
-		"mason.nvim",
-		"mason-lspconfig.nvim",
 		"saghen/blink.cmp",
 	},
 	--- Wire capability-gated keymaps on attach, configure diagnostics/capabilities, enable servers.

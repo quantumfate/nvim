@@ -1,38 +1,160 @@
 ---
-# Assembles the package set, then hands the whole list
-# to yay in one transaction (repo + AUR alike).
+# Installs the external toolchain from system packages, puts the config in place,
+# then verifies that every tool the editor expects actually resolved. The tool list
+# comes from vars/tools.generated.yml, generated out of lua/toolchain/registry.lua.
 
-- name: Build package list
+- name: Load the generated tool registry
+  ansible.builtin.include_vars:
+    file: tools.generated.yml
+
+- name: Select the ecosystems to install
   ansible.builtin.set_fact:
-    nvim_resolved_packages: >-
-      {{ (common_packages
-          + (nvim_packages if nvim_install_packages else [])
-          + (nvim_language_runtimes if nvim_install_language_runtimes else [])
-          + (nvim_lsp_servers if nvim_install_lsp_servers else [])
-          + (nvim_formatters if nvim_install_formatters else [])
-          + (nvim_linters if nvim_install_linters else [])
-          + (nvim_dap if nvim_install_dap else [])
-          + (nvim_editor_integration_tools if nvim_install_editor_integration_tools else []))
-         | unique }}
+    nvim_selected: >-
+      {{ nvim_ecosystems if not nvim_ecosystem_filter
+         else nvim_ecosystems | dict2items
+              | selectattr('key', 'in', nvim_ecosystem_filter)
+              | items2dict }}
 
-- name: Install packages
-  kewlfft.aur.aur:
-    name: "{{ nvim_resolved_packages }}"
-    use: yay
-    state: present
+- name: Collect every package the selected ecosystems want
+  ansible.builtin.set_fact:
+    nvim_wanted_packages: >-
+      {{ (nvim_selected.values() | map(attribute='packages') | flatten | list
+          + nvim_extra_packages) | unique }}
+
+- name: Install the failure notifier
+  ansible.builtin.template:
+    src: nvim-tool-notify.sh.j2
+    dest: "{{ nvim_notify_script }}"
+    mode: "0755"
   become: false
+
+- name: Work out which packages are missing
+  # pacman -T prints the packages that are not installed, so a run that installs
+  # nothing skips both the upgrade guard and the transaction below.
+  ansible.builtin.command:
+    argv: "{{ ['pacman', '-T'] + nvim_wanted_packages }}"
+  register: nvim_missing_packages
+  changed_when: false
+  # -T exits 127 when something is missing, which is the normal case here.
+  failed_when: nvim_missing_packages.rc not in [0, 127]
+  check_mode: false
+
+- name: Guard against a partial upgrade
+  # Only relevant when something actually gets installed: pulling a new package into
+  # a system that is behind on updates is the partial upgrade that breaks Arch. A
+  # run with nothing to install is safe against any database age.
+  when: nvim_require_current_system and nvim_missing_packages.stdout_lines | length > 0
+  block:
+    - name: Check for pending system updates
+      ansible.builtin.command: checkupdates
+      register: nvim_pending_updates
+      changed_when: false
+      # checkupdates exits 2 when there is nothing to do.
+      failed_when: nvim_pending_updates.rc not in [0, 2]
+      check_mode: false
+
+    - name: Abort — installing now would be a partial upgrade
+      ansible.builtin.fail:
+        msg: >-
+          {{ nvim_missing_packages.stdout_lines | length }} package(s) to install
+          ({{ nvim_missing_packages.stdout_lines | join(', ') | truncate(120) }}) while
+          {{ nvim_pending_updates.stdout_lines | length }} package(s) are out of date.
+          Run a full `yay -Syu` first. Set nvim_require_current_system=false to override.
+      when: nvim_pending_updates.stdout_lines | length > 0
+
+- name: Install the toolchain packages
+  when: nvim_install_packages and nvim_missing_packages.stdout_lines | length > 0
+  block:
+    - name: Install packages
+      kewlfft.aur.aur:
+        name: "{{ nvim_wanted_packages }}"
+        use: yay
+        state: present
+      become: false
+  rescue:
+    - name: Report the package failure
+      ansible.builtin.command:
+        argv:
+          - "{{ nvim_notify_script }}"
+          - --phase
+          - packages
+          - --exit
+          - "1"
+          - --detail
+          - "{{ ansible_failed_result.msg | default('package installation failed') | truncate(300) }}"
+      changed_when: false
+      when: nvim_notify_failures
+      become: false
+
+    - name: Re-raise the package failure
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('package installation failed') }}"
+
+# Each step is what no package can do for us: rustup components, luarocks rocks,
+# cargo crates, the unpackaged lua debug adapter.
+- name: Run the per-ecosystem bootstrap steps
+  when: nvim_run_bootstrap
+  ansible.builtin.include_tasks: bootstrap.yml
+  loop: "{{ nvim_selected.values() | map(attribute='bootstrap') | select('defined') | flatten }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+# Shell files are often chezmoi-managed; editing the target directly would be undone
+# by the next `chezmoi apply`, so writes go to the source and are applied from there.
+- name: Resolve the shell files through chezmoi
+  ansible.builtin.include_tasks: chezmoi_target.yml
+  loop: "{{ nvim_shell_env_files + [nvim_profile_file] }}"
+  loop_control:
+    loop_var: nvim_target_file
+
+- name: Remove the leftover mason tree
+  when: nvim_purge_mason
+  become: false
+  block:
+    - name: Delete the mason package directory
+      ansible.builtin.file:
+        path: "{{ nvim_mason_dir }}"
+        state: absent
+
+    - name: Drop mason from the shell PATH
+      ansible.builtin.lineinfile:
+        path: "{{ nvim_edit_paths[item] }}"
+        regexp: mason/bin
+        state: absent
+      loop: "{{ nvim_shell_env_files }}"
+      when: nvim_edit_paths[item] is defined
+      register: nvim_mason_path_edit
+
+- name: Put the per-user tool bin dirs on PATH
+  ansible.builtin.lineinfile:
+    path: "{{ nvim_edit_paths[nvim_profile_file] }}"
+    create: true
+    mode: "0644"
+    line: 'export PATH="{{ item }}:$PATH"'
+  become: false
+  loop: "{{ nvim_selected.values() | map(attribute='bin_paths') | select('defined') | flatten | unique }}"
+  register: nvim_profile_edit
+
+- name: Apply the chezmoi source changes
+  ansible.builtin.command: chezmoi apply
+  become: false
+  changed_when: true
+  when:
+    - nvim_chezmoi_managed | default(false)
+    - (nvim_mason_path_edit is changed) or (nvim_profile_edit is changed)
 
 - name: Manage the config directory
   when: (nvim_repo_path | realpath) != (nvim_config_dir | realpath)
+  become: false
   block:
     - name: Check whether the config target exists
       ansible.builtin.stat:
         path: "{{ nvim_config_dir }}"
       register: nvim_config_dir_stat
 
-    - name: Probe the config target for uncommitted changes
+    - name: Probe the config target for uncommitted changes # noqa: command-instead-of-module
       ansible.builtin.command: git -C {{ nvim_config_dir }} status --porcelain
-      register: config_dir_dirty
+      register: nvim_config_dir_dirty
       changed_when: false
       failed_when: false
       check_mode: false
@@ -43,7 +165,7 @@
         msg: >-
           {{ nvim_config_dir }} has uncommitted changes; commit or move them
           before re-linking the config.
-      when: config_dir_dirty is defined and config_dir_dirty.stdout | length > 0
+      when: nvim_config_dir_dirty is defined and nvim_config_dir_dirty.stdout | length > 0
 
     - name: Remove the old config target
       ansible.builtin.file:
@@ -57,3 +179,72 @@
         dest: "{{ nvim_config_dir }}"
         state: link
         force: true
+
+- name: Install the neovim plugins headlessly
+  when: nvim_sync_plugins
+  become: false
+  block:
+    - name: Sync lazy.nvim
+      ansible.builtin.command: nvim --headless "+Lazy! sync" +qa
+      register: nvim_lazy_sync
+      changed_when: "'Installed' in nvim_lazy_sync.stderr or 'Updated' in nvim_lazy_sync.stderr"
+      # Plugin builds (blink.cmp's cargo build, LuaSnip's jsregexp) take a while.
+      timeout: 1800
+  rescue:
+    - name: Report the plugin sync failure
+      ansible.builtin.command:
+        argv:
+          - "{{ nvim_notify_script }}"
+          - --phase
+          - plugins
+          - --exit
+          - "1"
+          - --detail
+          - "{{ ansible_failed_result.msg | default('lazy.nvim sync failed') | truncate(300) }}"
+      changed_when: false
+      when: nvim_notify_failures
+
+    - name: Re-raise the plugin sync failure
+      ansible.builtin.fail:
+        msg: "{{ ansible_failed_result.msg | default('lazy.nvim sync failed') }}"
+
+- name: Refresh the tool store
+  # Neovim owns the store; the role only asks it to re-probe PATH and read the result.
+  when: nvim_refresh_store
+  become: false
+  ansible.builtin.command: >-
+    nvim --headless -c "lua require('toolchain.store').refresh({}, function() vim.cmd('qa!') end)"
+  # Regenerating a derived file is not a change to the machine.
+  changed_when: false
+  timeout: 300
+
+- name: Verify the toolchain
+  when: nvim_verify_tools and nvim_refresh_store
+  become: false
+  block:
+    - name: Read the tool store
+      ansible.builtin.slurp:
+        src: "{{ nvim_store_path }}"
+      register: nvim_store_raw
+
+    - name: Collect the tools that did not resolve
+      ansible.builtin.set_fact:
+        nvim_missing_tools: "{{ (nvim_store_raw.content | b64decode | from_json).summary.missing_tools }}"
+
+    - name: Report the missing tools
+      ansible.builtin.command:
+        argv:
+          - "{{ nvim_notify_script }}"
+          - --phase
+          - verify
+          - --exit
+          - "1"
+          - --detail
+          - "not on PATH after install: {{ nvim_missing_tools | join(', ') }}"
+      changed_when: false
+      when: nvim_missing_tools | length > 0 and nvim_notify_failures
+
+    - name: Abort — tools are missing after a full install
+      ansible.builtin.fail:
+        msg: "missing after install: {{ nvim_missing_tools | join(', ') }}"
+      when: nvim_missing_tools | length > 0

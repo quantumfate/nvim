@@ -1,5 +1,5 @@
 --- Config-file templates. Each is consumed by a tool already wired into this Neovim
---- config (conform, nvim-lint, mason LSPs), so generated files are live immediately.
+--- config (conform, nvim-lint, lspconfig servers), so generated files are live immediately.
 ---@class scaffold.templates
 local M = {}
 

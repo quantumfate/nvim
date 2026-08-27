@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# {{ ansible_managed }}
+# Reports a toolchain failure twice: once to the desktop as a notification with
+# structured hints, and once to {{ nvim_failure_log }} as a JSON line. Both carry the
+# same fields, so a status bar can subscribe to notifications and still rebuild
+# history from the log after a restart.
+#
+#   nvim-tool-notify --phase bootstrap --ecosystem rust --tool cargo-bacon-ls \
+#                    --exit 101 --detail "error: could not compile"
+set -uo pipefail
+
+LOG="{{ nvim_failure_log }}"
+URGENCY="{{ nvim_notify_urgency }}"
+
+phase="unknown"
+ecosystem=""
+tool=""
+exit_code=0
+detail=""
+
+while (($#)); do
+  case "$1" in
+    --phase) phase="${2-}" && shift 2 ;;
+    --ecosystem) ecosystem="${2-}" && shift 2 ;;
+    --tool) tool="${2-}" && shift 2 ;;
+    --exit) exit_code="${2-0}" && shift 2 ;;
+    --detail) detail="${2-}" && shift 2 ;;
+    *) printf 'unknown argument: %s\n' "$1" >&2 && exit 2 ;;
+  esac
+done
+
+timestamp=$(date -Is)
+summary="neovim toolchain: ${tool:-$phase} failed"
+body="${detail:-no detail}"
+
+# jq builds the record so any quoting in `detail` survives into valid JSON.
+if command -v jq >/dev/null 2>&1; then
+  mkdir -p "${LOG%/*}"
+  jq -nc \
+    --arg ts "$timestamp" --arg phase "$phase" --arg eco "$ecosystem" \
+    --arg tool "$tool" --arg detail "$detail" --arg host "$(hostname)" \
+    --argjson exit "${exit_code:-0}" \
+    '{timestamp:$ts, phase:$phase, ecosystem:$eco, tool:$tool, exit:$exit, host:$host, detail:$detail}' \
+    >>"$LOG"
+fi
+
+# Hints are the machine-readable half: a client reads x-nvim-* off the notification
+# instead of scraping the summary text.
+command -v notify-send >/dev/null 2>&1 || exit 0
+notify-send \
+  --app-name="nvim-toolchain" \
+  --urgency="$URGENCY" \
+  --category="nvim.toolchain.failure" \
+  --icon=dialog-error \
+  --hint="string:x-nvim-phase:$phase" \
+  --hint="string:x-nvim-ecosystem:$ecosystem" \
+  --hint="string:x-nvim-tool:$tool" \
+  --hint="int:x-nvim-exit:${exit_code:-0}" \
+  --hint="string:x-nvim-timestamp:$timestamp" \
+  --hint="string:x-nvim-log:$LOG" \
+  --hint="string:x-nvim-store:{{ nvim_store_path }}" \
+  "$summary" "$body"

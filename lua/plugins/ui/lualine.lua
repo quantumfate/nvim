@@ -162,7 +162,6 @@ return {
 				"fzf",
 				"lazy",
 				"man",
-				"mason",
 				"mundo",
 				"neo-tree",
 				"nerdtree",

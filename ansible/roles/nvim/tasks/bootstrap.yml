@@ -1,0 +1,51 @@
+---
+# One bootstrap step. Kept separate so a failure notifies with the step's own
+# identity instead of collapsing every step into one error.
+
+- name: "Bootstrap: {{ item.name }}"
+  become: false
+  block:
+    # shell, not command: the steps chain with && and expand $HOME/$XDG_DATA_HOME.
+    - name: "Run bootstrap step {{ item.name }}" # noqa: command-instead-of-shell
+      ansible.builtin.shell: "{{ item.cmd }}"
+      args:
+        # The registry stores portable $HOME/$XDG_DATA_HOME paths; `creates` is a
+        # filesystem check, not a shell word, so it has to be expanded here.
+        creates: >-
+          {{ item.creates
+             | replace('$XDG_DATA_HOME', ansible_facts.user_dir ~ '/.local/share')
+             | replace('$HOME', ansible_facts.user_dir)
+             if item.creates is defined else omit }}
+      register: nvim_bootstrap_result
+      # A step that cannot express "already done" as a path says so through the
+      # output it prints instead; without either, it reports changed every run.
+      changed_when: >-
+        nvim_bootstrap_result.rc == 0
+        and 'Did not run command' not in (nvim_bootstrap_result.msg | default(''))
+        and (item.changed_if is not defined
+             or item.changed_if in ((nvim_bootstrap_result.stdout | default(''))
+                                    ~ (nvim_bootstrap_result.stderr | default(''))))
+      environment:
+        XDG_DATA_HOME: "{{ ansible_facts.user_dir }}/.local/share"
+      timeout: 1800
+  rescue:
+    - name: "Report the failure of {{ item.name }}"
+      ansible.builtin.command:
+        argv:
+          - "{{ nvim_notify_script }}"
+          - --phase
+          - bootstrap
+          - --tool
+          - "{{ item.name }}"
+          - --exit
+          - "{{ nvim_bootstrap_result.rc | default(1) }}"
+          - --detail
+          - "{{ nvim_bootstrap_result.stderr | default(ansible_failed_result.msg) | default('') | truncate(300) }}"
+      changed_when: false
+      when: nvim_notify_failures
+
+    # A bootstrap step is not fatal on its own: the verify stage decides whether the
+    # tool it was supposed to provide is actually missing.
+    - name: "Continue past the failure of {{ item.name }}"
+      ansible.builtin.debug:
+        msg: "bootstrap step {{ item.name }} failed; verification will decide if it matters"

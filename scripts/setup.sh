@@ -30,6 +30,6 @@ if have direnv && [[ -f .envrc ]]; then
 fi
 
 log_ok "Repository wired."
-log_info "Install the toolchain:  just provision   (system, ansible)"
+log_info "Install the toolchain:  just provision   (packages + plugins, ansible)"
 log_info "                    or:  just dev         (project, nix shell)"
 log_info "Run checks:             just check"

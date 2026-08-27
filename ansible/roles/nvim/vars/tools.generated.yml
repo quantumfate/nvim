@@ -1,0 +1,455 @@
+---
+# GENERATED FILE — do not edit.
+# Source: lua/toolchain/registry.lua. Regenerate with `just toolchain-export`.
+#
+# One entry per ecosystem, matching the grouping the editor and the project
+# scaffold both use. `packages` installs through yay (repo and AUR alike),
+# `bootstrap` covers what no package provides, `tools` is what the role verifies
+# actually resolved afterwards.
+nvim_ecosystems:
+  core:
+    packages:
+      - "neovim"
+      - "git"
+      - "base-devel"
+      - "tree-sitter-cli"
+      - "curl"
+      - "wget"
+      - "ripgrep"
+      - "fd"
+      - "fzf"
+      - "lazygit"
+      - "chezmoi"
+      - "tmux"
+      - "wl-clipboard"
+      - "pre-commit"
+      - "just"
+      - "codespell"
+      - "devpod-bin"
+    tools:
+      - name: "ripgrep"
+        kind: "tool"
+        bin: "rg"
+        package: "ripgrep"
+        optional: false
+      - name: "fd"
+        kind: "tool"
+        bin: "fd"
+        package: "fd"
+        optional: false
+      - name: "fzf"
+        kind: "tool"
+        bin: "fzf"
+        package: "fzf"
+        optional: false
+      - name: "lazygit"
+        kind: "tool"
+        bin: "lazygit"
+        package: "lazygit"
+        optional: false
+      - name: "chezmoi"
+        kind: "tool"
+        bin: "chezmoi"
+        package: "chezmoi"
+        optional: false
+      - name: "tmux"
+        kind: "tool"
+        bin: "tmux"
+        package: "tmux"
+        optional: false
+      - name: "wl-clipboard"
+        kind: "tool"
+        bin: "wl-copy"
+        package: "wl-clipboard"
+        optional: false
+      - name: "pre-commit"
+        kind: "tool"
+        bin: "pre-commit"
+        package: "pre-commit"
+        optional: false
+      - name: "just"
+        kind: "tool"
+        bin: "just"
+        package: "just"
+        optional: false
+      - name: "codespell"
+        kind: "tool"
+        bin: "codespell"
+        package: "codespell"
+        optional: false
+      - name: "devpod"
+        kind: "tool"
+        bin: "devpod-cli"
+        package: "devpod-bin"
+        optional: true
+  lua:
+    packages:
+      - "lua51"
+      - "luarocks"
+      - "lua-language-server"
+      - "stylua"
+    bin_paths:
+      - "$HOME/.luarocks/bin"
+    bootstrap:
+      - name: "luarocks-nlua"
+        cmd: "luarocks install --local --lua-version 5.1 nlua"
+        creates: "$HOME/.luarocks/bin/nlua"
+      - name: "local-lua-debugger"
+        cmd: >-
+          dst="$XDG_DATA_HOME/nvim/dap/local-lua-debugger-vscode" &&
+          git clone --depth 1 https://github.com/tomblind/local-lua-debugger-vscode "$dst" &&
+          npm --prefix "$dst" install &&
+          npm --prefix "$dst" run build
+        creates: "$XDG_DATA_HOME/nvim/dap/local-lua-debugger-vscode/extension/debugAdapter.js"
+      - name: "luarocks-luacheck"
+        cmd: "luarocks install --local --lua-version 5.1 luacheck"
+        creates: "$HOME/.luarocks/bin/luacheck"
+    tools:
+      - name: "lua_ls"
+        kind: "lsp"
+        bin: "lua-language-server"
+        package: "lua-language-server"
+        optional: false
+      - name: "stylua"
+        kind: "fmt"
+        bin: "stylua"
+        package: "stylua"
+        optional: false
+      - name: "luacheck"
+        kind: "lint"
+        bin: "luacheck"
+        package: null
+        optional: true
+      - name: "nlua"
+        kind: "dap"
+        bin: "nlua"
+        package: null
+        optional: false
+      - name: "local-lua"
+        kind: "dap"
+        bin: "node"
+        path: "$XDG_DATA_HOME/nvim/dap/local-lua-debugger-vscode/extension/debugAdapter.js"
+        package: null
+        optional: false
+  python:
+    packages:
+      - "python"
+      - "uv"
+      - "basedpyright"
+      - "ruff"
+      - "python-black"
+      - "python-debugpy"
+    tools:
+      - name: "basedpyright"
+        kind: "lsp"
+        bin: "basedpyright"
+        package: "basedpyright"
+        optional: false
+      - name: "ruff_format"
+        kind: "fmt"
+        bin: "ruff"
+        package: "ruff"
+        optional: false
+      - name: "black"
+        kind: "fmt"
+        bin: "black"
+        package: "python-black"
+        optional: false
+      - name: "ruff"
+        kind: "lint"
+        bin: "ruff"
+        package: "ruff"
+        optional: false
+      - name: "debugpy"
+        kind: "dap"
+        bin: "python"
+        package: "python-debugpy"
+        optional: false
+  node:
+    packages:
+      - "nodejs"
+      - "npm"
+      - "pnpm"
+      - "typescript-language-server"
+      - "svelte-language-server"
+      - "tailwindcss-language-server"
+      - "vue-language-server"
+      - "prettierd"
+      - "prettier"
+      - "deno"
+      - "eslint_d"
+      - "eslint"
+      - "vscode-js-debug-bin"
+    tools:
+      - name: "ts_ls"
+        kind: "lsp"
+        bin: "typescript-language-server"
+        package: "typescript-language-server"
+        optional: false
+      - name: "svelte"
+        kind: "lsp"
+        bin: "svelteserver"
+        package: "svelte-language-server"
+        optional: false
+      - name: "tailwindcss"
+        kind: "lsp"
+        bin: "tailwindcss-language-server"
+        package: "tailwindcss-language-server"
+        optional: false
+      - name: "vuels"
+        kind: "lsp"
+        bin: "vue-language-server"
+        package: "vue-language-server"
+        optional: false
+      - name: "prettierd"
+        kind: "fmt"
+        bin: "prettierd"
+        package: "prettierd"
+        optional: false
+      - name: "prettier"
+        kind: "fmt"
+        bin: "prettier"
+        package: "prettier"
+        optional: false
+      - name: "deno_fmt"
+        kind: "fmt"
+        bin: "deno"
+        package: "deno"
+        optional: false
+      - name: "eslint_d"
+        kind: "lint"
+        bin: "eslint_d"
+        package: "eslint_d"
+        optional: false
+      - name: "eslint"
+        kind: "lint"
+        bin: "eslint"
+        package: "eslint"
+        optional: false
+      - name: "js-debug"
+        kind: "dap"
+        bin: "js-debug-dap"
+        package: "vscode-js-debug-bin"
+        optional: false
+  rust:
+    packages:
+      - "rustup"
+      - "rust-analyzer"
+      - "bacon"
+      - "codelldb-bin"
+    bin_paths:
+      - "$HOME/.cargo/bin"
+    bootstrap:
+      - name: "rustup-toolchain"
+        cmd: "rustup show active-toolchain >/dev/null 2>&1 || rustup default stable"
+        changed_if: "default toolchain set"
+      - name: "rustup-components"
+        cmd: "rustup component add rustfmt clippy"
+        changed_if: "installing component"
+      - name: "cargo-bacon-ls"
+        cmd: "cargo install --locked bacon-ls"
+        creates: "$HOME/.cargo/bin/bacon-ls"
+    tools:
+      - name: "rust_analyzer"
+        kind: "lsp"
+        bin: "rust-analyzer"
+        package: "rust-analyzer"
+        optional: false
+      - name: "bacon_ls"
+        kind: "lsp"
+        bin: "bacon-ls"
+        package: null
+        optional: false
+      - name: "rustfmt"
+        kind: "fmt"
+        bin: "rustfmt"
+        package: null
+        optional: false
+      - name: "clippy"
+        kind: "lint"
+        bin: "cargo-clippy"
+        package: null
+        optional: false
+      - name: "bacon"
+        kind: "lint"
+        bin: "bacon"
+        package: "bacon"
+        optional: false
+      - name: "codelldb"
+        kind: "dap"
+        bin: "codelldb"
+        package: "codelldb-bin"
+        optional: false
+  go:
+    packages:
+      - "go"
+      - "gopls"
+      - "go-tools"
+      - "delve"
+    bin_paths:
+      - "$HOME/go/bin"
+    tools:
+      - name: "gopls"
+        kind: "lsp"
+        bin: "gopls"
+        package: "gopls"
+        optional: false
+      - name: "gofmt"
+        kind: "fmt"
+        bin: "gofmt"
+        package: "go"
+        optional: false
+      - name: "goimports"
+        kind: "fmt"
+        bin: "goimports"
+        package: "go-tools"
+        optional: false
+      - name: "delve"
+        kind: "dap"
+        bin: "dlv"
+        package: "delve"
+        optional: false
+  c:
+    packages:
+      - "clang"
+      - "python-cpplint"
+    tools:
+      - name: "clangd"
+        kind: "lsp"
+        bin: "clangd"
+        package: "clang"
+        optional: false
+      - name: "clang_format"
+        kind: "fmt"
+        bin: "clang-format"
+        package: "clang"
+        optional: false
+      - name: "cpplint"
+        kind: "lint"
+        bin: "cpplint"
+        package: "python-cpplint"
+        optional: false
+  shell:
+    packages:
+      - "bash-language-server"
+      - "shfmt"
+      - "fish"
+      - "shellcheck"
+    tools:
+      - name: "bashls"
+        kind: "lsp"
+        bin: "bash-language-server"
+        package: "bash-language-server"
+        optional: false
+      - name: "shfmt"
+        kind: "fmt"
+        bin: "shfmt"
+        package: "shfmt"
+        optional: false
+      - name: "fish_indent"
+        kind: "fmt"
+        bin: "fish_indent"
+        package: "fish"
+        optional: false
+      - name: "shellcheck"
+        kind: "lint"
+        bin: "shellcheck"
+        package: "shellcheck"
+        optional: false
+  zig:
+    packages:
+      - "zls"
+      - "zig"
+    tools:
+      - name: "zls"
+        kind: "lsp"
+        bin: "zls"
+        package: "zls"
+        optional: false
+      - name: "zigfmt"
+        kind: "fmt"
+        bin: "zig"
+        package: "zig"
+        optional: false
+  json:
+    packages:
+      - "vscode-json-languageserver"
+    tools:
+      - name: "jsonls"
+        kind: "lsp"
+        bin: "vscode-json-language-server"
+        package: "vscode-json-languageserver"
+        optional: false
+  toml:
+    packages:
+      - "taplo-cli"
+    tools:
+      - name: "taplo"
+        kind: "lsp"
+        bin: "taplo"
+        package: "taplo-cli"
+        optional: false
+  yaml:
+    packages:
+      - "yaml-language-server"
+      - "yamllint"
+    tools:
+      - name: "yamlls"
+        kind: "lsp"
+        bin: "yaml-language-server"
+        package: "yaml-language-server"
+        optional: false
+      - name: "yamllint"
+        kind: "lint"
+        bin: "yamllint"
+        package: "yamllint"
+        optional: false
+  ansible:
+    packages:
+      - "ansible"
+      - "ansible-language-server"
+      - "ansible-lint"
+    tools:
+      - name: "ansiblels"
+        kind: "lsp"
+        bin: "ansible-language-server"
+        package: "ansible-language-server"
+        optional: false
+      - name: "ansible_lint"
+        kind: "lint"
+        bin: "ansible-lint"
+        package: "ansible-lint"
+        optional: false
+  markdown:
+    packages:
+      - "marksman"
+      - "markdownlint-cli"
+    tools:
+      - name: "marksman"
+        kind: "lsp"
+        bin: "marksman"
+        package: "marksman"
+        optional: false
+      - name: "markdownlint"
+        kind: "lint"
+        bin: "markdownlint"
+        package: "markdownlint-cli"
+        optional: false
+  docker:
+    packages:
+      - "hadolint-bin"
+    tools:
+      - name: "hadolint"
+        kind: "lint"
+        bin: "hadolint"
+        package: "hadolint-bin"
+        optional: false
+  qml:
+    packages:
+      - "qt6-tools"
+    tools:
+      - name: "qmlls"
+        kind: "lsp"
+        bin: "qmlls6"
+        package: "qt6-tools"
+        optional: false

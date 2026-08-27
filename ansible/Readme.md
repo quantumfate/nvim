@@ -1,25 +1,122 @@
 # Ansible
 
-Provisions this Neovim config on an arch based system: installs runtime packages,
-symlinks the config into `~/.config/nvim/`.
+Installs this Neovim config's external toolchain from system packages, links the
+config into `~/.config/nvim/`, installs the plugins headlessly, and verifies that
+every tool the editor expects actually resolved on PATH.
 
 ## Run locally
 
 ```sh
 ansible-galaxy collection install -r requirements.yml
-ansible-playbook playbook.yml --ask-become-pass
+just provision   # == cd ansible && ansible-playbook playbook.yml --ask-become-pass
 ```
 
-## Import from a controller
+## Where the tool list lives
 
-(git submodule or vendored), put `ansible/roles` on your `roles_path`, then:
+`lua/toolchain/registry.lua` is the single source of truth: every LSP server,
+formatter, linter and debug adapter, grouped by ecosystem the same way
+`lua/scaffold/tools.lua` groups project tooling. From it are generated:
+
+| artefact                              | contents                                                        |
+| ------------------------------------- | --------------------------------------------------------------- |
+| `roles/nvim/vars/tools.generated.yml` | `nvim_ecosystems` — packages, bootstrap steps, bin paths, tools |
+| `AUR-dependencies.txt`                | the human-readable package overview                             |
+
+Regenerate both with `just toolchain-export`; `just toolchain-check` (also a
+pre-commit hook) fails if they drifted from the registry. Adding a language is one
+row in the registry — the role, the docs and the editor all follow.
+
+There is no Mason. Every tool is a system package, so there is exactly one copy of
+each binary and one thing that updates it (`yay -Syu`). The role deletes the
+leftover `~/.local/share/nvim/mason` tree and the PATH entry that shadowed
+`/usr/bin`.
+
+## What the role does
+
+1. **Refuses to install into a stale system.** `checkupdates` must be empty —
+   mixing new packages into a system that is behind is a partial upgrade, which is
+   how Arch breaks. Override with `nvim_require_current_system=false`.
+2. **Installs every package** in one yay transaction (repo and AUR alike).
+3. **Runs the bootstrap steps** no package can cover: rustup components, luarocks
+   rocks, `cargo install bacon-ls`, and the unpackaged lua debug adapter. Each step
+   is idempotent and guarded by `creates`.
+4. **Links the config**, refusing to clobber a checkout with uncommitted changes.
+5. **Syncs the plugins** with `nvim --headless "+Lazy! sync" +qa`.
+6. **Refreshes the tool store** and fails if a required tool is missing.
+
+## The tool store
+
+Neovim owns `~/.local/state/nvim/tools.json` and rewrites it on idle after startup,
+on `:ToolchainRefresh`, and at the end of a provision run. Ansible only reads it.
+It is the interface for status bars and dashboards:
+
+```json
+{
+  "schema": 1,
+  "generated_at": "2026-08-28T00:00:00Z",
+  "summary": { "total": 60, "present": 58, "missing": 2, "missing_tools": [] },
+  "ecosystems": {
+    "rust": {
+      "packages": ["rustup", "rust-analyzer", "bacon", "codelldb-bin"],
+      "present": 6,
+      "missing": 0,
+      "tools": [
+        {
+          "name": "rust_analyzer",
+          "kind": "lsp",
+          "ecosystem": "rust",
+          "binary": "rust-analyzer",
+          "package": "rust-analyzer",
+          "present": true,
+          "path": "/usr/bin/rust-analyzer",
+          "version": "rust-analyzer 0.3.3025-standalone",
+          "mtime": 1787841674,
+          "optional": false
+        }
+      ]
+    }
+  }
+}
+```
+
+Writes are atomic (tmp + rename), so a reader never sees half a document. `kind` is
+one of `lsp`, `fmt`, `lint`, `dap`, `tool`.
+
+## Failure notifications
+
+Every failing step raises a desktop notification through
+`~/.local/bin/nvim-tool-notify` and appends one JSON object to
+`~/.local/state/nvim/toolchain-failures.jsonl`. The notification carries the same
+fields as hints, so a client reads them instead of scraping the text:
+
+| hint               | example                                      |
+| ------------------ | -------------------------------------------- |
+| `x-nvim-phase`     | `packages`, `bootstrap`, `plugins`, `verify` |
+| `x-nvim-ecosystem` | `rust`                                       |
+| `x-nvim-tool`      | `cargo-bacon-ls`                             |
+| `x-nvim-exit`      | `101`                                        |
+| `x-nvim-timestamp` | `2026-08-28T00:00:00+02:00`                  |
+| `x-nvim-log`       | path of the failure log                      |
+| `x-nvim-store`     | path of the tool store                       |
+
+App name is `nvim-toolchain`, category `nvim.toolchain.failure`.
+
+## Editor commands
+
+| command                  | effect                                                       |
+| ------------------------ | ------------------------------------------------------------ |
+| `:ToolchainStatus`       | report present/missing counts from the store                 |
+| `:ToolchainRefresh`      | re-probe PATH and rewrite the store                          |
+| `:ToolchainExport`       | regenerate the role's vars and the package overview          |
+| `:checkhealth toolchain` | missing tools, plus any binary resolving outside its package |
+
+## Import from a controller
 
 ```yaml
 - hosts: workstation
   roles:
-    - role: quickshell
+    - role: nvim
       vars:
-        quickshell_config_name: quantumfate
-        quickshell_repo_path: /path/to/checkout
-        quickshell_install_extra_packages: true # Dofus swap tooling
+        nvim_repo_path: /path/to/checkout
+        nvim_ecosystem_filter: [core, lua, rust] # default: every ecosystem
 ```

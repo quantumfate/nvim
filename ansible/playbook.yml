@@ -1,7 +1,7 @@
 ---
-- name: Deploy quantumfate Quickshell config
+- name: Deploy quantumfate Neovim config
   hosts: localhost
   connection: local
   gather_facts: true
   roles:
-    - role: quickshell
+    - role: nvim

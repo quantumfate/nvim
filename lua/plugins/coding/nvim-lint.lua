@@ -99,7 +99,7 @@ return {
 			dockerfile = { "hadolint" },
 			c = { "cpplint" },
 			cpp = { "cpplint" },
-			json = { "jsonlint" },
+			-- json: jsonls already reports syntax errors, a second linter only duplicates them.
 		}
 
 		-- Slow, whole-project linters: only worth running against what is on disk.

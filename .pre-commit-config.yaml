@@ -12,3 +12,14 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      # The ansible role's package list and AUR-dependencies.txt are generated from
+      # lua/toolchain/registry.lua; this keeps them from drifting apart in a commit.
+      - id: toolchain-export
+        name: toolchain vars are in sync with the registry
+        entry: just toolchain-check
+        language: system
+        pass_filenames: false
+        files: '^(lua/toolchain/|ansible/roles/nvim/vars/|AUR-dependencies\.txt)'

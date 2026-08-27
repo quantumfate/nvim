@@ -1,101 +1,52 @@
 ---
+# The role installs this config's external toolchain from system packages and puts
+# the config in place. The tool list itself is not here — it is generated from
+# lua/toolchain/registry.lua into vars/tools.generated.yml, so the editor and the
+# role can never disagree. Regenerate with `just toolchain-export`.
+
 nvim_app_name: nvim
 nvim_repo_path: "{{ playbook_dir }}/.."
-
 nvim_config_dir: "{{ ansible_facts.user_dir }}/.config/nvim"
+nvim_data_dir: "{{ ansible_facts.user_dir }}/.local/share/nvim"
+nvim_state_dir: "{{ ansible_facts.user_dir }}/.local/state/nvim"
 
-# Package names verified against the Arch repos and the AUR; see
-# AUR-dependencies.txt for the tool -> package mapping and notes.
+# Ecosystems to install. Empty means every ecosystem in the generated vars.
+nvim_ecosystem_filter: []
+# Extra packages that belong to no ecosystem.
+nvim_extra_packages: []
 
 nvim_install_packages: true
-nvim_packages:
-  - neovim
-  - git
-  - base-devel # gcc + make, for treesitter parsers and LuaSnip jsregexp
-  - tree-sitter-cli
-  - ripgrep
-  - fd
-  - fzf
-  - curl
-  - wget
+nvim_run_bootstrap: true
 
-nvim_install_language_runtimes: true
-nvim_language_runtimes:
-  - nodejs
-  - npm
-  - pnpm
-  - go
-  - rustup
-  - python
-  - uv
-  - lua51
-  - luarocks
-  - zig
+# Refuse to install against a stale package database: mixing new packages into a
+# system that is behind on updates is a partial upgrade, which breaks Arch hard.
+nvim_require_current_system: true
 
-nvim_install_lsp_servers: true
-nvim_lsp_servers:
-  - lua-language-server
-  - basedpyright # AUR
-  - typescript-language-server
-  - rust-analyzer
-  - gopls
-  - clang # provides clangd + clang-format
-  - vscode-json-languageserver
-  - yaml-language-server
-  - ansible-language-server # AUR
-  - tailwindcss-language-server
-  - bash-language-server
-  - qt6-tools # provides qmlls6
-  - svelte-language-server
-  - taplo-cli
-  - marksman
-  - zls
-  - vue-language-server
-  - bacon # bacon_ls backend; bacon-ls itself via Mason/cargo
+# Mason is gone; every tool comes from a system package now. This removes the
+# leftover ~1.5G package tree and the PATH entry that still shadows /usr/bin.
+nvim_purge_mason: true
+nvim_mason_dir: "{{ nvim_data_dir }}/mason"
+# Files searched for a stale mason PATH entry. When chezmoi manages one of them the
+# role edits its chezmoi source and applies, so the change is not reverted later.
+nvim_shell_env_files:
+  - "{{ ansible_facts.user_dir }}/.zshenv"
+  - "{{ ansible_facts.user_dir }}/.profile"
+# File that receives the per-user tool bin dirs (~/.cargo/bin, ~/.luarocks/bin, ...).
+nvim_profile_file: "{{ ansible_facts.user_dir }}/.profile"
 
-nvim_install_formatters: true
-nvim_formatters:
-  - stylua
-  - prettierd # AUR
-  - prettier
-  - python-black
-  - ruff
-  - shfmt
-  - go-tools # provides goimports
-  - deno
-  - fish # provides fish_indent
-  - just
-  - codespell
-  # gofmt ships with go, zigfmt with zig, clang-format with clang,
-  # rustfmt is a rustup component — all already installed above.
+# Run neovim once, headless, to install plugins and rewrite the tool store.
+nvim_sync_plugins: true
+nvim_refresh_store: true
+nvim_store_path: "{{ nvim_state_dir }}/tools.json"
 
-nvim_install_linters: true
-nvim_linters:
-  - eslint_d
-  - eslint
-  - shellcheck
-  - markdownlint-cli
-  - yamllint
-  - hadolint-bin # AUR
-  - ansible-lint
-  - ansible
-  - nodejs-jsonlint # AUR, provides jsonlint
-  - python-cpplint # AUR
+# Fail the play when a required tool did not end up on PATH, or resolved to a
+# binary outside the package that was supposed to provide it.
+nvim_verify_tools: true
 
-nvim_install_dap: true
-nvim_dap:
-  - python-debugpy
-  - codelldb-bin # AUR
-  - vscode-js-debug-bin # AUR
-  - delve
-  # nlua (Lua debugging) comes from lua51 + `luarocks install nlua`
-
-nvim_install_editor_integration_tools: true
-nvim_editor_integration_tools:
-  - lazygit
-  - devpod-bin # AUR
-  - chezmoi
-  - tmux
-  - wl-clipboard
-  - pre-commit
-  # ollama omitted — only needed by avante.nvim, currently disabled
+# Failure notifications. Every failing step raises a desktop notification carrying
+# structured hints, and appends one JSON object to the failure log, so a status bar
+# or dashboard can render history without parsing ansible output.
+nvim_notify_failures: true
+nvim_notify_script: "{{ ansible_facts.user_dir }}/.local/bin/nvim-tool-notify"
+nvim_failure_log: "{{ nvim_state_dir }}/toolchain-failures.jsonl"
+nvim_notify_urgency: critical
