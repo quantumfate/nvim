@@ -56,15 +56,48 @@ for k, v in pairs(default_options) do
 	vim.opt[k] = v
 end
 
+--- Markers that identify the root of an Ansible project. `roles/` and `inventory/` are
+--- deliberately absent: those names show up in unrelated repos too.
+local ansible_root_markers = { "ansible.cfg", ".ansible-lint", "galaxy.yml", "site.yml", "requirements.yml" }
+
+--- Cached per directory: this runs for every plain-YAML buffer, and an upward walk each
+--- time is wasteful when a project's files share a handful of directories.
+---@type table<string, boolean>
+local ansible_root_cache = {}
+
+--- Whether `path` sits inside a tree that looks like an Ansible project.
+---@param path string Absolute file path
+---@return boolean
+local function in_ansible_project(path)
+	local dir = vim.fs.dirname(path)
+	if ansible_root_cache[dir] == nil then
+		local found = vim.fs.find(ansible_root_markers, { upward = true, path = dir, stop = vim.uv.os_homedir() })[1]
+		ansible_root_cache[dir] = found ~= nil
+	end
+	return ansible_root_cache[dir]
+end
+
 -- Register extra filetype detection by extension, filename, and path pattern.
 vim.filetype.add({
 	extension = {
 		tex = "tex",
 		zir = "zir",
+		--- Jinja templates have no filetype of their own. Detect the rendered file's type from
+		--- the name with `.j2` stripped (nginx.conf.j2 -> conf) so templates are highlighted at
+		--- all; fall back to a jinja-aware dialect when the stem says nothing.
+		---@param path string
+		---@return string
+		j2 = function(path)
+			local stripped = path:gsub("%.j2$", "")
+			return vim.filetype.match({ filename = stripped }) or "htmldjango"
+		end,
 	},
 	filename = {
 		["playbook.yml"] = "yaml.ansible",
 		["playbook.yaml"] = "yaml.ansible",
+		["site.yml"] = "yaml.ansible",
+		["site.yaml"] = "yaml.ansible",
+		["ansible.cfg"] = "dosini",
 	},
 	pattern = {
 		["[jt]sconfig.*.json"] = "jsonc",
@@ -107,13 +140,29 @@ vim.api.nvim_create_autocmd("FileType", {
 			local key = l:match("^%s*%-?%s*([%a_][%w_]*):")
 			if key and not seen[key] then
 				seen[key] = true
-				if key == "hosts" or key == "roles" or key == "tasks" or key == "handlers"
-					or key == "become" or key == "gather_facts" or key == "pre_tasks" or key == "post_tasks" then
+				if
+					key == "hosts"
+					or key == "roles"
+					or key == "tasks"
+					or key == "handlers"
+					or key == "become"
+					or key == "gather_facts"
+					or key == "pre_tasks"
+					or key == "post_tasks"
+				then
 					hits = hits + 1
 				end
 			end
 		end
 		if hits >= 2 then
+			vim.bo[buf].filetype = "yaml.ansible"
+			return
+		end
+
+		-- No playbook shape, but files under an Ansible project root (requirements.yml,
+		-- inventories, loose vars files) are still ansiblels' and ansible-lint's business.
+		local path = vim.api.nvim_buf_get_name(buf)
+		if path ~= "" and in_ansible_project(path) then
 			vim.bo[buf].filetype = "yaml.ansible"
 		end
 	end,

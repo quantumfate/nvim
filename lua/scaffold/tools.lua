@@ -89,9 +89,15 @@ M.eco = {
 		sys = { "yamllint" },
 	},
 	ansible = {
-		lint = { "ansible-lint" },
+		-- --fix rewrites in place, so it is the formatter; the plain run is the check.
+		fmt = { "ansible-lint --fix --offline" },
+		lint = { "ansible-lint --offline" },
+		-- Cheap structural gate: parses every play without touching a host.
+		test = { "ansible-playbook --syntax-check playbook.yml" },
 		nix = { "ansible", "ansible-lint" },
 		sys = { "ansible", "ansible-lint" },
+		bin_paths = { "$HOME/.local/bin" },
+		bootstrap = { "[ -f requirements.yml ] && ansible-galaxy install -r requirements.yml >/dev/null 2>&1 || true" },
 	},
 	markdown = {
 		fmt = { "prettier --write '**/*.md'" },

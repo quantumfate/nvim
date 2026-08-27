@@ -24,6 +24,7 @@ local CATEGORIES = {
 	build = true,
 	hooks = true,
 	provision = true,
+	layout = true, -- project skeletons (ansible role tree)
 	env = true, -- nix flake devShell + .envrc
 	ci = true,
 	maintenance = true,
@@ -33,7 +34,7 @@ local CATEGORIES = {
 
 --- A single file the scaffolder can emit.
 ---@class scaffold.Entry
----@field path string Project-relative destination
+---@field path string|fun(d: scaffold.Detection): string Project-relative destination
 ---@field category string One of CATEGORIES
 ---@field when fun(d: scaffold.Detection, o: scaffold.Opts): boolean Whether this entry applies
 ---@field content string|fun(d: scaffold.Detection, o: scaffold.Opts): string Static text or builder
@@ -53,6 +54,23 @@ local function needs(eco)
 	return function(d)
 		return d.ecosystems[eco] == true
 	end
+end
+
+--- Destination of a generated role file. The role is named after the project, so the
+--- path is only known once the project root is.
+---@param dir string Role subdirectory (tasks, defaults, handlers, meta)
+---@return fun(d: scaffold.Detection): string
+local function role_path(dir)
+	return function(d)
+		return ("roles/%s/%s/main.yml"):format(templates.ansible_name(d), dir)
+	end
+end
+
+--- Gate for GitHub-only files: inert on Codeberg and other forges, so skip them there.
+---@param d scaffold.Detection
+---@return boolean
+local function github_project(d)
+	return is_project(d) and detect.uses_github(d)
 end
 
 --- Registry of generatable files. Order here is the order shown in previews.
@@ -77,6 +95,53 @@ local REGISTRY = {
 			return d.ecosystems.python == true and vim.uv.fs_stat(fs.join_paths(d.root, "pyproject.toml")) == nil
 		end,
 		content = templates.ruff,
+	},
+	-- Ansible project skeleton: config, inventory, playbook and one role, all wired to
+	-- each other so `ansible-playbook playbook.yml` runs against localhost immediately.
+	{ path = "ansible.cfg", category = "layout", when = needs("ansible"), content = templates.ansible_cfg },
+	{ path = ".ansible-lint", category = "layout", when = needs("ansible"), content = templates.ansible_lint },
+	{
+		path = "requirements.yml",
+		category = "layout",
+		when = needs("ansible"),
+		content = templates.ansible_requirements,
+	},
+	{
+		path = "inventory/hosts.yml",
+		category = "layout",
+		when = needs("ansible"),
+		content = templates.ansible_inventory,
+	},
+	{
+		path = "group_vars/all.yml",
+		category = "layout",
+		when = needs("ansible"),
+		content = templates.ansible_group_vars,
+	},
+	{ path = "playbook.yml", category = "layout", when = needs("ansible"), content = templates.ansible_playbook },
+	{
+		path = role_path("tasks"),
+		category = "layout",
+		when = needs("ansible"),
+		content = templates.ansible_role_tasks,
+	},
+	{
+		path = role_path("defaults"),
+		category = "layout",
+		when = needs("ansible"),
+		content = templates.ansible_role_defaults,
+	},
+	{
+		path = role_path("handlers"),
+		category = "layout",
+		when = needs("ansible"),
+		content = templates.ansible_role_handlers,
+	},
+	{
+		path = role_path("meta"),
+		category = "layout",
+		when = needs("ansible"),
+		content = templates.ansible_role_meta,
 	},
 	-- Task runner: only when no runner exists, so we never shadow a Makefile.
 	{
@@ -103,20 +168,20 @@ local REGISTRY = {
 	-- direnv glue: loads the flake devShell on nix machines, wires tool paths always.
 	{ path = ".envrc", category = "env", when = is_project, content = templates.envrc },
 	-- CI runs `just check` inside the flake devShell (same flake.lock as local).
-	{ path = ".github/workflows/ci.yml", category = "ci", when = is_project, content = templates.ci },
+	{ path = ".github/workflows/ci.yml", category = "ci", when = github_project, content = templates.ci },
 	-- Maintenance & project hygiene.
 	{ path = "renovate.json", category = "maintenance", when = is_project, content = templates.renovate },
 	{ path = "CHANGELOG.md", category = "docs", when = is_project, content = templates.changelog },
 	{
 		path = ".github/ISSUE_TEMPLATE/bug_report.yml",
 		category = "github",
-		when = is_project,
+		when = github_project,
 		content = templates.issue_bug,
 	},
 	{
 		path = ".github/ISSUE_TEMPLATE/feature_request.yml",
 		category = "github",
-		when = is_project,
+		when = github_project,
 		content = templates.issue_feature,
 	},
 }
@@ -166,12 +231,13 @@ function M.plan(root, opts)
 	for _, entry in ipairs(REGISTRY) do
 		local pass_category = not filtering or opts.categories[entry.category]
 		if pass_category and entry.when(d, opts) then
-			local abs = fs.join_paths(root, entry.path)
+			local path = type(entry.path) == "function" and entry.path(d) or entry.path --[[@as string]]
+			local abs = fs.join_paths(root, path)
 			local exists = vim.uv.fs_stat(abs) ~= nil
 			if not exists or opts.force then
 				local content = type(entry.content) == "function" and entry.content(d, opts) or entry.content
 				table.insert(plan, {
-					path = entry.path,
+					path = path,
 					abs = abs,
 					content = content --[[@as string]],
 					executable = entry.executable,

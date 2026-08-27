@@ -108,6 +108,172 @@ max_width = 100
 edition = "2021"
 ]]
 
+--- Role/play name derived from the project directory, normalised to the
+--- `[a-z0-9_]` shape Galaxy requires of role names.
+---@param detection scaffold.Detection
+---@return string
+function M.ansible_name(detection)
+	local base = vim.fn.fnamemodify(detection.root, ":t"):lower()
+	local name = base:gsub("[^%a%d_]", "_"):gsub("_+", "_"):gsub("^_+", ""):gsub("_+$", "")
+	return name ~= "" and name or "site"
+end
+
+--- ansible.cfg pointing at the generated layout. `stdout_callback = yaml` makes task
+--- output readable; inventory/roles paths keep every command argument-free.
+---@return string
+function M.ansible_cfg()
+	return table.concat({
+		"[defaults]",
+		"inventory = inventory/hosts.yml",
+		"roles_path = roles",
+		"collections_path = collections",
+		"# Readable multi-line task output; the old `stdout_callback = yaml` plugin is gone.",
+		"result_format = yaml",
+		"callback_result_format = yaml",
+		"retry_files_enabled = False",
+		"host_key_checking = False",
+		"interpreter_python = auto_silent",
+		"",
+		"[privilege_escalation]",
+		"become_method = sudo",
+		"# Not become_ask_pass: it prompts on every run, even for plays that never escalate.",
+		"# Pass -K (or --ask-become-pass) when a play does need sudo.",
+	}, "\n")
+end
+
+--- .ansible-lint config. Read by both `just lint` and nvim-lint, so the editor and the
+--- hook agree on which rules fire.
+---@return string
+function M.ansible_lint()
+	return table.concat({
+		"---",
+		"# Raise to `production` once the basics pass; `moderate` skips the strictest rules.",
+		"profile: moderate",
+		"",
+		"exclude_paths:",
+		"  - .cache/",
+		"  - .venv/",
+		"  - collections/",
+		"",
+		"# ansible-lint runs yamllint internally and picks up .yamllint automatically.",
+		"use_default_rules: true",
+	}, "\n")
+end
+
+--- Galaxy requirements. `just dev`/setup.sh installs these into collections/.
+---@return string
+function M.ansible_requirements()
+	return table.concat({
+		"---",
+		"collections:",
+		"  - name: community.general",
+		"",
+		"roles: []",
+	}, "\n")
+end
+
+--- Starter inventory: localhost over the local connection, so the playbook runs before
+--- any real host exists.
+---@param detection scaffold.Detection
+---@return string
+function M.ansible_inventory(detection)
+	return table.concat({
+		"---",
+		"all:",
+		"  children:",
+		"    " .. M.ansible_name(detection) .. ":",
+		"      hosts:",
+		"        localhost:",
+		"          ansible_connection: local",
+	}, "\n")
+end
+
+--- group_vars/all.yml: the one place shared defaults belong.
+---@return string
+function M.ansible_group_vars()
+	return table.concat({
+		"---",
+		"# Variables shared by every host. Role-specific defaults belong in",
+		"# roles/<role>/defaults/main.yml instead.",
+	}, "\n")
+end
+
+--- Top-level playbook wiring the generated role onto the inventory group.
+---@param detection scaffold.Detection
+---@return string
+function M.ansible_playbook(detection)
+	local name = M.ansible_name(detection)
+	return table.concat({
+		"---",
+		"- name: Deploy " .. name,
+		"  hosts: " .. name,
+		"  gather_facts: true",
+		"  roles:",
+		"    - role: " .. name,
+	}, "\n")
+end
+
+--- roles/<name>/tasks/main.yml: one FQCN task, so a fresh checkout runs green.
+---@param detection scaffold.Detection
+---@return string
+function M.ansible_role_tasks(detection)
+	local name = M.ansible_name(detection)
+	return table.concat({
+		"---",
+		"- name: Report the target platform",
+		"  ansible.builtin.debug:",
+		'    msg: "{{ ' .. name .. "_message }} on {{ ansible_facts['distribution'] }}\"",
+	}, "\n")
+end
+
+--- roles/<name>/defaults/main.yml: overridable variables, namespaced by role name.
+---@param detection scaffold.Detection
+---@return string
+function M.ansible_role_defaults(detection)
+	local name = M.ansible_name(detection)
+	return table.concat({
+		"---",
+		name .. "_message: Hello from " .. name,
+	}, "\n")
+end
+
+--- roles/<name>/handlers/main.yml: notified-only tasks.
+---@return string
+function M.ansible_role_handlers()
+	return table.concat({
+		"---",
+		"# - name: Restart service",
+		"#   ansible.builtin.systemd_service:",
+		"#     name: service",
+		"#     state: restarted",
+	}, "\n")
+end
+
+--- roles/<name>/meta/main.yml: the Galaxy metadata ansible-lint's `meta-` rules expect.
+---@param detection scaffold.Detection
+---@return string
+function M.ansible_role_meta(detection)
+	local name = M.ansible_name(detection)
+	return table.concat({
+		"---",
+		"galaxy_info:",
+		"  role_name: " .. name,
+		"  namespace: local",
+		"  author: local",
+		"  description: " .. name .. " role",
+		"  license: MIT",
+		'  min_ansible_version: "2.15"',
+		"  platforms:",
+		-- Galaxy validates this against a fixed enum; the spelling is "ArchLinux".
+		"    - name: ArchLinux",
+		"      versions:",
+		"        - all",
+		"  galaxy_tags: []",
+		"",
+		"dependencies: []",
+	}, "\n")
+end
+
 --- Per-ecosystem .gitignore fragments, composed by `M.gitignore`.
 ---@type table<string, string>
 local IGNORE = {
@@ -119,7 +285,7 @@ local IGNORE = {
 	go = "# Go\n/bin/\nvendor/\n",
 	c = "# C / C++\n*.o\n*.obj\n*.a\n*.so\n/build/\n",
 	nix = "# Nix\nresult\nresult-*\n",
-	ansible = "# Ansible\n*.retry\n.vault_pass\n",
+	ansible = "# Ansible\n*.retry\n.vault_pass\ncollections/\n*.vault\n",
 }
 
 --- .gitignore for OS/editor junk plus every detected ecosystem.
