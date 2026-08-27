@@ -54,6 +54,14 @@ rules:
     check-keys: false
   comments:
     min-spaces-from-content: 1
+  # ansible-lint refuses a yamllint config that disagrees with these three and
+  # silently drops its --fix mode, so they are pinned to the values it demands.
+  comments-indentation: false
+  braces:
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
 ]]
 
 --- stylua config; consumed by the `stylua` formatter.
@@ -154,6 +162,16 @@ function M.ansible_lint()
 		"  - .cache/",
 		"  - .venv/",
 		"  - collections/",
+		"",
+		"skip_list:",
+		"  # Roles that are private to one repo gain nothing from a <role>_ prefix",
+		"  # on every variable; drop this entry if the roles get published.",
+		"  - var-naming[no-role-prefix]",
+		"  # Deliberate command/shell calls where the module lacks the needed flags.",
+		"  - command-instead-of-module",
+		"  # Ansible cannot infer when a wrapped command changed anything. Better",
+		"  # handled per task with a real changed_when than fought repo-wide.",
+		"  - no-changed-when",
 		"",
 		"# ansible-lint runs yamllint internally and picks up .yamllint automatically.",
 		"use_default_rules: true",

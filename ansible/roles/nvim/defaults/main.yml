@@ -8,12 +8,14 @@ nvim_install_packages: true
 nvim_packages:
   - neovim
   - git
-  - gcc, make
+  - gcc
+  - make
   - tree-sitter-cli
   - ripgrep
   - fd
   - fzf
-  - curl, wget
+  - curl
+  - wget
 
 nvim_install_language_runtimes: true
 nvim_language_runtimes:
