@@ -3,6 +3,20 @@
 ---@class plugins.coding.nvim_lint
 ---@field linters_by_ft table<string, string[]> Linters mapped by filetype
 ---@field setup fun(): nil
+
+--- Closest project root, so linters read the project's own config (.ansible-lint,
+--- ansible.cfg) and resolve role/collection paths instead of nvim's cwd.
+---@param buf integer
+---@return string
+local function lint_root(buf)
+	local name = vim.api.nvim_buf_get_name(buf)
+	if name == "" then
+		return vim.fn.getcwd()
+	end
+	local markers = { "ansible.cfg", ".ansible-lint", "galaxy.yml", ".git" }
+	local found = vim.fs.find(markers, { upward = true, path = vim.fs.dirname(name) })[1]
+	return found and vim.fs.dirname(found) or vim.fn.getcwd()
+end
 return {
 	"mfussenegger/nvim-lint",
 	event = { "User FileOpened" },
@@ -20,7 +34,7 @@ return {
 					return
 				end
 
-				lint.try_lint()
+				lint.try_lint(nil, { cwd = lint_root(vim.api.nvim_get_current_buf()) })
 				Snacks.notify.info("Linting with: " .. table.concat(linters, ", "))
 			end,
 			desc = "Lint buffer",
@@ -29,6 +43,45 @@ return {
 	--- Map filetypes to linters and lint automatically on edit/write.
 	config = function()
 		local lint = require("lint")
+
+		-- ansible-lint reports every rule at INFO out of the box and runs from nvim's cwd,
+		-- so role/collection paths and .ansible-lint config go unread. Parse its codeclimate
+		-- JSON instead: real severities, rule ids as diagnostic codes, project root as cwd.
+		local ansible_severity = {
+			blocker = vim.diagnostic.severity.ERROR,
+			critical = vim.diagnostic.severity.ERROR,
+			major = vim.diagnostic.severity.WARN,
+			minor = vim.diagnostic.severity.WARN,
+			info = vim.diagnostic.severity.INFO,
+		}
+
+		lint.linters.ansible_lint = vim.tbl_extend("force", lint.linters.ansible_lint, {
+			args = { "--nocolor", "--offline", "-f", "json" },
+			--- Turn ansible-lint's codeclimate JSON into diagnostics.
+			---@param output string
+			---@return vim.Diagnostic[]
+			parser = function(output)
+				local ok, issues = pcall(vim.json.decode, output)
+				if not ok or type(issues) ~= "table" then
+					return {}
+				end
+
+				return vim.tbl_map(function(issue)
+					-- Rules report either a bare line ("lines") or a line/column pair ("positions").
+					local loc = issue.location or {}
+					local pos = loc.positions and loc.positions.begin or {}
+					local line = pos.line or (loc.lines and loc.lines.begin) or 1
+					return {
+						lnum = math.max(line - 1, 0),
+						col = math.max((pos.column or 1) - 1, 0),
+						severity = ansible_severity[issue.severity] or vim.diagnostic.severity.WARN,
+						source = "ansible-lint",
+						code = issue.check_name,
+						message = issue.description or issue.check_name or "ansible-lint",
+					}
+				end, issues)
+			end,
+		})
 
 		lint.linters_by_ft = {
 			javascript = { "eslint_d" },
@@ -49,16 +102,50 @@ return {
 			json = { "jsonlint" },
 		}
 
+		-- Slow, whole-project linters: only worth running against what is on disk.
+		---@type table<string, string[]>
+		local write_only_events = {
+			["yaml.ansible"] = { "FileType", "BufWritePost" },
+		}
+
 		-- Lint on enter/write/insert-leave, but only when the filetype has a linter.
-		vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
-			group = vim.api.nvim_create_augroup("nvim-lint", { clear = true }),
-			callback = function()
-				local ft = vim.bo.filetype
-				local linters = lint.linters_by_ft[ft] or {}
-				if #linters > 0 then
-					lint.try_lint()
-				end
+		local group = vim.api.nvim_create_augroup("nvim-lint", { clear = true })
+		local timer = assert(vim.uv.new_timer())
+
+		--- Run the filetype's linters against `buf`, honouring the write-only list.
+		---@param buf integer
+		---@param event string
+		local function lint_buf(buf, event)
+			local ft = vim.bo[buf].filetype
+			local linters = lint.linters_by_ft[ft] or {}
+			if #linters == 0 then
+				return
+			end
+
+			local allowed = write_only_events[ft]
+			if allowed and not vim.tbl_contains(allowed, event) then
+				return
+			end
+
+			-- Coalesce bursts (TextChanged fires per edit) into one linter run.
+			timer:start(200, 0, function()
+				vim.schedule(function()
+					-- try_lint always targets the current buffer; skip if focus moved on.
+					if vim.api.nvim_get_current_buf() == buf then
+						lint.try_lint(nil, { cwd = lint_root(buf) })
+					end
+				end)
+			end)
+		end
+
+		vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "BufWritePost", "InsertLeave", "TextChanged" }, {
+			group = group,
+			callback = function(ev)
+				lint_buf(ev.buf, ev.event)
 			end,
 		})
+
+		-- This plugin loads mid-BufRead, so the first buffer's FileType may already be set.
+		lint_buf(vim.api.nvim_get_current_buf(), "FileType")
 	end,
 }

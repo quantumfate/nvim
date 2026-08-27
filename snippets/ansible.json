@@ -1,0 +1,333 @@
+{
+	"play": {
+		"prefix": "play",
+		"description": "Playbook play with hosts, become and roles",
+		"body": [
+			"---",
+			"- name: ${1:Play description}",
+			"  hosts: ${2:all}",
+			"  become: ${3:true}",
+			"  gather_facts: ${4:true}",
+			"  vars:",
+			"    ${5:key}: ${6:value}",
+			"  tasks:",
+			"    - name: ${7:Task description}",
+			"      ansible.builtin.${8:debug}:",
+			"        ${9:msg}: ${0:hello}"
+		]
+	},
+	"task": {
+		"prefix": "task",
+		"description": "Single task with name and module",
+		"body": [
+			"- name: ${1:Task description}",
+			"  ansible.builtin.${2:command}:",
+			"    ${3:cmd}: ${0}"
+		]
+	},
+	"block": {
+		"prefix": "block",
+		"description": "block / rescue / always",
+		"body": [
+			"- name: ${1:Block description}",
+			"  block:",
+			"    - name: ${2:Task description}",
+			"      ansible.builtin.${3:debug}:",
+			"        msg: ${4:running}",
+			"  rescue:",
+			"    - name: ${5:Handle failure}",
+			"      ansible.builtin.fail:",
+			"        msg: ${6:failed}",
+			"  always:",
+			"    - name: ${7:Cleanup}",
+			"      ansible.builtin.debug:",
+			"        msg: ${0:done}"
+		]
+	},
+	"handler": {
+		"prefix": "handler",
+		"description": "Handler task triggered by notify",
+		"body": [
+			"- name: ${1:Restart service}",
+			"  ansible.builtin.systemd_service:",
+			"    name: ${2:service}",
+			"    state: restarted",
+			"  listen: ${0:$1}"
+		]
+	},
+	"notify": {
+		"prefix": "notify",
+		"description": "notify a handler",
+		"body": ["notify: ${0:Restart service}"]
+	},
+	"when": {
+		"prefix": "when",
+		"description": "Conditional execution",
+		"body": ["when: ${0:ansible_facts['os_family'] == 'Archlinux'}"]
+	},
+	"loop": {
+		"prefix": "loop",
+		"description": "loop with loop_control",
+		"body": [
+			"loop: \"{{ ${1:items} }}\"",
+			"loop_control:",
+			"  label: \"{{ ${0:item.name} }}\""
+		]
+	},
+	"register": {
+		"prefix": "register",
+		"description": "register result with changed_when/failed_when",
+		"body": [
+			"register: ${1:result}",
+			"changed_when: ${2:$1.rc != 0}",
+			"failed_when: ${0:false}"
+		]
+	},
+	"package": {
+		"prefix": "package",
+		"description": "Install packages (distro-agnostic)",
+		"body": [
+			"- name: Install ${1:packages}",
+			"  ansible.builtin.package:",
+			"    name: \"{{ ${2:package_list} }}\"",
+			"    state: ${0:present}"
+		]
+	},
+	"template": {
+		"prefix": "template",
+		"description": "Render a Jinja template to a destination",
+		"body": [
+			"- name: Render ${1:config}",
+			"  ansible.builtin.template:",
+			"    src: ${2:$1.j2}",
+			"    dest: ${3:/etc/$1}",
+			"    owner: ${4:root}",
+			"    group: ${5:root}",
+			"    mode: \"${6:0644}\"",
+			"  notify: ${0:Restart service}"
+		]
+	},
+	"copy": {
+		"prefix": "copy",
+		"description": "Copy a file to the target",
+		"body": [
+			"- name: Copy ${1:file}",
+			"  ansible.builtin.copy:",
+			"    src: ${2:$1}",
+			"    dest: ${3:/etc/$1}",
+			"    mode: \"${0:0644}\""
+		]
+	},
+	"file": {
+		"prefix": "file",
+		"description": "Manage a file, directory or symlink",
+		"body": [
+			"- name: Ensure ${1:path} ${2:directory}",
+			"  ansible.builtin.file:",
+			"    path: ${3:/etc/$1}",
+			"    state: ${2:directory}",
+			"    mode: \"${0:0755}\""
+		]
+	},
+	"lineinfile": {
+		"prefix": "lineinfile",
+		"description": "Ensure a line is present in a file",
+		"body": [
+			"- name: Ensure ${1:line} in ${2:file}",
+			"  ansible.builtin.lineinfile:",
+			"    path: ${3:/etc/$2}",
+			"    regexp: \"${4:^key=}\"",
+			"    line: \"${5:key=value}\"",
+			"    state: ${0:present}"
+		]
+	},
+	"service": {
+		"prefix": "service",
+		"description": "Enable and start a systemd unit",
+		"body": [
+			"- name: Enable ${1:service}",
+			"  ansible.builtin.systemd_service:",
+			"    name: ${1:service}",
+			"    state: ${2:started}",
+			"    enabled: ${0:true}"
+		]
+	},
+	"command": {
+		"prefix": "command",
+		"description": "Run a command with idempotency guards",
+		"body": [
+			"- name: ${1:Run command}",
+			"  ansible.builtin.command:",
+			"    cmd: ${2:/usr/bin/true}",
+			"    creates: ${3:/path/that/marks/done}",
+			"  changed_when: ${0:false}"
+		]
+	},
+	"shell": {
+		"prefix": "shell",
+		"description": "Run a shell pipeline (use only when command cannot)",
+		"body": [
+			"- name: ${1:Run pipeline}",
+			"  ansible.builtin.shell:",
+			"    cmd: |",
+			"      ${2:set -o pipefail}",
+			"      ${3:command | filter}",
+			"    executable: /bin/bash",
+			"  register: ${4:result}",
+			"  changed_when: ${0:false}"
+		]
+	},
+	"stat": {
+		"prefix": "stat",
+		"description": "Check a path, then act on it",
+		"body": [
+			"- name: Check ${1:path}",
+			"  ansible.builtin.stat:",
+			"    path: ${2:/etc/$1}",
+			"  register: ${0:$1_stat}"
+		]
+	},
+	"git": {
+		"prefix": "git",
+		"description": "Clone or update a repository",
+		"body": [
+			"- name: Clone ${1:repo}",
+			"  ansible.builtin.git:",
+			"    repo: ${2:https://github.com/org/$1}",
+			"    dest: ${3:/opt/$1}",
+			"    version: ${0:main}"
+		]
+	},
+	"uri": {
+		"prefix": "uri",
+		"description": "HTTP request with status check",
+		"body": [
+			"- name: ${1:Call API}",
+			"  ansible.builtin.uri:",
+			"    url: ${2:https://example.com}",
+			"    method: ${3:GET}",
+			"    status_code: ${4:200}",
+			"    return_content: true",
+			"  register: ${0:response}"
+		]
+	},
+	"set_fact": {
+		"prefix": "setfact",
+		"description": "Define a runtime fact",
+		"body": [
+			"- name: Set ${1:fact}",
+			"  ansible.builtin.set_fact:",
+			"    ${1:fact}: ${0:value}"
+		]
+	},
+	"assert": {
+		"prefix": "assert",
+		"description": "Assert preconditions with a message",
+		"body": [
+			"- name: Assert ${1:precondition}",
+			"  ansible.builtin.assert:",
+			"    that:",
+			"      - ${2:var is defined}",
+			"    fail_msg: ${0:$1 not satisfied}"
+		]
+	},
+	"debug": {
+		"prefix": "debug",
+		"description": "Print a variable or message",
+		"body": [
+			"- name: Show ${1:value}",
+			"  ansible.builtin.debug:",
+			"    var: ${0:$1}"
+		]
+	},
+	"include_tasks": {
+		"prefix": "include",
+		"description": "Include a task file at runtime",
+		"body": [
+			"- name: Include ${1:tasks}",
+			"  ansible.builtin.include_tasks:",
+			"    file: ${0:$1.yml}"
+		]
+	},
+	"import_role": {
+		"prefix": "importrole",
+		"description": "Import a role with vars",
+		"body": [
+			"- name: Import ${1:role}",
+			"  ansible.builtin.import_role:",
+			"    name: ${1:role}",
+			"  vars:",
+			"    ${2:key}: ${0:value}"
+		]
+	},
+	"delegate": {
+		"prefix": "delegate",
+		"description": "Run on another host, once",
+		"body": ["delegate_to: ${1:localhost}", "run_once: ${0:true}"]
+	},
+	"tags": {
+		"prefix": "tags",
+		"description": "Task tags",
+		"body": ["tags:", "  - ${0:setup}"]
+	},
+	"nolog": {
+		"prefix": "nolog",
+		"description": "Suppress secret output",
+		"body": ["no_log: ${0:true}"]
+	},
+	"vault": {
+		"prefix": "vault",
+		"description": "Reference a vault-encrypted variable",
+		"body": ["${1:secret}: \"{{ ${0:vault_$1} }}\""]
+	},
+	"role meta": {
+		"prefix": "meta",
+		"description": "roles/<role>/meta/main.yml galaxy info",
+		"body": [
+			"---",
+			"galaxy_info:",
+			"  role_name: ${1:name}",
+			"  namespace: ${2:namespace}",
+			"  author: ${2:namespace}",
+			"  description: ${3:What the role does}",
+			"  license: ${4:MIT}",
+			"  min_ansible_version: \"${5:2.14}\"",
+			"  platforms:",
+			"    - name: ${6:Archlinux}",
+			"      versions:",
+			"        - all",
+			"  galaxy_tags:",
+			"    - ${7:tag}",
+			"dependencies: []",
+			"$0"
+		]
+	},
+	"requirements": {
+		"prefix": "requirements",
+		"description": "Galaxy requirements file",
+		"body": [
+			"---",
+			"collections:",
+			"  - name: ${1:community.general}",
+			"roles:",
+			"  - name: ${0:namespace.role}"
+		]
+	},
+	"molecule": {
+		"prefix": "molecule",
+		"description": "Molecule scenario config",
+		"body": [
+			"---",
+			"driver:",
+			"  name: ${1:podman}",
+			"platforms:",
+			"  - name: ${2:instance}",
+			"    image: ${3:archlinux:latest}",
+			"provisioner:",
+			"  name: ansible",
+			"verifier:",
+			"  name: ansible",
+			"$0"
+		]
+	}
+}

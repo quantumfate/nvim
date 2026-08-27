@@ -73,6 +73,16 @@ return {
 				ts.install(to_install)
 			end
 
+			-- Compound filetypes have no parser of their own; point them at their base grammar
+			-- so highlight/indent/folds work in e.g. Ansible playbooks.
+			for ft, lang in pairs({
+				["yaml.ansible"] = "yaml",
+				["yaml.docker-compose"] = "yaml",
+				["yaml.gitlab"] = "yaml",
+			}) do
+				vim.treesitter.language.register(lang, ft)
+			end
+
 			-- Custom query directives and function textobjects from the local util module.
 			local ts_util = require("util.plugins.treesitter")
 			vim.treesitter.query.add_directive("downcase!", ts_util.case_directive(string.lower), { force = true })

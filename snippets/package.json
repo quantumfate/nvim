@@ -4,15 +4,66 @@
 	"description": "Personal Neovim snippets",
 	"contributes": {
 		"snippets": [
-			{ "language": ["sh"], "path": "./sh.json" },
-			{ "language": ["rust"], "path": "./rust.json" },
-			{ "language": ["lua"], "path": "./lua.json" },
-			{ "language": ["c"], "path": "./c.json" },
-			{ "language": ["cpp"], "path": "./cpp.json" },
-			{ "language": ["go"], "path": "./go.json" },
-			{ "language": ["python"], "path": "./python.json" },
-			{ "language": ["typescript"], "path": "./typescript.json" },
-			{ "language": ["javascript"], "path": "./javascript.json" }
+			{
+				"language": [
+					"sh"
+				],
+				"path": "./sh.json"
+			},
+			{
+				"language": [
+					"rust"
+				],
+				"path": "./rust.json"
+			},
+			{
+				"language": [
+					"lua"
+				],
+				"path": "./lua.json"
+			},
+			{
+				"language": [
+					"c"
+				],
+				"path": "./c.json"
+			},
+			{
+				"language": [
+					"cpp"
+				],
+				"path": "./cpp.json"
+			},
+			{
+				"language": [
+					"go"
+				],
+				"path": "./go.json"
+			},
+			{
+				"language": [
+					"python"
+				],
+				"path": "./python.json"
+			},
+			{
+				"language": [
+					"typescript"
+				],
+				"path": "./typescript.json"
+			},
+			{
+				"language": [
+					"javascript"
+				],
+				"path": "./javascript.json"
+			},
+			{
+				"language": [
+					"yaml.ansible"
+				],
+				"path": "./ansible.json"
+			}
 		]
 	}
 }

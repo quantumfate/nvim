@@ -1,0 +1,105 @@
+# AUR / Package dependencies for this Neovim config
+#
+# Everything this config needs, mapped to its Arch package name.
+#   [extra] = official repo  -> install with: pacman -S <pkg>
+#   [AUR]   = Arch User Repo -> install with your AUR helper: yay/paru -S <pkg>
+#   [core]  = base repo
+#
+# Bundled with lazy.nvim via git, so NOT Arch packages:
+#   neovim plugins themselves (see lazy-lock.json)
+#   treesitter parsers (built on demand)
+#
+# Most of the LSP/format/lint/dap tools are auto-installed by Mason on first
+# launch (:Mason). Prefer the pacman/AUR package if you want them handled by
+# the system package manager instead.
+
+## Core (required)
+- neovim          [extra]   # >= 0.11 (nightly recommended)
+- git             [extra]
+- gcc, make       [extra]   # `base-devel`; builds treesitter parsers + LuaSnip jsregexp
+- tree-sitter-cli [extra]   # parser installs on the main branch
+- ripgrep         [extra]   # grep/picker backend
+- fd              [extra]   # file finder backend
+- fzf             [extra]   # fuzzy matching
+- curl, wget      [core]    # Mason downloads + nvim-dbee binary fetch
+
+## Language runtimes (needed so the Mason tools actually run)
+- nodejs, npm     [extra]
+- pnpm            [extra]
+- go              [extra]
+- rustup          [extra]   # rust-analyzer / rustfmt / clippy as rustup components
+- python          [extra]
+- uv              [extra]   # python package manager
+- lua51           [extra]   # Lua 5.1 for luarocks/nlua (Lua debugging)
+- luarocks        [extra]
+- zig             [extra]   # zig fmt (conform "zigfmt")
+
+## LSP servers
+- lua_ls                      -> lua-language-server            [extra]
+- basedpyright                -> basedpyright                   [AUR]  (or basedpyright-bin)
+- ts_ls                       -> typescript-language-server     [extra]
+- rust_analyzer               -> rust-analyzer                  [extra]
+- gopls                       -> gopls                          [extra]
+- clangd                      -> clang                          [extra] # provides clangd
+- jsonls                      -> vscode-json-languageserver     [extra]
+- yamlls                      -> yaml-language-server           [extra]
+- ansiblels                   -> ansible-language-server        [extra]
+- tailwindcss                 -> tailwindcss-language-server    [extra]
+- bashls                      -> bash-language-server           [extra]
+- qmlls                       -> qt6-tools                      [extra] # provides qmlls6
+- svelte-language-server      -> svelte-language-server         [extra]
+- taplo                       -> taplo-cli                      [extra] # provides taplo
+- marksman                    -> marksman                       [extra]
+- zls                         -> zls                            [extra]
+- vuels (extra, non-Mason)    -> vue-language-server            [extra]
+- bacon_ls (extra, non-Mason) -> bacon [extra] + bacon-ls via :MasonInstall bacon-ls / `cargo install bacon-ls` (no dedicated AUR pkg)
+
+## Formatters (conform.nvim)
+- stylua        -> stylua                          [extra]
+- prettierd     -> prettierd                       [AUR]  # needs prettier locally
+- prettier      -> prettier                        [extra]
+- black         -> python-black                    [extra]
+- ruff          -> ruff                            [extra]
+- shfmt         -> shfmt                           [extra]
+- clang-format  -> clang                           [extra]
+- goimports     -> go-tools                        [extra] # provides goimports
+- gofmt         -> go                              [extra]
+- rustfmt       -> rustup component rustfmt        [extra]
+- deno          -> deno                            [extra]
+- fish_indent   -> fish                            [extra]
+- just          -> just                            [extra]
+- zigfmt        -> zig                             [extra]
+- codespell     -> codespell                       [extra]
+
+## Linters (nvim-lint / Mason)
+- eslint_d      -> eslint_d            [extra] # depends on eslint
+- eslint        -> eslint              [extra]
+- shellcheck    -> shellcheck          [extra]
+- markdownlint  -> markdownlint-cli    [extra]
+- yamllint      -> yamllint            [extra]
+- hadolint      -> hadolint-bin        [AUR]
+- ansible_lint  -> ansible-lint        [extra] # needs ansible [extra]
+- jsonlint      -> nodejs-jsonlint     [AUR]   # provides jsonlint
+- cpplint       -> python-cpplint      [AUR]
+
+## DAP adapters (nvim-dap)
+- debugpy          -> python-debugpy        [extra]
+- codelldb         -> codelldb-bin          [AUR]
+- js-debug-adapter -> vscode-js-debug-bin   [AUR]
+- delve            -> delve                 [extra]
+- nlua (Lua debug) -> lua51 + luarocks: `luarocks install nlua`
+
+## Optional / editor integration tools
+- lazygit    -> lazygit       [extra]   # git UI  (<leader>gg)
+- devpod     -> devpod-bin    [AUR]     # dev containers
+- chezmoi    -> chezmoi       [extra]   # chezmoi.nvim
+- tmux       -> tmux          [extra]   # tmux-sessionizer
+- wl-clipboard -> wl-clipboard [extra]  # system clipboard (wl-copy/wl-paste)
+- pre-commit -> pre-commit    [extra]   # .pre-commit-config.yaml
+- ollama     -> ollama-bin    [AUR]     # only for avante.nvim (currently disabled)
+
+## Plugin build-time requirements (toolchains, not Arch packages)
+- blink.cmp        -> cargo build --release          (rustup/cargo)
+- LuaSnip          -> make install_jsregexp          (gcc + make)
+- nvim-treesitter  -> C compiler + make + tree-sitter-cli
+- nvim-dbee        -> curl/wget fetches prebuilt binary on install

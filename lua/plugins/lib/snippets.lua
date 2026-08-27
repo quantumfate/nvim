@@ -40,6 +40,7 @@ return {
 			extend("javascript", { "jsdoc" })
 			extend("javascriptreact", { "javascript" })
 			extend("lua", { "luadoc" })
+			extend("yaml.ansible", { "yaml" })
 			extend("python", { "pydoc", "debug", "unittest", "comprehension" })
 			extend("rust", { "rustdoc" })
 			extend("c", { "cdoc" })

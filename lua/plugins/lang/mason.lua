@@ -18,17 +18,17 @@
 --- LSP servers with capability awareness
 ---@type string[]
 local lsp_servers = {
-	"lua_ls",
+	"lua-language-server",
 	"basedpyright",
-	"ts_ls",
-	"rust_analyzer",
+	"typescript-language-server",
+	"rust-analyzer",
 	"gopls",
 	"clangd",
-	"jsonls",
-	"yamlls",
-	"ansiblels",
-	"tailwindcss",
-	"bashls",
+	"json-lsp",
+	"yaml-language-server",
+	"ansible-language-server",
+	"tailwindcss-language-server",
+	"bash-language-server",
 	"qmlls",
 	"svelte-language-server",
 	"taplo",
@@ -44,9 +44,7 @@ local formatters = {
 	"black",
 	"ruff",
 	"shfmt",
-	"clang-format",
 	"goimports",
-	"rustfmt",
 	"deno",
 }
 
@@ -58,7 +56,7 @@ local linters = {
 	"markdownlint",
 	"yamllint",
 	"hadolint",
-	"ansible_lint",
+	"ansible-lint",
 	"jsonlint",
 	"cpplint",
 }

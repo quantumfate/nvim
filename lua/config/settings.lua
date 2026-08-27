@@ -56,15 +56,67 @@ for k, v in pairs(default_options) do
 	vim.opt[k] = v
 end
 
--- Register extra filetype detection by extension and filename pattern.
+-- Register extra filetype detection by extension, filename, and path pattern.
 vim.filetype.add({
 	extension = {
 		tex = "tex",
 		zir = "zir",
 	},
+	filename = {
+		["playbook.yml"] = "yaml.ansible",
+		["playbook.yaml"] = "yaml.ansible",
+	},
 	pattern = {
 		["[jt]sconfig.*.json"] = "jsonc",
+		-- Standard Ansible role/playbook layout.
+		[".*/defaults/.*%.ya?ml"] = "yaml.ansible",
+		[".*/host_vars/.*%.ya?ml"] = "yaml.ansible",
+		[".*/group_vars/.*%.ya?ml"] = "yaml.ansible",
+		[".*/group_vars/.*/.*%.ya?ml"] = "yaml.ansible",
+		[".*/playbook.*%.ya?ml"] = "yaml.ansible",
+		[".*/playbooks/.*%.ya?ml"] = "yaml.ansible",
+		[".*/roles/.*/tasks/.*%.ya?ml"] = "yaml.ansible",
+		[".*/roles/.*/handlers/.*%.ya?ml"] = "yaml.ansible",
+		[".*/roles/.*/defaults/.*%.ya?ml"] = "yaml.ansible",
+		[".*/roles/.*/vars/.*%.ya?ml"] = "yaml.ansible",
+		[".*/roles/.*/meta/.*%.ya?ml"] = "yaml.ansible",
+		[".*/tasks/.*%.ya?ml"] = "yaml.ansible",
+		[".*/handlers/.*%.ya?ml"] = "yaml.ansible",
+		[".*/molecule/.*%.ya?ml"] = "yaml.ansible",
+		[".*/inventory/.*%.ya?ml"] = "yaml.ansible",
+		[".*galaxy.*%.ya?ml"] = "yaml.ansible",
 	},
+})
+
+-- nvim only consults string-valued patterns, never content functions, for buffered files.
+-- So loose playbooks that miss the layout patterns above get claimed by sniffing the first
+-- lines for real playbook keys; untouched YAML is left as plain "yaml".
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "yaml",
+	callback = function(ev)
+		local buf = ev.buf
+		if vim.bo[buf].filetype ~= "yaml" then
+			return
+		end
+		local ok, lines = pcall(vim.api.nvim_buf_get_lines, buf, 0, 40, false)
+		if not ok then
+			return
+		end
+		local seen, hits = {}, 0
+		for _, l in ipairs(lines) do
+			local key = l:match("^%s*%-?%s*([%a_][%w_]*):")
+			if key and not seen[key] then
+				seen[key] = true
+				if key == "hosts" or key == "roles" or key == "tasks" or key == "handlers"
+					or key == "become" or key == "gather_facts" or key == "pre_tasks" or key == "post_tasks" then
+					hits = hits + 1
+				end
+			end
+		end
+		if hits >= 2 then
+			vim.bo[buf].filetype = "yaml.ansible"
+		end
+	end,
 })
 
 --- Diagnostic display: gutter signs, virtual text, and float styling.

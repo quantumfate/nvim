@@ -212,7 +212,38 @@ local M = {
 	ansiblels = {
 		cmd = { "ansible-language-server", "--stdio" },
 		filetypes = { "yaml.ansible" },
-		root_markers = { "ansible.cfg", ".ansible-lint", "playbooks/", "roles/" },
+		root_markers = {
+			"ansible.cfg",
+			".ansible-lint",
+			"playbook.yml",
+			"playbook.yaml",
+			"playbooks/",
+			"roles/",
+			"galaxy.yml",
+		},
+		settings = {
+			-- ansiblels reads this key and prompts for a telemetry choice when it is unset.
+			["redhat.telemetry.enabled"] = false,
+			ansible = {
+				ansible = {
+					path = "ansible",
+					-- Completes and inserts modules as collection.namespace.module, which is what
+					-- ansible-lint's fqcn rules demand.
+					useFullyQualifiedCollectionNames = true,
+				},
+				executionEnvironment = { enabled = false },
+				python = { interpreterPath = "python" },
+				completion = {
+					provideRedirectModules = true,
+					provideModuleOptionAliases = true,
+				},
+				validation = {
+					enabled = true,
+					-- nvim-lint already runs ansible-lint on save; keep diagnostics single-sourced.
+					lint = { enabled = false },
+				},
+			},
+		},
 	},
 
 	tailwindcss = {

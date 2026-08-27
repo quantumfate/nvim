@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: nvim
+  namespace: quantumfate
+  author: quantumfate
+  description: Deployment of my neovim config.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Archlinux
+      versions:
+        - all
+  galaxy_tags:
+    - neovim
+    - config
+    - dotfiles
+dependencies: []

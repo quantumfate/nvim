@@ -1,0 +1,7 @@
+---
+- name: Deploy quantumfate Quickshell config
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - role: quickshell

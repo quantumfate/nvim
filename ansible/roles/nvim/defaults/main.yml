@@ -1,0 +1,14 @@
+---
+nvim_app_name: nvim
+nvim_repo_path: "{{ playbook_dir }}/.."
+
+nvim_install_packages: true
+nvim_packages:
+  - neovim         
+  - git            
+  - gcc, make      
+  - tree-sitter-cli
+  - ripgrep        
+  - fd             
+  - fzf            
+  - curl, wget     

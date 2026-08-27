@@ -70,7 +70,7 @@ return {
 			json = { "prettierd", "prettier" },
 			jsonc = { "prettierd", "prettier" },
 			yaml = { "prettierd", "prettier" },
-			["yaml.ansible"] = { "prettierd", "prettier" },
+			["yaml.ansible"] = { "prettierd" },
 			markdown = { "prettierd", "prettier" },
 			html = { "prettierd", "prettier" },
 			css = { "prettierd", "prettier" },
@@ -107,6 +107,16 @@ return {
 		end,
 		formatters = {
 			injected = { options = { ignore_errors = true } },
+			-- Auto-fixes ansible-lint rules (FQCN, key order, deprecated syntax). Rewrites the
+			-- file in place rather than a stream, so it is opt-in via :AnsibleFix, never on save.
+			ansible_fix = {
+				command = "ansible-lint",
+				args = { "--fix", "--nocolor", "--offline", "$FILENAME" },
+				stdin = false,
+				-- Keep the real basename in the temp copy; ansible-lint classifies files by path.
+				tmpfile_format = ".conform.$RANDOM.$FILENAME",
+				exit_codes = { 0, 2 },
+			},
 			-- Zig ships its formatter with the compiler; reads stdin, writes stdout.
 			zigfmt = {
 				command = "zig",
@@ -125,6 +135,22 @@ return {
 	},
 	--- Register :FormatDisable/:FormatEnable/:FormatToggle to control format-on-save.
 	init = function()
+		vim.api.nvim_create_user_command("AnsibleFix", function()
+			if vim.fn.executable("ansible-lint") == 0 then
+				Snacks.notify.warn("ansible-lint not installed")
+				return
+			end
+			-- conform runs it against a temp copy and reads the result back into the buffer.
+			require("conform").format({ formatters = { "ansible_fix" }, timeout_ms = 15000 }, function(err)
+				if err then
+					Snacks.notify.error("ansible-lint --fix: " .. err)
+					return
+				end
+				vim.cmd.update()
+				Snacks.notify.info("Applied ansible-lint fixes")
+			end)
+		end, { desc = "Apply ansible-lint --fix to the current file" })
+
 		vim.api.nvim_create_user_command("FormatDisable", function(args)
 			if args.bang then
 				vim.b.disable_autoformat = true
