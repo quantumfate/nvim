@@ -4,12 +4,14 @@ nvim_repo_path: "{{ playbook_dir }}/.."
 
 nvim_config_dir: "{{ ansible_facts.user_dir }}/.config/nvim"
 
+# Package names verified against the Arch repos and the AUR; see
+# AUR-dependencies.txt for the tool -> package mapping and notes.
+
 nvim_install_packages: true
 nvim_packages:
   - neovim
   - git
-  - gcc
-  - make
+  - base-devel # gcc + make, for treesitter parsers and LuaSnip jsregexp
   - tree-sitter-cli
   - ripgrep
   - fd
@@ -33,40 +35,39 @@ nvim_language_runtimes:
 nvim_install_lsp_servers: true
 nvim_lsp_servers:
   - lua-language-server
-  - basedpyright
+  - basedpyright # AUR
   - typescript-language-server
   - rust-analyzer
   - gopls
-  - clang
+  - clang # provides clangd + clang-format
   - vscode-json-languageserver
   - yaml-language-server
-  - ansible-language-server
+  - ansible-language-server # AUR
   - tailwindcss-language-server
   - bash-language-server
-  - qt6-tools
+  - qt6-tools # provides qmlls6
   - svelte-language-server
   - taplo-cli
   - marksman
   - zls
   - vue-language-server
+  - bacon # bacon_ls backend; bacon-ls itself via Mason/cargo
 
 nvim_install_formatters: true
 nvim_formatters:
   - stylua
-  - prettierd
+  - prettierd # AUR
   - prettier
   - python-black
   - ruff
   - shfmt
-  - clang
-  - go-tools
-  - go
-  - rustup component rustfmt
+  - go-tools # provides goimports
   - deno
-  - fish
+  - fish # provides fish_indent
   - just
-  - zig
   - codespell
+  # gofmt ships with go, zigfmt with zig, clang-format with clang,
+  # rustfmt is a rustup component — all already installed above.
 
 nvim_install_linters: true
 nvim_linters:
@@ -75,23 +76,26 @@ nvim_linters:
   - shellcheck
   - markdownlint-cli
   - yamllint
-  - hadolint-bin
+  - hadolint-bin # AUR
   - ansible-lint
-  - nodejs-jsonlint
-  - python-cpplint
+  - ansible
+  - nodejs-jsonlint # AUR, provides jsonlint
+  - python-cpplint # AUR
 
 nvim_install_dap: true
 nvim_dap:
   - python-debugpy
-  - codelldb-bin
-  - vscode-js-debug-bin
+  - codelldb-bin # AUR
+  - vscode-js-debug-bin # AUR
   - delve
-  - lua51 # TODO: luarocks install nlua
+  # nlua (Lua debugging) comes from lua51 + `luarocks install nlua`
 
 nvim_install_editor_integration_tools: true
 nvim_editor_integration_tools:
   - lazygit
-  - devpod-bin
+  - devpod-bin # AUR
+  - chezmoi
   - tmux
   - wl-clipboard
   - pre-commit
+  # ollama omitted — only needed by avante.nvim, currently disabled
