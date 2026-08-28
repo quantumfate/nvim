@@ -303,7 +303,7 @@ local IGNORE = {
 	go = "# Go\n/bin/\nvendor/\n",
 	c = "# C / C++\n*.o\n*.obj\n*.a\n*.so\n/build/\n",
 	nix = "# Nix\nresult\nresult-*\n",
-	ansible = "# Ansible\n*.retry\n.vault_pass\ncollections/\n*.vault\n",
+	ansible = "# Ansible\n*.retry\n.vault_pass\ncollections/\n*.vault\n.ansible\n",
 }
 
 --- .gitignore for OS/editor junk plus every detected ecosystem.
