@@ -1,12 +1,5 @@
---- Single source of truth for the external toolchain: every LSP server, formatter,
---- linter and debug adapter this config drives, grouped by ecosystem the same way
---- `scaffold.tools` groups project tooling. Everything downstream derives from here —
---- the ansible role's package list (`toolchain.export`), the JSON store quickshell
---- reads (`toolchain.store`), and `:checkhealth`.
----
---- Nothing installs tools from inside neovim: the ansible role owns installation via
---- pacman/AUR, this table owns the data model, and the store reports what is actually
---- on PATH. Adding a language is one row here.
+--- Every external tool this config drives, grouped by ecosystem. Source of truth:
+--- the ansible role's package list and the JSON store are both derived from it.
 ---@class toolchain.registry
 local M = {}
 
@@ -16,9 +9,8 @@ local M = {}
 ---@field name string Name this config refers to the tool by (lspconfig server, conform/nvim-lint name)
 ---@field bin string Executable to look for on PATH
 ---@field path? string Absolute path to check instead of PATH, for tools that are not
---- executables — a node entry point, a shared library. $HOME/$XDG_DATA_HOME allowed
 ---@field pkg? string Arch/AUR package providing it; defaults to `bin`. false when unpackaged
----@field version_args? string[] Argv that prints a version; defaults to { "--version" }
+---@field version_args? string[]|false Argv that prints a version; defaults to
 ---@field optional? boolean Absence is not reported as missing
 
 ---@class toolchain.Eco
@@ -30,20 +22,21 @@ local M = {}
 ---@field tool? toolchain.Tool[] Editor-integration tools that are not one of the four kinds
 ---@field bin_paths? string[] Per-user bin dirs the tools land in, shell-expandable
 ---@field bootstrap? toolchain.Bootstrap[] Post-install steps the package manager cannot do
+---@field update? toolchain.Step[] Upgrade form of the bootstrap steps, run by :ToolchainUpdate
+
+---@class toolchain.Step
+---@field name string Identifier used in logs and notifications
+---@field cmd string Shell command; $HOME and $XDG_DATA_HOME are expanded
 
 ---@class toolchain.Bootstrap
 ---@field name string Identifier used in logs and failure notifications
 ---@field cmd string Shell command; must be idempotent, it runs on every provision
 ---@field creates? string Path whose existence means the step already ran, $HOME/$XDG_DATA_HOME allowed
 ---@field changed_if? string Substring of stdout that means the step actually did something.
---- Steps with neither `creates` nor `changed_if` always report as changed
 
---- Kinds in the order they are reported.
 ---@type toolchain.Kind[]
 M.kinds = { "lsp", "fmt", "lint", "dap", "tool" }
 
---- Per-ecosystem toolchain. `pkg` is an Arch repo or AUR package name — both install
---- through yay in one transaction, so they are not distinguished here.
 ---@type table<string, toolchain.Eco>
 M.eco = {
 	core = {
@@ -54,12 +47,12 @@ M.eco = {
 			{ name = "fzf", bin = "fzf" },
 			{ name = "lazygit", bin = "lazygit" },
 			{ name = "chezmoi", bin = "chezmoi" },
-			{ name = "tmux", bin = "tmux" },
+			{ name = "tmux", bin = "tmux", version_args = { "-V" } },
 			{ name = "wl-clipboard", bin = "wl-copy", pkg = "wl-clipboard" },
 			{ name = "pre-commit", bin = "pre-commit" },
 			{ name = "just", bin = "just" },
 			{ name = "codespell", bin = "codespell" },
-			{ name = "devpod", bin = "devpod-cli", pkg = "devpod-bin", optional = true },
+			{ name = "devpod", bin = "devpod-cli", pkg = "devpod-bin", optional = true, version_args = { "version" } },
 		},
 	},
 
@@ -69,7 +62,8 @@ M.eco = {
 		fmt = { { name = "stylua", bin = "stylua" } },
 		lint = { { name = "luacheck", bin = "luacheck", pkg = false, optional = true } },
 		dap = {
-			{ name = "nlua", bin = "nlua", pkg = false },
+			-- nlua is a lua interpreter shim: --version opens it as a file.
+			{ name = "nlua", bin = "nlua", pkg = false, version_args = false },
 			{
 				-- A node entry point rather than a binary: dap.lua runs it through node.
 				name = "local-lua",
@@ -79,6 +73,19 @@ M.eco = {
 			},
 		},
 		bin_paths = { "$HOME/.luarocks/bin" },
+		-- Upgrade form of the bootstrap steps, which are install-once.
+		update = {
+			{ name = "nlua", cmd = "luarocks install --local --lua-version 5.1 nlua" },
+			{ name = "luacheck", cmd = "luarocks install --local --lua-version 5.1 luacheck" },
+			{
+				name = "local-lua-debugger",
+				-- reset, not pull: the build writes into the checkout, so it is never clean.
+				cmd = 'dst="$XDG_DATA_HOME/nvim/dap/local-lua-debugger-vscode" && '
+					.. 'git -C "$dst" fetch --depth 1 origin HEAD && '
+					.. 'git -C "$dst" reset --hard FETCH_HEAD && '
+					.. 'npm --prefix "$dst" install && npm --prefix "$dst" run build',
+			},
+		},
 		bootstrap = {
 			{
 				name = "luarocks-nlua",
@@ -86,8 +93,7 @@ M.eco = {
 				creates = "$HOME/.luarocks/bin/nlua",
 			},
 			{
-				-- No distro package: the extension is built from source into the data dir,
-				-- where dap.lua looks for it.
+				-- No distro package; dap.lua looks for the build in the data dir.
 				name = "local-lua-debugger",
 				cmd = 'dst="$XDG_DATA_HOME/nvim/dap/local-lua-debugger-vscode" && '
 					.. 'git clone --depth 1 https://github.com/tomblind/local-lua-debugger-vscode "$dst" && '
@@ -130,7 +136,10 @@ M.eco = {
 			{ name = "eslint_d", bin = "eslint_d" },
 			{ name = "eslint", bin = "eslint" },
 		},
-		dap = { { name = "js-debug", bin = "js-debug-dap", pkg = "vscode-js-debug-bin" } },
+		-- Probing this one creates a socket named after the argument.
+		dap = {
+			{ name = "js-debug", bin = "js-debug-dap", pkg = "vscode-js-debug-bin", version_args = false },
+		},
 	},
 
 	rust = {
@@ -144,8 +153,13 @@ M.eco = {
 			{ name = "clippy", bin = "cargo-clippy", pkg = false },
 			{ name = "bacon", bin = "bacon" },
 		},
-		dap = { { name = "codelldb", bin = "codelldb", pkg = "codelldb-bin" } },
+		-- codelldb has no version flag; the store falls back to the package version.
+		dap = { { name = "codelldb", bin = "codelldb", pkg = "codelldb-bin", version_args = false } },
 		bin_paths = { "$HOME/.cargo/bin" },
+		update = {
+			{ name = "rustup", cmd = "rustup update" },
+			{ name = "bacon-ls", cmd = "cargo install --locked --force bacon-ls" },
+		},
 		bootstrap = {
 			{
 				name = "rustup-toolchain",
@@ -225,7 +239,6 @@ M.eco = {
 	},
 }
 
---- Report order; unknown ecosystems append alphabetically so a new row still shows up.
 ---@type string[]
 local BASE_ORDER = {
 	"core",
@@ -246,7 +259,6 @@ local BASE_ORDER = {
 	"qml",
 }
 
---- Deterministic ecosystem order. Every aggregator iterates this.
 ---@return string[]
 function M.ordered()
 	local out, seen = {}, {}
@@ -267,7 +279,6 @@ function M.ordered()
 	return out
 end
 
---- Every tool, tagged with the ecosystem and kind it came from.
 ---@param eco_name? string Restrict to one ecosystem
 ---@return { eco: string, kind: toolchain.Kind, tool: toolchain.Tool }[]
 function M.tools(eco_name)
@@ -282,7 +293,29 @@ function M.tools(eco_name)
 	return out
 end
 
---- Package name for a tool, or nil when nothing packages it (`pkg = false`).
+---@param eco_names? string[] Defaults to every ecosystem
+---@return { eco: string, step: toolchain.Step }[]
+function M.update_steps(eco_names)
+	local out = {}
+	for _, eco_name in ipairs(eco_names or M.ordered()) do
+		for _, step in ipairs((M.eco[eco_name] or {}).update or {}) do
+			table.insert(out, { eco = eco_name, step = step })
+		end
+	end
+	return out
+end
+
+---@return string[]
+function M.updatable()
+	local out = {}
+	for _, eco_name in ipairs(M.ordered()) do
+		if (M.eco[eco_name].update or {})[1] then
+			table.insert(out, eco_name)
+		end
+	end
+	return out
+end
+
 ---@param tool toolchain.Tool
 ---@return string?
 function M.package_of(tool)
@@ -292,7 +325,6 @@ function M.package_of(tool)
 	return tool.pkg or tool.bin
 end
 
---- Every package the ecosystem needs, `sys` entries included, in registry order.
 ---@param eco_name string
 ---@return string[]
 function M.packages_of(eco_name)

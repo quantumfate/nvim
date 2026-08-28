@@ -1,20 +1,10 @@
---- External toolchain: the data model for every LSP server, formatter, linter and
---- debug adapter this config drives. Tools are installed by the ansible role from
---- system packages — nothing here installs anything. What this owns is the store at
---- `$XDG_STATE_HOME/nvim/tools.json`, which other programs (status bars, dashboards)
---- read to see what is present, which version, and what is missing.
----
----   :ToolchainStatus   report the current state
----   :ToolchainRefresh  re-probe PATH and rewrite the store
----   :ToolchainExport   regenerate the ansible role's package vars
+--- Commands and startup wiring for the toolchain modules.
 ---@class toolchain
 local M = {}
 
 M.registry = require("toolchain.registry")
 M.store = require("toolchain.store")
 
---- Refreshes the store, quietly, once the session has settled. Startup stays clean:
---- the probes are async and nothing blocks on them.
 local function refresh_on_idle()
 	vim.api.nvim_create_autocmd("User", {
 		pattern = "VeryLazy",
@@ -27,7 +17,6 @@ local function refresh_on_idle()
 	})
 end
 
---- Human-readable summary of the store. Snacks is a global from snacks.nvim.
 ---@param doc table
 local function report(doc)
 	local lines = { ("%d/%d tools present"):format(doc.summary.present, doc.summary.total) }
@@ -59,6 +48,28 @@ function M.setup()
 	vim.api.nvim_create_user_command("ToolchainRefresh", function()
 		M.store.refresh({}, report)
 	end, { desc = "Re-probe the toolchain and rewrite the store" })
+
+	vim.api.nvim_create_user_command("ToolchainDashboard", function()
+		require("toolchain.dashboard").open()
+	end, { desc = "Toolchain report with update actions" })
+
+	-- <leader>i is the "interfaces" group (see whichkey).
+	vim.keymap.set("n", "<leader>it", function()
+		require("toolchain.dashboard").open()
+	end, { desc = "Toolchain" })
+
+	vim.api.nvim_create_user_command("ToolchainUpdate", function(args)
+		require("toolchain.update").run(require("toolchain.update").parse(args.fargs))
+	end, {
+		nargs = "*",
+		complete = function(lead)
+			local candidates = vim.list_extend(M.registry.updatable(), { "--dry-run", "--no-plugins" })
+			return vim.tbl_filter(function(name)
+				return name:find(lead, 1, true) == 1
+			end, candidates)
+		end,
+		desc = "Update the tools pacman does not own ([ecosystem...] [--dry-run] [--no-plugins])",
+	})
 
 	vim.api.nvim_create_user_command("ToolchainExport", function()
 		local path = require("toolchain.export").ansible()

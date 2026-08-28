@@ -1,28 +1,28 @@
---- Machine-readable state of the external toolchain, written to
---- `$XDG_STATE_HOME/nvim/tools.json` for other programs (quickshell status bars,
---- dashboards, update hooks) to read. Neovim owns this file: ansible installs the
---- tools, this module reports what actually resolved on PATH.
----
---- The write is atomic (tmp + rename), so a reader never sees a partial document.
+--- Writes $XDG_STATE_HOME/nvim/tools.json: what resolved on PATH, at which version.
+--- Neovim owns the file, ansible only reads it.
 ---@class toolchain.store
 local M = {}
 
 local registry = require("toolchain.registry")
 
---- Bumped when the document shape changes, so readers can refuse what they cannot parse.
+-- Readers refuse a shape they do not know.
 local SCHEMA = 1
 
---- Version probes are slow; a tool's version is re-read only when its binary changed.
 ---@type table<string, { mtime: integer, version: string }>
 local version_cache = {}
 
---- Absolute path of the store.
+---@param path string
+---@param args string[]
+---@return string
+local function cache_key(path, args)
+	return path .. "\0" .. table.concat(args, " ")
+end
+
 ---@return string
 function M.path()
 	return vim.fs.joinpath(vim.fn.stdpath("state"), "tools.json")
 end
 
---- Previously written document, or nil when absent or unreadable.
 ---@return table?
 function M.read()
 	local ok, content = pcall(vim.fn.readfile, M.path())
@@ -33,39 +33,58 @@ function M.read()
 	return decoded and doc or nil
 end
 
---- Seeds the in-memory version cache from a previous run, so a restart does not
---- re-probe every binary.
 local function seed_cache()
 	local doc = M.read()
 	for _, eco in pairs(doc and doc.ecosystems or {}) do
 		for _, tool in ipairs(eco.tools or {}) do
-			if tool.path and tool.version and tool.mtime then
-				version_cache[tool.path] = { mtime = tool.mtime, version = tool.version }
+			if tool.path and tool.version and tool.mtime and tool.probe then
+				version_cache[tool.probe] = { mtime = tool.mtime, version = tool.version }
 			end
 		end
 	end
 end
 
---- First line of `<bin> --version`, trimmed. Tools disagree wildly on format, so the
---- raw line is kept rather than parsed into components.
 ---@param path string
 ---@param args string[]
 ---@param on_done fun(version: string?)
+---@param out string
+---@return string?
+local function sanitize(out)
+	local first = vim.split(out, "\n", { plain = true })[1] or ""
+	first = first:gsub("\27%[[0-9;]*m", ""):gsub("%s+", " ")
+	first = vim.trim(first)
+	if first == "" then
+		return nil
+	end
+	return #first > 72 and (first:sub(1, 69) .. "...") or first
+end
+
 local function probe_version(path, args, on_done)
 	vim.system({ path, unpack(args) }, { text = true, timeout = 5000 }, function(res)
-		local out = (res.stdout or "") .. (res.stderr or "")
-		local first = vim.split(out, "\n", { plain = true })[1] or ""
-		on_done(vim.trim(first) ~= "" and vim.trim(first) or nil)
+		on_done(sanitize((res.stdout or "") .. (res.stderr or "")))
 	end)
 end
 
---- Resolves one registry entry against the filesystem.
 ---@param entry { eco: string, kind: toolchain.Kind, tool: toolchain.Tool }
 ---@return table state Serialisable tool state, version still unfilled
+-- Installed package versions, for tools that cannot report their own.
+---@param on_done fun(versions: table<string, string>)
+local function package_versions(on_done)
+	vim.system({ "pacman", "-Q" }, { text = true, stdin = false }, function(res)
+		local out = {}
+		for _, line in ipairs(vim.split(res.stdout or "", "\n", { plain = true })) do
+			local name, version = line:match("^(%S+)%s+(%S+)$")
+			if name then
+				out[name] = version
+			end
+		end
+		on_done(out)
+	end)
+end
+
 local function resolve(entry)
 	local tool = entry.tool
-	-- A tool pinned to an absolute path is not on PATH at all (a node entry point,
-	-- for instance); everything else is looked up the way a shell would.
+	-- A pinned path is not on PATH at all — a node entry point, say.
 	local path = tool.path and vim.fn.expand(tool.path) or vim.fn.exepath(tool.bin)
 	if tool.path and vim.uv.fs_stat(path) == nil then
 		path = ""
@@ -85,7 +104,6 @@ local function resolve(entry)
 	}
 end
 
---- Writes `doc` to the store atomically.
 ---@param doc table
 ---@return boolean ok
 local function write(doc)
@@ -99,10 +117,6 @@ local function write(doc)
 	return vim.uv.fs_rename(tmp, path) and true or false
 end
 
---- Rebuilds the store from the registry and the current PATH.
----
---- Version probes run concurrently and the file is written once they all report, so
---- the callback fires after the store is on disk.
 ---@param opts? { versions?: boolean } versions defaults to true
 ---@param on_done? fun(doc: table)
 function M.refresh(opts, on_done)
@@ -124,16 +138,27 @@ function M.refresh(opts, on_done)
 
 	local pending = 0
 	local finished = false
+	-- Falls back for anything that cannot report a version of its own.
+	local pkg_versions = {}
 
-	--- Writes and reports once every outstanding probe has landed. The body is
-	--- scheduled because probe callbacks land in a fast event context, where the
-	--- vim.fn calls behind the write are not allowed.
+	-- Probe callbacks land in a fast event context, where the vim.fn calls behind the
+	-- write are not allowed.
 	local function settle()
 		if finished or pending > 0 then
 			return
 		end
 		finished = true
 		vim.schedule(function()
+			for _, eco in pairs(doc.ecosystems) do
+				for _, tool in ipairs(eco.tools) do
+					if not tool.version and tool.present and tool.package then
+						tool.version = pkg_versions[tool.package]
+						tool.version_source = tool.version and "package" or nil
+					elseif tool.version then
+						tool.version_source = tool.version_source or "probe"
+					end
+				end
+			end
 			table.sort(doc.summary.missing_tools)
 			write(doc)
 			if on_done then
@@ -160,16 +185,23 @@ function M.refresh(opts, on_done)
 				end
 			end
 
-			local cached = state.path and version_cache[state.path]
+			-- Entry points are not executables; version_args = false means "do not ask".
+			local probeable = want_versions and state.path and not entry.tool.path and entry.tool.version_args ~= false
+			local args = entry.tool.version_args or { "--version" }
+			local key = state.path and cache_key(state.path, args) or nil
+			if probeable then
+				state.probe = key
+			end
+
+			local cached = key and version_cache[key]
 			if cached and cached.mtime == state.mtime then
 				state.version = cached.version
-			-- Entry points are not executables, so there is nothing to ask for a version.
-			elseif want_versions and state.path and not entry.tool.path then
+			elseif probeable then
 				pending = pending + 1
-				probe_version(state.path, entry.tool.version_args or { "--version" }, function(version)
+				probe_version(state.path, args, function(version)
 					state.version = version
-					if version and state.path then
-						version_cache[state.path] = { mtime = state.mtime, version = version }
+					if version and key then
+						version_cache[key] = { mtime = state.mtime, version = version }
 					end
 					pending = pending - 1
 					settle()
@@ -178,6 +210,13 @@ function M.refresh(opts, on_done)
 		end
 		doc.ecosystems[eco_name] = eco
 	end
+
+	pending = pending + 1
+	package_versions(function(versions)
+		pkg_versions = versions
+		pending = pending - 1
+		settle()
+	end)
 
 	settle()
 end

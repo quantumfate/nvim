@@ -226,7 +226,7 @@ return {
 				{ "<leader>ip", "project_diagnostics", "Project Wide Diagnostics" },
 				{ "<leader>il", "lsp", "Symbols and LSP" },
 				{ "<leader>in", "neotest", "Neotest" },
-				{ "<leader>it", "list_trouble", "Symbols, Local- and Quickfix list" },
+				{ "<leader>iT", "list_trouble", "Symbols, Local- and Quickfix list" },
 				{ "<leader>if", "symbols", "Symbols" },
 			}
 

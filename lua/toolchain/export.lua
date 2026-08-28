@@ -1,26 +1,18 @@
---- Projects the toolchain registry into the ansible role's variables, so the role
---- and this config can never disagree about which tools exist. The generated file is
---- committed; `just toolchain-export` regenerates it and CI fails if that produces a
---- diff.
+--- Generates the ansible role's package vars and the package overview, so the role
+--- can never disagree with the registry.
 ---@class toolchain.export
 local M = {}
 
 local registry = require("toolchain.registry")
 
---- Path of the generated vars file, relative to the repo root.
 M.rel_path = "ansible/roles/nvim/vars/tools.generated.yml"
 
---- Quotes a scalar for YAML. Everything is quoted: package names like `no` or `on`
---- are YAML booleans unquoted, and shell commands are full of `:` and `#`.
 ---@param value string
 ---@return string
 local function scalar(value)
 	return '"' .. value:gsub("\\", "\\\\"):gsub('"', '\\"') .. '"'
 end
 
---- Emits `key: value`, folding a long command across lines so the generated file
---- stays inside the 120-column lint limit. Folded scalars rejoin with spaces, so the
---- split points are the ` && ` seams.
 ---@param out string[]
 ---@param indent string
 ---@param key string
@@ -37,7 +29,6 @@ local function emit(out, indent, key, value)
 	end
 end
 
---- Renders `nvim_ecosystems` as YAML lines.
 ---@return string[]
 local function render()
 	local out = {
@@ -101,7 +92,6 @@ local function render()
 	return out
 end
 
---- Writes the vars file.
 ---@param root? string Repo root; defaults to this config's directory
 ---@return string path
 function M.ansible(root)
@@ -112,11 +102,8 @@ function M.ansible(root)
 	return path
 end
 
---- Path of the generated package overview.
 M.doc_rel_path = "AUR-dependencies.txt"
 
---- Renders the human-readable package list: what to install, per ecosystem, with the
---- tool each package is there for.
 ---@return string[]
 local function render_doc()
 	local out = {
@@ -160,7 +147,6 @@ local function render_doc()
 	return out
 end
 
---- Writes the package overview.
 ---@param root? string
 ---@return string path
 function M.doc(root)
@@ -170,7 +156,6 @@ function M.doc(root)
 	return path
 end
 
---- Regenerates every artefact derived from the registry.
 ---@param root? string
 ---@return string[] paths
 function M.all(root)

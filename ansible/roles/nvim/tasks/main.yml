@@ -1,7 +1,6 @@
 ---
-# Installs the external toolchain from system packages, puts the config in place,
-# then verifies that every tool the editor expects actually resolved. The tool list
-# comes from vars/tools.generated.yml, generated out of lua/toolchain/registry.lua.
+# Tool list comes from vars/tools.generated.yml, generated out of
+# lua/toolchain/registry.lua — never edit it here.
 
 - name: Load the generated tool registry
   ansible.builtin.include_vars:
@@ -29,20 +28,18 @@
   become: false
 
 - name: Work out which packages are missing
-  # pacman -T prints the packages that are not installed, so a run that installs
-  # nothing skips both the upgrade guard and the transaction below.
+  # A run that installs nothing skips both the guard and the transaction below.
   ansible.builtin.command:
     argv: "{{ ['pacman', '-T'] + nvim_wanted_packages }}"
   register: nvim_missing_packages
   changed_when: false
-  # -T exits 127 when something is missing, which is the normal case here.
+  # -T exits 127 when something is missing, the normal case here.
   failed_when: nvim_missing_packages.rc not in [0, 127]
   check_mode: false
 
 - name: Guard against a partial upgrade
-  # Only relevant when something actually gets installed: pulling a new package into
-  # a system that is behind on updates is the partial upgrade that breaks Arch. A
-  # run with nothing to install is safe against any database age.
+  # Pulling a new package into a system that is behind is what breaks Arch. With
+  # nothing to install, database age does not matter.
   when: nvim_require_current_system and nvim_missing_packages.stdout_lines | length > 0
   block:
     - name: Check for pending system updates
@@ -90,8 +87,6 @@
       ansible.builtin.fail:
         msg: "{{ ansible_failed_result.msg | default('package installation failed') }}"
 
-# Each step is what no package can do for us: rustup components, luarocks rocks,
-# cargo crates, the unpackaged lua debug adapter.
 - name: Run the per-ecosystem bootstrap steps
   when: nvim_run_bootstrap
   ansible.builtin.include_tasks: bootstrap.yml
@@ -99,8 +94,7 @@
   loop_control:
     label: "{{ item.name }}"
 
-# Shell files are often chezmoi-managed; editing the target directly would be undone
-# by the next `chezmoi apply`, so writes go to the source and are applied from there.
+# Editing a chezmoi-managed file directly is undone by the next `chezmoi apply`.
 - name: Resolve the shell files through chezmoi
   ansible.builtin.include_tasks: chezmoi_target.yml
   loop: "{{ nvim_shell_env_files + [nvim_profile_file] }}"
@@ -188,7 +182,7 @@
       ansible.builtin.command: nvim --headless "+Lazy! sync" +qa
       register: nvim_lazy_sync
       changed_when: "'Installed' in nvim_lazy_sync.stderr or 'Updated' in nvim_lazy_sync.stderr"
-      # Plugin builds (blink.cmp's cargo build, LuaSnip's jsregexp) take a while.
+      # blink.cmp builds with cargo, LuaSnip with make.
       timeout: 1800
   rescue:
     - name: Report the plugin sync failure
@@ -209,7 +203,7 @@
         msg: "{{ ansible_failed_result.msg | default('lazy.nvim sync failed') }}"
 
 - name: Refresh the tool store
-  # Neovim owns the store; the role only asks it to re-probe PATH and read the result.
+  # Neovim owns the store; the role only asks for a re-probe, then reads it.
   when: nvim_refresh_store
   become: false
   ansible.builtin.command: >-

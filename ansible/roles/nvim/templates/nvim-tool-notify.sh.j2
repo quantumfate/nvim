@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 # {{ ansible_managed }}
-# Reports a toolchain failure twice: once to the desktop as a notification with
-# structured hints, and once to {{ nvim_failure_log }} as a JSON line. Both carry the
-# same fields, so a status bar can subscribe to notifications and still rebuild
-# history from the log after a restart.
+# Reports a toolchain failure to the desktop and to {{ nvim_event_log }}, the same
+# stream :ToolchainUpdate writes to (tagged by "source").
 #
 #   nvim-tool-notify --phase bootstrap --ecosystem rust --tool cargo-bacon-ls \
 #                    --exit 101 --detail "error: could not compile"
 set -uo pipefail
 
-LOG="{{ nvim_failure_log }}"
+LOG="{{ nvim_event_log }}"
 URGENCY="{{ nvim_notify_urgency }}"
 
 phase="unknown"
@@ -33,24 +31,25 @@ timestamp=$(date -Is)
 summary="neovim toolchain: ${tool:-$phase} failed"
 body="${detail:-no detail}"
 
-# jq builds the record so any quoting in `detail` survives into valid JSON.
+# jq builds the record so quoting in `detail` survives into valid JSON.
 if command -v jq >/dev/null 2>&1; then
   mkdir -p "${LOG%/*}"
   jq -nc \
     --arg ts "$timestamp" --arg phase "$phase" --arg eco "$ecosystem" \
     --arg tool "$tool" --arg detail "$detail" --arg host "$(hostname)" \
     --argjson exit "${exit_code:-0}" \
-    '{timestamp:$ts, phase:$phase, ecosystem:$eco, tool:$tool, exit:$exit, host:$host, detail:$detail}' \
+    '{timestamp:$ts, status:"failed", source:"ansible", phase:$phase, ecosystem:$eco,
+      tool:$tool, exit:$exit, host:$host, detail:$detail}' \
     >>"$LOG"
 fi
 
-# Hints are the machine-readable half: a client reads x-nvim-* off the notification
-# instead of scraping the summary text.
+# Clients read x-nvim-* instead of scraping the summary text.
 command -v notify-send >/dev/null 2>&1 || exit 0
 notify-send \
   --app-name="nvim-toolchain" \
   --urgency="$URGENCY" \
-  --category="nvim.toolchain.failure" \
+  --category="nvim.toolchain.failed" \
+  --hint="string:x-nvim-status:failed" \
   --icon=dialog-error \
   --hint="string:x-nvim-phase:$phase" \
   --hint="string:x-nvim-ecosystem:$ecosystem" \

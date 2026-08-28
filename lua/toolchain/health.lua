@@ -1,16 +1,12 @@
---- `:checkhealth toolchain` — what is installed, what is missing, and where each tool
---- came from. Reports a tool resolving outside the system prefixes as an ownership
---- problem: two installs of the same binary drift apart and the wrong one wins PATH.
+--- `:checkhealth toolchain`: missing tools, and binaries shadowing their package.
 ---@class toolchain.health
 local M = {}
 
 local registry = require("toolchain.registry")
 local store = require("toolchain.store")
 
---- Prefixes a system-managed tool is expected to live under.
 local SYSTEM_PREFIXES = { "/usr/bin/", "/usr/lib/", "/bin/" }
 
---- Prefixes owned by a per-user toolchain (rustup, cargo, luarocks, go).
 local USER_PREFIXES = { "/.cargo/bin/", "/.rustup/", "/.luarocks/bin/", "/go/bin/", "/.local/bin/" }
 
 ---@param path string
@@ -42,8 +38,7 @@ function M.check()
 			if not tool.present and not tool.optional then
 				table.insert(missing, ("%s (%s) — package %s"):format(tool.name, eco_name, tool.package or "none"))
 			elseif tool.present and tool.package and not under(tool.path, SYSTEM_PREFIXES) then
-				-- A packaged tool resolving out of a user prefix means something else
-				-- installed it too and is shadowing the system copy.
+				-- Two installs of one binary drift apart, and the wrong one wins PATH.
 				if not under(tool.path, USER_PREFIXES) then
 					table.insert(
 						foreign,

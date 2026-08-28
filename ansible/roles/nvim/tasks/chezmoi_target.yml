@@ -1,6 +1,5 @@
 ---
-# Maps one home-directory file to the path that should actually be edited: its
-# chezmoi source file when chezmoi manages it, the file itself otherwise.
+# Edit target for one home file: its chezmoi source when managed, else itself.
 
 - name: "Ask chezmoi about {{ nvim_target_file | basename }}"
   ansible.builtin.command: chezmoi source-path {{ nvim_target_file }}

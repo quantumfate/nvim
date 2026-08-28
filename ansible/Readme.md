@@ -26,11 +26,6 @@ Regenerate both with `just toolchain-export`; `just toolchain-check` (also a
 pre-commit hook) fails if they drifted from the registry. Adding a language is one
 row in the registry — the role, the docs and the editor all follow.
 
-There is no Mason. Every tool is a system package, so there is exactly one copy of
-each binary and one thing that updates it (`yay -Syu`). The role deletes the
-leftover `~/.local/share/nvim/mason` tree and the PATH entry that shadowed
-`/usr/bin`.
-
 ## What the role does
 
 1. **Refuses to install into a stale system.** `checkupdates` must be empty —
@@ -86,7 +81,7 @@ one of `lsp`, `fmt`, `lint`, `dap`, `tool`.
 
 Every failing step raises a desktop notification through
 `~/.local/bin/nvim-tool-notify` and appends one JSON object to
-`~/.local/state/nvim/toolchain-failures.jsonl`. The notification carries the same
+`~/.local/state/nvim/toolchain-events.jsonl`. The notification carries the same
 fields as hints, so a client reads them instead of scraping the text:
 
 | hint               | example                                      |
@@ -99,7 +94,9 @@ fields as hints, so a client reads them instead of scraping the text:
 | `x-nvim-log`       | path of the failure log                      |
 | `x-nvim-store`     | path of the tool store                       |
 
-App name is `nvim-toolchain`, category `nvim.toolchain.failure`.
+App name is `nvim-toolchain`, category `nvim.toolchain.failed`. `:ToolchainUpdate`
+writes to the same log with `"source": "nvim"`, so one file carries everything that
+happened to the toolchain.
 
 ## Editor commands
 
