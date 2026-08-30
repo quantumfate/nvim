@@ -107,6 +107,47 @@ return {
 				WinBar = { bg = colors.base, fg = colors.overlay0 },
 				WinBarNC = { bg = colors.base, fg = colors.surface2 },
 
+				-- lazy.nvim UI. Its groups are `hi default` links into whatever the
+				-- colorscheme happens to define — IncSearch for the home button,
+				-- Visual for the active tab, CursorLine for the others — which is
+				-- how the manager ended up with filled chips and a rainbow of
+				-- load-reason colours. Redefined here on the same three rules as
+				-- everything else: no fills, one accent, metadata in greys.
+				LazyNormal = { bg = colors.base, fg = colors.text },
+				LazyH1 = { fg = colors.mauve, bg = colors.base, bold = true },
+				LazyH2 = { fg = colors.subtext0, bold = true },
+				LazyButton = { fg = colors.overlay0, bg = colors.base },
+				LazyButtonActive = { fg = colors.mauve, bg = colors.base, bold = true },
+				LazySpecial = { fg = colors.surface2 },
+				LazyDimmed = { fg = colors.surface2 },
+				LazyProp = { fg = colors.surface2 },
+				LazyValue = { fg = colors.subtext0 },
+				LazyComment = { fg = colors.overlay0 },
+				LazyLocal = { fg = colors.overlay1 },
+				LazyDir = { fg = colors.overlay1 },
+				LazyUrl = { fg = colors.overlay1 },
+				LazyNoCond = { fg = colors.overlay0 },
+				LazyProgressDone = { fg = colors.mauve },
+				LazyProgressTodo = { fg = colors.surface1 },
+				LazyCommit = { fg = colors.overlay1 },
+				LazyCommitIssue = { fg = colors.overlay1 },
+				LazyCommitType = { fg = colors.subtext0, bold = true },
+				LazyCommitScope = { fg = colors.overlay1, italic = true },
+
+				-- Load reasons are metadata about metadata: one grey for all of
+				-- them, so the plugin NAME is what the eye lands on in a list of
+				-- seventy rows.
+				LazyReasonCmd = { fg = colors.overlay0 },
+				LazyReasonEvent = { fg = colors.overlay0 },
+				LazyReasonFt = { fg = colors.overlay0 },
+				LazyReasonImport = { fg = colors.overlay0 },
+				LazyReasonKeys = { fg = colors.overlay0 },
+				LazyReasonPlugin = { fg = colors.overlay0 },
+				LazyReasonRequire = { fg = colors.overlay0 },
+				LazyReasonRuntime = { fg = colors.overlay0 },
+				LazyReasonSource = { fg = colors.overlay0 },
+				LazyReasonStart = { fg = colors.overlay0 },
+
 				-- snacks.input — same surfaces as every other float: quiet border,
 				-- grey title, and the accent on the prompt icon alone, which is
 				-- the one thing that says "type here".

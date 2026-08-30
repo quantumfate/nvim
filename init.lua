@@ -27,6 +27,17 @@ require("lazy").setup({
 		{ import = "plugins" },
 	},
 	checker = { enabled = true }, -- automatic plugin update checks
+	-- The plugin manager is a float like any other: rounded border one step off
+	-- the background, a titled frame instead of a bare slab, and no backdrop
+	-- (100 = fully transparent dim layer), matching the snacks windows. Colours
+	-- for it are in plugins/ui/catppuccin.lua, under "lazy.nvim UI".
+	ui = {
+		border = "rounded",
+		backdrop = 100,
+		title = " Plugins ",
+		title_pos = "center",
+		size = { width = 0.85, height = 0.85 },
+	},
 })
 
 -- Root detection: register autocmds, then publish the spec globals it reads.

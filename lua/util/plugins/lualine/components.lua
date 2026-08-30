@@ -54,7 +54,10 @@ end
 return {
 	mode = {
 		"mode",
-		padding = { left = 1, right = 1 },
+		-- The bar's left margin. It matches kitty's side padding, so the first
+		-- glyph of the statusline lines up with the window's air instead of
+		-- starting hard against the terminal edge.
+		padding = { left = 2, right = 1 },
 		cond = nil,
 		---@param displayed string
 		---@param _ table
