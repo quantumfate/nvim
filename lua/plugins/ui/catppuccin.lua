@@ -55,7 +55,13 @@ return {
 		custom_highlights = function(colors)
 			return {
 				NormalFloat = { bg = colors.base },
-				FloatBorder = { fg = colors.mauve, bg = colors.base },
+				-- Borders are structure, not accent. They sit one step off the
+				-- background (surface1) so a float reads as a separate surface
+				-- without drawing a bright frame around it; mauve is reserved
+				-- for the one active thing on screen.
+				FloatBorder = { fg = colors.surface1, bg = colors.base },
+				FloatTitle = { fg = colors.overlay1, bg = colors.base },
+				WinSeparator = { fg = colors.base },
 				BlinkCmpMenuBorder = { link = "FloatBorder" },
 
 				BlinkCmpKindAvante = { fg = colors.mauve },
@@ -66,21 +72,21 @@ return {
 				-- Noice cmdline
 				NoiceCmdline = { bg = colors.base },
 				NoiceCmdlinePopup = { bg = colors.base },
-				NoiceCmdlinePopupBorder = { fg = colors.mauve, bg = colors.base },
+				NoiceCmdlinePopupBorder = { link = "FloatBorder" },
 				NoiceCmdlineIcon = { fg = colors.mauve, bg = colors.base },
 				-- Noice other elements (if needed)
 				NoicePopup = { bg = colors.base },
-				NoicePopupBorder = { fg = colors.mauve, bg = colors.base },
+				NoicePopupBorder = { link = "FloatBorder" },
 				NoiceMini = { bg = colors.base },
 				NoiceConfirm = { bg = colors.base },
-				NoiceConfirmBorder = { fg = colors.mauve, bg = colors.base },
+				NoiceConfirmBorder = { link = "FloatBorder" },
 				-- Edgy window backgrounds and borders
 				EdgyNormal = { bg = colors.base },
-				EdgyWinBar = { fg = colors.mauve, bg = colors.base, bold = true },
+				EdgyWinBar = { fg = colors.overlay1, bg = colors.base },
 				EdgyWinBarInactive = { fg = colors.overlay0, bg = colors.base },
-				EdgyTitle = { fg = colors.mauve, bg = colors.base, bold = true },
+				EdgyTitle = { fg = colors.overlay1, bg = colors.base },
 				EdgyTitleInactive = { fg = colors.overlay0, bg = colors.base },
-				EdgyIcon = { fg = colors.mauve, bg = colors.base },
+				EdgyIcon = { fg = colors.overlay0, bg = colors.base },
 				EdgyIconActive = { fg = colors.mauve, bg = colors.base },
 
 				-- Trouble backgrounds (for the edgy panels)
@@ -89,6 +95,33 @@ return {
 				TroubleTitle = { fg = colors.mauve },
 				TroubleIconDirectory = { fg = colors.mauve },
 				TroubleCount = { fg = colors.mauve, bg = colors.surface0 },
+
+				-- The statusline and tabline own no background: they sit on the
+				-- editor background and are set off by whitespace, like the tmux
+				-- bar above them. Nothing about them should read as a "bar".
+				StatusLine = { bg = colors.base, fg = colors.overlay0 },
+				StatusLineNC = { bg = colors.base, fg = colors.surface2 },
+				TabLine = { bg = colors.base, fg = colors.overlay0 },
+				TabLineFill = { bg = colors.base },
+				TabLineSel = { bg = colors.base, fg = colors.mauve, bold = true },
+				WinBar = { bg = colors.base, fg = colors.overlay0 },
+				WinBarNC = { bg = colors.base, fg = colors.surface2 },
+
+				-- snacks.input — same surfaces as every other float: quiet border,
+				-- grey title, and the accent on the prompt icon alone, which is
+				-- the one thing that says "type here".
+				SnacksInputBorder = { link = "FloatBorder" },
+				SnacksInputTitle = { fg = colors.overlay1, bg = colors.base },
+				SnacksInputIcon = { fg = colors.mauve, bg = colors.base },
+				SnacksInputNormal = { bg = colors.base, fg = colors.text },
+
+				-- Indent guides (snacks.indent). The guide is a ruler: it must be
+				-- visible when looked for and invisible when not. surface0 sits
+				-- barely above the background; only the enclosing scope steps up
+				-- to surface2, so exactly one guide on screen is brighter.
+				SnacksIndent = { fg = colors.surface0 },
+				SnacksIndentScope = { fg = colors.surface2 },
+				SnacksIndentChunk = { fg = colors.surface2 },
 
 				-- Dap
 				DapStoppedLine = { bg = colors.surface0 },
@@ -101,9 +134,11 @@ return {
 				-- Neo-tree, mauve accent
 				NeoTreeNormal = { bg = colors.base },
 				NeoTreeNormalNC = { bg = colors.base },
-				NeoTreeWinSeparator = { fg = colors.mauve, bg = colors.base },
-				NeoTreeBorder = { fg = colors.mauve, bg = colors.base },
-				NeoTreeTitleBar = { fg = colors.crust, bg = colors.mauve },
+				-- The sidebar is separated from the code by the gap between them,
+				NeoTreeWinSeparator = { fg = colors.base, bg = colors.base },
+				-- not by a coloured rule down the middle of the screen.
+				NeoTreeBorder = { fg = colors.base, bg = colors.base },
+				NeoTreeTitleBar = { fg = colors.overlay1, bg = colors.base },
 				NeoTreeFloatBorder = { link = "FloatBorder" },
 				NeoTreeFloatTitle = { fg = colors.mauve, bg = colors.base },
 				NeoTreeTabInactive = { fg = colors.overlay0, bg = colors.base },
@@ -113,7 +148,7 @@ return {
 
 				-- Neo-tree file/folder icons and text
 				NeoTreeDirectoryIcon = { fg = colors.mauve },
-				NeoTreeDirectoryName = { fg = colors.mauve },
+				NeoTreeDirectoryName = { fg = colors.subtext0 },
 				NeoTreeFileName = { fg = colors.text },
 				NeoTreeFileIcon = { fg = colors.blue },
 				NeoTreeModified = { fg = colors.peach },
@@ -131,7 +166,7 @@ return {
 
 				-- Neo-tree symbols and UI elements
 				NeoTreeSymbolicLinkTarget = { fg = colors.teal },
-				NeoTreeRootName = { fg = colors.mauve, bold = true },
+				NeoTreeRootName = { fg = colors.overlay1, bold = true },
 				NeoTreeIndentMarker = { fg = colors.overlay0 },
 				NeoTreeExpander = { fg = colors.mauve },
 				NeoTreeDimText = { fg = colors.overlay0 },
@@ -162,7 +197,11 @@ return {
 					Visual = { bg = colors.surface0 },
 					CursorLine = { bg = colors.base },
 					Directory = { fg = colors.mauve },
-					LineNr = { fg = colors.mauve },
+					-- Line numbers are a ruler, not content: they were mauve,
+					-- which made the brightest colour on screen the one thing
+					-- you never actually read. Only the cursor's line is accented.
+					LineNr = { fg = colors.surface2 },
+					CursorLineNr = { fg = colors.mauve, bold = true },
 					TroubleFilename = { fg = colors.mauve },
 					Title = { fg = colors.mauve },
 

@@ -44,6 +44,33 @@ local default_options = {
 	ruler = false,
 	laststatus = 3,
 	relativenumber = true,
+
+	-- --- Space -----------------------------------------------------------
+	-- The same aesthetic as the terminal surface (kitty + both tmux bars):
+	-- one accent, flat chrome, and air where the eye needs a boundary.
+	--
+	-- Division of labour: font size and LINE HEIGHT are cell-grid properties
+	-- and belong to kitty (modify_font cell_height, see system-config's zsh
+	-- role) — a terminal neovim cannot change how tall a text row is. What
+	-- neovim owns is everything inside the viewport: gutters, borders, popups.
+	numberwidth = 5, -- wider number gutter: digits stop touching the text
+	signcolumn = "yes:2", -- two sign slots = a permanent blank lane between gutter and code
+	pumheight = 12, -- a taller completion popup scrolls less
+	pumblend = 0, -- popups fully opaque; translucency over code is noise
+	winblend = 0,
+	cursorlineopt = "number", -- mark the line in the gutter, do not paint a bar across the code
+	winborder = "rounded", -- every float gets the same border (nvim 0.11+)
+	fillchars = {
+		eob = " ", -- no "~" column past the end of the buffer
+		vert = " ", -- splits are separated by whitespace, not by a drawn rule
+		horiz = " ",
+		horizup = " ",
+		horizdown = " ",
+		vertleft = " ",
+		vertright = " ",
+		verthoriz = " ",
+		fold = " ",
+	},
 }
 
 -- Append-style options that must extend (not overwrite) their defaults.

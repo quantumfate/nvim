@@ -2,6 +2,25 @@
 --- Reads two config-wide globals: `icons` (_G.icons) and `Snacks`.
 local util = require("util.plugins.lualine.util")
 
+--- Catppuccin Macchiato, read once. Used for the conditional components below.
+local P = require("catppuccin.palettes").get_palette("macchiato")
+
+--- Colour rule for the statusline:
+---   * always-present components (path, location, progress, lsp, filetype)
+---     stay in the theme greys — they are furniture, and furniture that shouts
+---     every second stops carrying information at all;
+---   * RARE components — the ones that appear only when something is true —
+---     get a saturated palette colour each, so their appearance is the signal.
+---     One hue per condition, so you learn "peach = debugger" rather than
+---     reading the label.
+---@param hex string Palette colour
+---@return fun(): table lualine color spec
+local function only(hex)
+	return function()
+		return { fg = hex }
+	end
+end
+
 --- Below this window width, wide components hide themselves.
 local window_width_limit = 150
 
@@ -85,9 +104,9 @@ return {
 			end
 		end,
 		padding = { left = 2, right = 2 },
-		separator = { left = "" },
 	},
 	python_env = {
+		color = only(P.green), -- a virtualenv is active
 		function()
 			if vim.bo.filetype == "python" then
 				local venv = os.getenv("CONDA_DEFAULT_ENV") or os.getenv("VIRTUAL_ENV")
@@ -111,7 +130,6 @@ return {
 		},
 		cond = conditions.hide_in_width,
 		padding = { left = 2, right = 2 },
-		separator = { right = "" },
 	},
 	lsp = {
 		function()
@@ -148,8 +166,6 @@ return {
 		cond = function()
 			return not conditions.buffer_is_terminal()
 		end,
-		--separator = { left = "" }
-		separator = { left = icons.ui.BoldDividerRight, right = "" },
 	},
 	progress = {
 		"progress",
@@ -159,7 +175,6 @@ return {
 		cond = function()
 			return not conditions.buffer_is_terminal()
 		end,
-		separator = { left = "", right = "" },
 	},
 	spaces = {
 		function()
@@ -181,6 +196,7 @@ return {
 		icon_only = true,
 	},
 	searchcount = {
+		color = only(P.yellow), -- an active search
 		function()
 			local sc = vim.fn.searchcount({ maxcount = 999 })
 			if sc.total == 0 then
@@ -192,9 +208,9 @@ return {
 			return vim.v.hlsearch == 1
 		end,
 		padding = { left = 2, right = 1 },
-		separator = { left = "" },
 	},
 	macrorecording = {
+		color = only(P.red), -- recording: the one state you must not miss
 		{
 			function()
 				local reg = vim.fn.reg_recording()
@@ -207,13 +223,13 @@ return {
 		padding = { left = 2, right = 1 },
 	},
 	wordcount = {
+		color = only(P.sky), -- prose buffers only
 		function()
 			return "󰈭 " .. vim.fn.wordcount().words
 		end,
 		cond = function()
 			return vim.tbl_contains({ "markdown", "text", "txt" }, vim.bo.filetype)
 		end,
-		separator = { left = "" },
 	},
 	navic = {
 		function()
@@ -231,33 +247,28 @@ return {
 		cond = function()
 			return package.loaded["noice"] and require("noice").api.status.command.has()
 		end,
-		color = function()
-			return { fg = Snacks.util.color("Statement") }
-		end,
-		separator = { left = "" },
+		color = only(P.sapphire), -- noice command in flight
 	},
 	-- stylua: ignore
 	mode_status = {
 		function() return require("noice").api.status.mode.get() end,
 		cond = function() return package.loaded["noice"] and require("noice").api.status.mode.has() end,
-		color = function() return { fg = Snacks.util.color("Constant") } end,
-		separator = { left = "" }
+		color = only(P.teal), -- noice mode (pending operator, etc.)
 	},
 	-- stylua: ignore
 	debug_status = {
 		function() return "" .. require("dap").status() end,
 		cond = function() return package.loaded["dap"] and require("dap").status() ~= "" end,
-		color = function() return { fg = Snacks.util.color("Debug") } end,
-		separator = { left = "" }
+		color = only(P.peach), -- debugger attached
 	},
 	-- stylua: ignore
 	updates_available = {
 		require("lazy.status").updates,
 		cond = require("lazy.status").has_updates,
-		color = function() return { fg = Snacks.util.color("Special") } end,
-		separator = { left = "" }
+		color = only(P.lavender), -- plugin updates waiting
 	},
 	harpoon = {
+		color = only(P.maroon), -- this file is on the harpoon list
 		function()
 			local harpoon = require("harpoon")
 			local list = harpoon:list()
@@ -275,11 +286,11 @@ return {
 		end,
 	},
 	remote_nvim = {
+		color = only(P.pink), -- editing on another host
 		function()
 			return vim.g.remote_neovim_host and ("Remote: %s"):format(vim.uv.os_gethostname()) or ""
 		end,
 		padding = { right = 1, left = 1 },
-		--separator = { left = "", right = "" },
 		cond = function()
 			return conditions.hide_in_width()
 		end,
@@ -289,7 +300,6 @@ return {
 			local edgy_util = require("util.plugins.edgy")
 			return edgy_util.get_pretty_view_string()
 		end,
-		separator = { left = "", right = icons.ui.BoldDividerLeft },
 	},
 	trouble = require("trouble").statusline({
 		mode = "lsp_document_symbols",

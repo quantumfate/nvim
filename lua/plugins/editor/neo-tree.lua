@@ -62,6 +62,13 @@ return {
 		end,
 		opts = {
 			sources = { "filesystem", "buffers", "git_status" },
+			-- Rename/create prompts go through vim.ui.input (snacks.input) instead
+			-- of neo-tree's own nui popup. The nui one is styled by neo-tree and
+			-- looked nothing like the rest of the editor: its own border, its own
+			-- title placement, its own colours. One input widget everywhere means
+			-- the prompt is recognisable before it is read.
+			use_popups_for_input = false,
+			popup_border_style = "rounded", -- for the popups that remain (preview, help)
 			open_files_do_not_replace_types = { "terminal", "Trouble", "trouble", "qf", "Outline", "edgy" },
 			filesystem = {
 				bind_to_cwd = false,
@@ -104,9 +111,7 @@ return {
 				},
 			},
 		},
-		-- Wire file move/rename events into LSP updates and refresh git status after lazygit.
 		config = function(_, opts)
-			-- Propagate a tree move/rename to LSP clients. `Snacks` is a global from snacks.nvim.
 			local function on_move(data)
 				Snacks.util.lsp.on_rename(data.source, data.destination)
 			end
@@ -117,9 +122,19 @@ return {
 				{ event = events.FILE_MOVED, handler = on_move },
 				{ event = events.FILE_RENAMED, handler = on_move },
 			})
+			local inputs = require("neo-tree.ui.inputs")
+			---@param prompt string
+			---@param default_value string?
+			---@param callback fun(input: string?)
+			---@param _options table? nui popup options, unused on this path
+			---@param completion string?
+			inputs.input = function(prompt, default_value, callback, _options, completion)
+				local title = vim.trim((tostring(prompt):gsub("[\r\n]+", " ")))
+				vim.ui.input({ prompt = title, default = default_value, completion = completion }, callback)
+			end
+
 			require("neo-tree").setup(opts)
 
-			-- Refresh the git_status source when a lazygit terminal closes.
 			vim.api.nvim_create_autocmd("TermClose", {
 				pattern = "*lazygit",
 				callback = function()

@@ -23,14 +23,12 @@ return {
 			options = {
 				always_divide_middle = true,
 				always_show_tabline = true,
-				component_separators = {
-					left = icons.ui.HollowDividerLeft,
-					right = icons.ui.HollowDividerRight,
-				},
-				section_separators = {
-					left = icons.ui.BoldDividerLeft,
-					right = icons.ui.BoldDividerRight,
-				},
+				-- Flat: no separators, no powerline arrows — same rule as the
+				-- tmux bars. Position and colour carry the grouping; drawn
+				-- glyphs between every section are chrome that has to be read
+				-- before the content is.
+				component_separators = "",
+				section_separators = "",
 				theme = color,
 				disabled_filetypes = {
 					statusline = {
