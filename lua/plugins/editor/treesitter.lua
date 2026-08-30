@@ -179,7 +179,18 @@ return {
 			motion("v", "@assignment.outer", "assignment")
 			motion("r", "@return.outer", "return")
 
-			-- `;` / `,` replay the last treesitter motion (and fall back to f/t repeat).
+			-- f/F/t/T go through the same wrapper, so one repeat key covers character
+			-- motions and structural motions alike.
+			for key, expr in pairs({
+				f = "builtin_f_expr",
+				F = "builtin_F_expr",
+				t = "builtin_t_expr",
+				T = "builtin_T_expr",
+			}) do
+				vim.keymap.set({ "n", "x", "o" }, key, repeatable[expr], { expr = true, desc = "Find " .. key })
+			end
+
+			-- `;` / `,` replay the last motion, character or structural.
 			vim.keymap.set({ "n", "x", "o" }, ";", repeatable.repeat_last_move, { desc = "Repeat last move" })
 			vim.keymap.set(
 				{ "n", "x", "o" },

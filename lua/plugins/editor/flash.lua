@@ -6,11 +6,12 @@ return {
 			search = {
 				enabled = false, -- flash off during / and ? search
 			},
+			-- Char mode is off: it takes over f/F/t/T with its own jump implementation,
+			-- which the treesitter repeat wrapper cannot see. `;` / `,` would then go
+			-- dead after every f/t move. f/F/t/T are mapped as repeatable motions in
+			-- plugins/editor/treesitter.lua instead; `s` covers what char mode offered.
 			char = {
-				enabled = true, -- flash on for f, F, t, T motions
-				-- `;` / `,` stay free for the treesitter repeatable-move wrapper in
-				-- plugins/editor/treesitter.lua, which falls back to f/t repeat.
-				keys = { "f", "F", "t", "T" },
+				enabled = false,
 			},
 		},
 	},
