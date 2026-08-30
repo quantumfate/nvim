@@ -83,17 +83,23 @@ return {
 				vim.treesitter.language.register(lang, ft)
 			end
 
-			-- Custom query directives and function textobjects from the local util module.
+			-- Custom query directives from the local util module. Function textobjects
+			-- (af/if, ac/ic, ...) come from mini.ai, which handles counts and next/last.
 			local ts_util = require("util.plugins.treesitter")
 			vim.treesitter.query.add_directive("downcase!", ts_util.case_directive(string.lower), { force = true })
 			vim.treesitter.query.add_directive("upcase!", ts_util.case_directive(string.upper), { force = true })
 
-			vim.keymap.set({ "x", "o" }, "af", function()
-				ts_util.select_function("function.outer")
-			end, { desc = "around function" })
-			vim.keymap.set({ "x", "o" }, "if", function()
-				ts_util.select_function("function.inner")
-			end, { desc = "inside function" })
+			-- Node-wise incremental selection, the treesitter answer to visual mode.
+			local ts_select = require("util.plugins.ts_select")
+			vim.keymap.set({ "n", "x" }, "<c-space>", ts_select.expand, { desc = "Expand selection to node" })
+			vim.keymap.set("x", "<bs>", ts_select.shrink, { desc = "Shrink selection to child node" })
+			vim.api.nvim_create_autocmd("ModeChanged", {
+				group = vim.api.nvim_create_augroup("ts_select_reset", { clear = true }),
+				pattern = "[vV\x16]*:[^vV\x16]*",
+				callback = function(ev)
+					ts_select.reset(ev.buf)
+				end,
+			})
 
 			-- Enable highlighting and treesitter folds for any buffer with an available parser.
 			vim.api.nvim_create_autocmd("FileType", {
@@ -127,40 +133,78 @@ return {
 		end,
 	},
 
-	-- Treesitter textobjects: jump between functions/classes/parameters.
+	-- Treesitter textobjects: structural motion (]f, [c, ...) and structural swaps.
 	{
 		"nvim-treesitter/nvim-treesitter-textobjects",
 		branch = "main",
 		event = "User FileOpened",
 		config = function()
 			local move = require("nvim-treesitter-textobjects.move")
+			local swap = require("nvim-treesitter-textobjects.swap")
+			local repeatable = require("nvim-treesitter-textobjects.repeatable_move")
 
-			-- Bind a normal/visual/operator key to a textobject move method.
-			---@param key string
+			-- Forward / backward prefixes. `-` and `_` are the layout-native pair (see
+			-- config/keymaps.lua); the bracket spellings stay as aliases.
+			local forward, backward = { "-", "]" }, { "_", "[" }
+
+			-- Bind a motion in both directions under both prefixes, wrapped so `;` / `,`
+			-- replay it.
+			---@param key string Suffix; the uppercase variant targets the node end.
 			---@param query string Textobject capture, e.g. "@function.outer"
-			---@param method string Move function name on the move module
-			---@param desc string
-			local function map(key, query, method, desc)
-				vim.keymap.set({ "n", "x", "o" }, key, function()
-					move[method](query, "textobjects")
-				end, { desc = desc, silent = true })
+			---@param label string Used to build the descriptions
+			local function motion(key, query, label)
+				local specs = {
+					{ forward, key, "goto_next_start", "Next " .. label .. " start" },
+					{ forward, key:upper(), "goto_next_end", "Next " .. label .. " end" },
+					{ backward, key, "goto_previous_start", "Prev " .. label .. " start" },
+					{ backward, key:upper(), "goto_previous_end", "Prev " .. label .. " end" },
+				}
+				for _, spec in ipairs(specs) do
+					local prefixes, suffix, method, desc = spec[1], spec[2], spec[3], spec[4]
+					local fn = repeatable.make_repeatable_move(function()
+						move[method](query, "textobjects")
+					end)
+					for _, prefix in ipairs(prefixes) do
+						vim.keymap.set({ "n", "x", "o" }, prefix .. suffix, fn, { desc = desc, silent = true })
+					end
+				end
 			end
 
-			-- Next
-			map("]f", "@function.outer", "goto_next_start", "Next Function Start")
-			map("]F", "@function.outer", "goto_next_end", "Next Function End")
-			map("]c", "@class.outer", "goto_next_start", "Next Class Start")
-			map("]C", "@class.outer", "goto_next_end", "Next Class End")
-			map("]a", "@parameter.inner", "goto_next_start", "Next Parameter Start")
-			map("]A", "@parameter.inner", "goto_next_end", "Next Parameter End")
+			motion("f", "@function.outer", "function")
+			motion("c", "@class.outer", "class")
+			motion("a", "@parameter.inner", "parameter")
+			motion("o", "@block.outer", "block")
+			motion("i", "@conditional.outer", "conditional")
+			motion("l", "@loop.outer", "loop")
+			motion("v", "@assignment.outer", "assignment")
+			motion("r", "@return.outer", "return")
 
-			-- Previous
-			map("[f", "@function.outer", "goto_previous_start", "Prev Function Start")
-			map("[F", "@function.outer", "goto_previous_end", "Prev Function End")
-			map("[c", "@class.outer", "goto_previous_start", "Prev Class Start")
-			map("[C", "@class.outer", "goto_previous_end", "Prev Class End")
-			map("[a", "@parameter.inner", "goto_previous_start", "Prev Parameter Start")
-			map("[A", "@parameter.inner", "goto_previous_end", "Prev Parameter End")
+			-- `;` / `,` replay the last treesitter motion (and fall back to f/t repeat).
+			vim.keymap.set({ "n", "x", "o" }, ";", repeatable.repeat_last_move, { desc = "Repeat last move" })
+			vim.keymap.set(
+				{ "n", "x", "o" },
+				",",
+				repeatable.repeat_last_move_opposite,
+				{ desc = "Repeat last move (reverse)" }
+			)
+
+			-- Structural swaps: exchange the node under the cursor with its sibling.
+			---@param key string Suffix after `<leader>m`; uppercase swaps backwards
+			---@param query string
+			---@param label string
+			local function swap_pair(key, query, label)
+				vim.keymap.set("n", "<leader>m" .. key, function()
+					swap.swap_next(query)
+				end, { desc = "Swap " .. label .. " forward" })
+				vim.keymap.set("n", "<leader>m" .. key:upper(), function()
+					swap.swap_previous(query)
+				end, { desc = "Swap " .. label .. " backward" })
+			end
+
+			swap_pair("a", "@parameter.inner", "parameter")
+			swap_pair("f", "@function.outer", "function")
+			swap_pair("c", "@class.outer", "class")
+			swap_pair("v", "@assignment.inner", "assignment")
 		end,
 	},
 

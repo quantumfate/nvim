@@ -30,14 +30,6 @@ local M = {
 		method = "textDocument/declaration",
 	},
 	{
-		keys = "gr",
-		func = function()
-			Snacks.picker.lsp_references()
-		end,
-		desc = "References",
-		method = "textDocument/references",
-	},
-	{
 		keys = "gI",
 		func = function()
 			Snacks.picker.lsp_implementations()

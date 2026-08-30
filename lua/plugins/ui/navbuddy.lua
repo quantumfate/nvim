@@ -1,4 +1,4 @@
---- Navbuddy (lazy.nvim spec): LSP symbol tree navigation popup, `gn` to open.
+--- Navbuddy (lazy.nvim spec): LSP symbol tree navigation popup, `<leader>cn` to open.
 
 return {
 	"hasansujon786/nvim-navbuddy",
@@ -16,7 +16,7 @@ return {
 		icons = _G.mini_icons_mt,
 	},
 	keys = {
-		{ "gn", "<cmd>Navbuddy<cr>", desc = "Navbuddy" },
+		{ "<leader>cn", "<cmd>Navbuddy<cr>", desc = "Navbuddy" },
 	},
 	--- Patches navic's comment/telescope integration, then starts navbuddy.
 	config = function(_, opts)

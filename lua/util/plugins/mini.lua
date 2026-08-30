@@ -91,6 +91,7 @@ function mini.ai_whichkey(opts)
 		{ "`", desc = "` string" },
 		{ "a", desc = "argument" },
 		{ "b", desc = ")]} block" },
+		{ "C", desc = "comment" },
 		{ "c", desc = "class" },
 		{ "d", desc = "digit(s)" },
 		{ "e", desc = "CamelCase / snake_case" },
@@ -99,13 +100,18 @@ function mini.ai_whichkey(opts)
 		{ "i", desc = "indent" },
 		{ "o", desc = "block, conditional, loop" },
 		{ "q", desc = "quote `\"'" },
+		{ "r", desc = "return statement" },
 		{ "t", desc = "tag" },
 		{ "u", desc = "use/call" },
+		{ "v", desc = "assignment (i = value)" },
 		{ "{", desc = "{} block" },
 		{ "}", desc = "{} with ws" },
 	}
 
+	-- Textobject prefixes are operator/visual only; the g[ / g] edge motions also work
+	-- in normal mode, so they are registered separately.
 	local ret = { mode = { "o", "x" } }
+	local ret_motion = { mode = { "n", "x", "o" } }
 	local mappings = vim.tbl_extend("force", {}, {
 		around = "a",
 		inside = "i",
@@ -113,22 +119,38 @@ function mini.ai_whichkey(opts)
 		inside_next = "in",
 		around_last = "al",
 		inside_last = "il",
+		goto_left = "g[",
+		goto_right = "g]",
 	}, opts.mappings or {})
-	mappings.goto_left = nil
-	mappings.goto_right = nil
+
+	-- Readable group labels for the popup, keyed by mini.ai mapping name.
+	local groups = {
+		around = "around",
+		inside = "inside",
+		around_next = "next",
+		inside_next = "next",
+		around_last = "last",
+		inside_last = "last",
+		goto_left = "goto start of",
+		goto_right = "goto end of",
+	}
 
 	for name, prefix in pairs(mappings) do
-		name = name:gsub("^around_", ""):gsub("^inside_", "")
-		ret[#ret + 1] = { prefix, group = name }
+		local group = groups[name] or name
+		local target = name:find("^goto_") and ret_motion or ret
+		target[#target + 1] = { prefix, group = group }
 		for _, obj in ipairs(objects) do
 			local desc = obj.desc
 			if prefix:sub(1, 1) == "i" then
 				desc = desc:gsub(" with ws", "")
 			end
-			ret[#ret + 1] = { prefix .. obj[1], desc = obj.desc }
+			target[#target + 1] = { prefix .. obj[1], desc = desc }
 		end
 	end
-	require("which-key").add(ret, { notify = false })
+
+	local wk = require("which-key")
+	wk.add(ret, { notify = false })
+	wk.add(ret_motion, { notify = false })
 end
 
 return mini

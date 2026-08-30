@@ -1,9 +1,5 @@
 --- which-key.nvim: popup key hints, leader group labels, and the config's window/editor keymaps.
 
--- Window dimensions sampled at load time to place the which-key popup.
-local total_width = vim.api.nvim_win_get_width(0)
-local total_height = vim.api.nvim_win_get_height(0)
-
 return {
 	"folke/which-key.nvim",
 	event = "VeryLazy",
@@ -29,9 +25,19 @@ return {
 			},
 		},
 		defaults = {},
-		-- Hide mappings that carry no description.
+		-- Hide mappings that carry no description, plus mini.surround's `n`/`l`
+		-- (next/last) suffix variants — they triple the `gs` popup for a rare action.
 		filter = function(mapping)
-			return mapping.desc ~= ""
+			if mapping.desc == "" then
+				return false
+			end
+			local lhs = mapping.lhs or ""
+			if lhs:match("^gs%a[nl]$") then
+				return false
+			end
+			-- `[` / `]` still work, but `-` / `_` are the primary spelling on this
+			-- layout; showing both doubles every motion in the popup.
+			return not lhs:match("^[%[%]]%a")
 		end,
 		-- win = {
 		-- 	no_overlap = true,
@@ -98,6 +104,7 @@ return {
 				-- Core groups
 				{ "<leader><tab>", group = "tabs" },
 				{ "<leader>h", group = "harpoon" },
+				{ "<leader>m", group = "move/swap" },
 				{ "<leader>n", group = "neogen" },
 				{ "<leader>f", group = "find" },
 				{ "<leader>fl", group = "lsp" },
@@ -142,14 +149,10 @@ return {
 				},
 				{ "<leader>z", group = "zig" },
 				-- Navigation groups
-				{
-					"[",
-					group = "prev",
-				},
-				{
-					"]",
-					group = "next",
-				},
+				{ "-", group = "next" },
+				{ "_", group = "prev" },
+				{ "[", group = "prev (legacy)" },
+				{ "]", group = "next (legacy)" },
 				{
 					"g",
 					group = "goto",
@@ -175,107 +178,4 @@ return {
 			desc = "Lazy",
 		},
 	},
-	-- Register the config's window-management and editing keymaps once which-key loads.
-	init = function()
-		local wk = require("which-key")
-
-		-- Window navigation, resize, splits, and split swapping.
-		wk.add({
-			{ "<leader>wh", "<cmd>wincmd h<cr>", desc = "Left" },
-			{ "<leader>wj", "<cmd>wincmd j<cr>", desc = "Down" },
-			{ "<leader>wk", "<cmd>wincmd k<cr>", desc = "Up" },
-			{ "<leader>wl", "<cmd>wincmd l<cr>", desc = "Right" },
-			{ "<leader>wx", "<cmd>close<cr>", desc = "Close" },
-
-			-- Resize mappings (2 lines/columns at a time)
-			{ "<leader>wH", "<cmd>vertical resize +2<cr>", desc = "Height +2" },
-			{ "<leader>wJ", "<cmd>resize +2<cr>", desc = "Width +2" },
-			{ "<leader>wK", "<cmd>resize -2<cr>", desc = "Width -2" },
-			{ "<leader>wL", "<cmd>vertical resize -2<cr>", desc = "Height -2" },
-
-			-- Splits and balance
-			{ "<leader>wv", "<cmd>vsplit<cr>", desc = "Vertical split" },
-			{ "<leader>ws", "<cmd>split<cr>", desc = "Horizontal split" },
-			{ "<leader>w=", "<cmd>wincmd =<cr>", desc = "Balance" },
-
-			-- Swap with neighbor split (file buffers only, skips trouble/edgy/etc.)
-			{
-				"<leader>w<",
-				function()
-					require("util.win-swap").swap("h")
-				end,
-				desc = "Swap with left split",
-			},
-			{
-				"<leader>w>",
-				function()
-					require("util.win-swap").swap("l")
-				end,
-				desc = "Swap with right split",
-			},
-			{
-				"<leader>w-",
-				function()
-					require("util.win-swap").swap("k")
-				end,
-				desc = "Swap with above split",
-			},
-			{
-				"<leader>w+",
-				function()
-					require("util.win-swap").swap("j")
-				end,
-				desc = "Swap with below split",
-			},
-		})
-
-		-- Editing, movement, search, and register keymaps.
-		wk.add({
-			{ "J", ":m '>+1<CR>gv=gv", desc = "Move selection down", mode = "v" },
-			{ "K", ":m '<-2<CR>gv=gv", desc = "Move selection up", mode = "v" },
-
-			{ "J", "mzJ`z", desc = "Join lines (keep cursor)", mode = "n" },
-			{ "<C-d>", "<C-d>zz", desc = "Scroll down (centered)", mode = "n" },
-			{ "<C-u>", "<C-u>zz", desc = "Scroll up (centered)", mode = "n" },
-			{ "n", "nzzzv", desc = "Next search result (centered)", mode = "n" },
-			{ "N", "Nzzzv", desc = "Prev search result (centered)", mode = "n" },
-
-			{ "<leader>P", [["_dP]], desc = "Paste without yanking selection", mode = "x" },
-			{ "<leader>D", [["_d]], desc = "Delete to black hole register", mode = { "n", "v" } },
-
-			{ "<C-c>", "<Esc>", desc = "Escape insert mode", mode = "i" },
-
-			{ "Q", "<nop>", desc = "Disable ex mode", mode = "n" },
-			{ "<C-f>", "<cmd>silent !tmux neww tmux-sessionizer<CR>", desc = "Open tmux sessionizer", mode = "n" },
-
-			{ "<C-k>", "<cmd>cnext<CR>zz", desc = "Next quickfix item", mode = "n" },
-			{ "<C-j>", "<cmd>cprev<CR>zz", desc = "Prev quickfix item", mode = "n" },
-			{ "<leader>k", "<cmd>lnext<CR>zz", desc = "Next location list item", mode = "n" },
-			{ "<leader>j", "<cmd>lprev<CR>zz", desc = "Prev location list item", mode = "n" },
-
-			{
-				"<leader>ss",
-				[[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]],
-				desc = "Search and replace word under cursor",
-				mode = "n",
-			},
-			{
-				"<leader>sn",
-				function()
-					vim.cmd("nohlsearch")
-				end,
-				desc = "Remove current search pattern",
-				mode = "n",
-			},
-		})
-		wk.add({
-			{
-				"<leader>fr",
-				desc = "Copy file path relative of root to clipboard",
-				function()
-					vim.fn.system({ "wl-copy" }, require("util.root").get_relative_fp())
-				end,
-			},
-		})
-	end,
 }

@@ -9,6 +9,12 @@ return {
 		local ai = require("mini.ai")
 		return {
 			n_lines = 500,
+			-- Edge motions follow the layout scheme in config/keymaps.lua:
+			-- `-` forward / `_` backward. `g[` and `g]` are kept there as aliases.
+			mappings = {
+				goto_left = "g_",
+				goto_right = "g-",
+			},
 			custom_textobjects = {
 				o = ai.gen_spec.treesitter({ -- code block
 					a = { "@block.outer", "@conditional.outer", "@loop.outer" },
@@ -16,6 +22,9 @@ return {
 				}),
 				f = ai.gen_spec.treesitter({ a = "@function.outer", i = "@function.inner" }), -- function
 				c = ai.gen_spec.treesitter({ a = "@class.outer", i = "@class.inner" }), -- class
+				v = ai.gen_spec.treesitter({ a = "@assignment.outer", i = "@assignment.rhs" }), -- assignment / its value
+				r = ai.gen_spec.treesitter({ a = "@return.outer", i = "@return.inner" }), -- return statement
+				C = ai.gen_spec.treesitter({ a = "@comment.outer", i = "@comment.inner" }), -- comment
 				t = { "<([%p%w]-)%f[^<%w][^<>]->.-</%1>", "^<.->().*()</[^/]->$" }, -- tags
 				d = { "%f[%d]%d+" }, -- digits
 				e = { -- word with case
