@@ -190,7 +190,8 @@ M.views = {
 
 ---@return string pretty_name Name in a pretty format or an empty string
 function M.get_pretty_view_string()
-	local pretty_name = internal.views[state.current].pretty_name
+	local view = state.current and internal.views[state.current]
+	local pretty_name = view and view.pretty_name
 	return pretty_name and " " .. pretty_name or ""
 end
 

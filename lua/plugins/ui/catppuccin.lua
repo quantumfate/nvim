@@ -61,7 +61,10 @@ return {
 				-- for the one active thing on screen.
 				FloatBorder = { fg = colors.surface1, bg = colors.base },
 				FloatTitle = { fg = colors.overlay1, bg = colors.base },
-				WinSeparator = { fg = colors.base },
+				-- Splits get a real rule again: surface1 is one step off the
+				-- background, enough to see where a docked panel starts and stops
+				-- without framing the screen in colour.
+				WinSeparator = { fg = colors.surface1, bg = colors.base },
 				BlinkCmpMenuBorder = { link = "FloatBorder" },
 
 				BlinkCmpKindAvante = { fg = colors.mauve },
@@ -82,7 +85,7 @@ return {
 				NoiceConfirmBorder = { link = "FloatBorder" },
 				-- Edgy window backgrounds and borders
 				EdgyNormal = { bg = colors.base },
-				EdgyWinBar = { fg = colors.overlay1, bg = colors.base },
+				EdgyWinBar = { fg = colors.mauve, bg = colors.base, bold = true },
 				EdgyWinBarInactive = { fg = colors.overlay0, bg = colors.base },
 				EdgyTitle = { fg = colors.overlay1, bg = colors.base },
 				EdgyTitleInactive = { fg = colors.overlay0, bg = colors.base },
@@ -175,10 +178,10 @@ return {
 				-- Neo-tree, mauve accent
 				NeoTreeNormal = { bg = colors.base },
 				NeoTreeNormalNC = { bg = colors.base },
-				-- The sidebar is separated from the code by the gap between them,
-				NeoTreeWinSeparator = { fg = colors.base, bg = colors.base },
-				-- not by a coloured rule down the middle of the screen.
-				NeoTreeBorder = { fg = colors.base, bg = colors.base },
+				-- The tree is an edgy panel like the rest, so it carries the same
+				-- quiet rule on its edge.
+				NeoTreeWinSeparator = { link = "WinSeparator" },
+				NeoTreeBorder = { link = "WinSeparator" },
 				NeoTreeTitleBar = { fg = colors.overlay1, bg = colors.base },
 				NeoTreeFloatBorder = { link = "FloatBorder" },
 				NeoTreeFloatTitle = { fg = colors.mauve, bg = colors.base },

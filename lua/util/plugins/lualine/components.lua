@@ -300,9 +300,14 @@ return {
 	},
 	view = {
 		function()
-			local edgy_util = require("util.plugins.edgy")
-			return edgy_util.get_pretty_view_string()
+			return require("util.plugins.edgy").get_pretty_view_string()
 		end,
+		-- Only rendered while a panel view is open, so the colour marks the
+		-- edgy layout as active the same way the panel icons do.
+		cond = function()
+			return require("util.plugins.edgy").get_current_view() ~= nil
+		end,
+		color = only(P.mauve), -- an edgy panel view is open
 	},
 	trouble = require("trouble").statusline({
 		mode = "lsp_document_symbols",

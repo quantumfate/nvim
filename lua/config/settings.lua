@@ -62,13 +62,15 @@ local default_options = {
 	winborder = "rounded", -- every float gets the same border (nvim 0.11+)
 	fillchars = {
 		eob = " ", -- no "~" column past the end of the buffer
-		vert = " ", -- splits are separated by whitespace, not by a drawn rule
-		horiz = " ",
-		horizup = " ",
-		horizdown = " ",
-		vertleft = " ",
-		vertright = " ",
-		verthoriz = " ",
+		-- Splits carry a thin rule so a docked panel has a visible edge; the
+		-- rule stays quiet through WinSeparator (surface1), not through weight.
+		vert = "│",
+		horiz = "─",
+		horizup = "┴",
+		horizdown = "┬",
+		vertleft = "┤",
+		vertright = "├",
+		verthoriz = "┼",
 		fold = " ",
 	},
 }
