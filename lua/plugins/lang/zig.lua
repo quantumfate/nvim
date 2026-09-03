@@ -7,27 +7,24 @@ return {
 		vim.g.zig_fmt_autosave = 0
 	end,
 	config = function()
-		--- Nearest directory containing build.zig, or nil for standalone files.
+		local root = require("util.root")
+
+		--- Nearest directory containing build.zig, or nil for standalone files. The
+		--- pattern detector stops at the first match rather than falling back to cwd,
+		--- which is what makes "is this a workspace?" answerable below.
+		---@param buf integer
 		---@return string|nil
-		local function project_root()
-			local start = vim.api.nvim_buf_get_name(0)
-			start = start ~= "" and vim.fs.dirname(start) or vim.uv.cwd()
-			local found = vim.fs.find("build.zig", { upward = true, path = start })[1]
-			return found and vim.fs.dirname(found) or nil
+		local function project_root(buf)
+			return root.detectors.pattern(buf, "build.zig")[1]
 		end
 
-		--- Directory of the current buffer, falling back to cwd for unsaved buffers.
-		---@return string
-		local function buffer_dir()
-			local path = vim.api.nvim_buf_get_name(0)
-			return path ~= "" and vim.fs.dirname(path) or vim.uv.cwd()
-		end
-
-		--- Run `zig ...` inside a stacked Snacks terminal rooted at the project (if any).
+		--- Run `zig ...` inside a stacked Snacks terminal rooted at the project, or at
+		--- the buffer's own root (lsp / .git / cwd) for a file with no build.zig.
+		---@param buf integer
 		---@param args string[] Arguments passed after the `zig` executable
-		local function zig_term(args)
+		local function zig_term(buf, args)
 			Snacks.terminal(vim.list_extend({ "zig" }, args), {
-				cwd = project_root() or buffer_dir(),
+				cwd = project_root(buf) or root.get({ buf = buf }),
 			})
 		end
 
@@ -39,40 +36,31 @@ return {
 				local path = vim.fs.normalize(vim.api.nvim_buf_get_name(buf))
 
 				vim.keymap.set("n", "<leader>zb", function()
-					zig_term({ "build" })
+					zig_term(buf, { "build" })
 				end, { buffer = buf, desc = "Zig Build" })
 
 				-- Project workspaces route through build.zig; lone files compile directly.
 				vim.keymap.set("n", "<leader>zr", function()
-					if project_root() then
-						zig_term({ "build", "run" })
+					if project_root(buf) then
+						zig_term(buf, { "build", "run" })
 					else
-						zig_term({ "run", path })
+						zig_term(buf, { "run", path })
 					end
 				end, { buffer = buf, desc = "Zig Run" })
 
 				vim.keymap.set("n", "<leader>zt", function()
-					if project_root() then
-						zig_term({ "build", "test" })
+					if project_root(buf) then
+						zig_term(buf, { "build", "test" })
 					else
-						zig_term({ "test", path })
+						zig_term(buf, { "test", path })
 					end
 				end, { buffer = buf, desc = "Zig Test" })
 
 				-- Parse/AST lint without compiling; catches syntax errors fast.
 				vim.keymap.set("n", "<leader>za", function()
-					zig_term({ "ast-check", path })
+					zig_term(buf, { "ast-check", path })
 				end, { buffer = buf, desc = "Zig Ast-check" })
 			end,
 		})
-
-		-- zls is provisioned by Mason automatically; the compiler must be installed manually.
-		if vim.fn.executable("zig") == 0 then
-			vim.notify(
-				"**zig** not found in PATH, please install it.\nhttps://ziglang.org/download/",
-				vim.log.levels.ERROR,
-				{ title = "zig.vim" }
-			)
-		end
 	end,
 }

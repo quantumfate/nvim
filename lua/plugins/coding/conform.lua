@@ -60,11 +60,12 @@ return {
 	opts = {
 		formatters_by_ft = {
 			lua = { "stylua" },
-			python = { "ruff_format", "black" },
+			-- ruff replaces black/isort: same layout, one tool, one config file.
+			python = { "ruff_organize_imports", "ruff_format" },
 			javascript = { "deno_fmt", "prettierd", "prettier" },
 			typescript = { "deno_fmt", "prettierd", "prettier" },
-			javascriptreact = { "prettierd", "prettier" },
-			typescriptreact = { "prettierd", "prettier" },
+			javascriptreact = { "deno_fmt", "prettierd", "prettier" },
+			typescriptreact = { "deno_fmt", "prettierd", "prettier" },
 			vue = { "prettierd", "prettier" },
 			svelte = { "prettierd", "prettier" },
 			json = { "prettierd", "prettier" },
@@ -81,7 +82,11 @@ return {
 			go = { "goimports", "gofmt" },
 			just = { "just" },
 			rust = { "rustfmt" },
-			zig = { "zigfmt" },
+			-- `.zon` files carry filetype `zig`, but their grammar is not Zig's.
+			zig = function(bufnr)
+				local name = vim.api.nvim_buf_get_name(bufnr)
+				return { name:sub(-4) == ".zon" and "zonfmt" or "zigfmt" }
+			end,
 			toml = { "taplo" },
 			c = { "clang-format" },
 			cpp = { "clang-format" },
@@ -123,6 +128,13 @@ return {
 				args = { "fmt", "--stdin" },
 				stdin = true,
 			},
+			-- Same formatter, ZON grammar. Over stdin there is no extension to infer
+			-- it from, so the mode has to be stated.
+			zonfmt = {
+				command = "zig",
+				args = { "fmt", "--stdin", "--zon" },
+				stdin = true,
+			},
 			shfmt = {
 				prepend_args = { "-i", "4" }, -- 4 space indent
 			},
@@ -130,6 +142,13 @@ return {
 				env = {
 					PRETTIERD_LOCAL_PRETTIER_ONLY = "1",
 				},
+			},
+			-- conform picks the first formatter that is merely *installed*, so an
+			-- unguarded deno would reformat every npm project on this machine.
+			deno_fmt = {
+				condition = function(_, ctx)
+					return require("util.root").detectors.pattern(ctx.buf, { "deno.json", "deno.jsonc" })[1] ~= nil
+				end,
 			},
 		},
 	},

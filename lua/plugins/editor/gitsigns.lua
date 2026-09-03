@@ -20,7 +20,7 @@ return {
 				topdelete = { text = "" },
 				changedelete = { text = "▎" },
 			},
-			signcolumn = false,
+			signcolumn = true,
 			attach_to_untracked = true,
 			current_line_blame = true, -- Toggle with `:Gitsigns toggle_current_line_blame`
 			current_line_blame_opts = {
@@ -34,32 +34,75 @@ return {
 			on_attach = function(bufnr)
 				local gitsigns = require("gitsigns")
 				local wk = require("which-key")
+
+				--- Wrap a direction-taking move so `;` / `,` replay it, joining the single
+				--- rotation editor/treesitter.lua sets up for f/t and structural motions.
+				--- The plugin flips `opts.forward` for `,`, so the move itself must read
+				--- that field rather than close over a fixed direction.
+				---@param move fun(forward: boolean)
+				---@return fun(forward: boolean)
+				local function repeatable(move)
+					local ok, rm = pcall(require, "nvim-treesitter-textobjects.repeatable_move")
+					if not ok then
+						return move
+					end
+					local wrapped = rm.make_repeatable_move(function(opts)
+						move(opts.forward)
+					end)
+					return function(forward)
+						wrapped({ forward = forward })
+					end
+				end
+
+				--- Jump to a hunk, honouring a count and wrapping at the ends of the file,
+				--- so holding the key cycles the buffer instead of stopping at the last one.
+				---@type fun(forward: boolean)
+				local hunk = repeatable(function(forward)
+					gitsigns.nav_hunk(forward and "next" or "prev", { count = vim.v.count1, wrap = true })
+				end)
+
+				--- The outermost hunk in each direction.
+				---@type fun(forward: boolean)
+				local edge_hunk = repeatable(function(forward)
+					gitsigns.nav_hunk(forward and "last" or "first")
+				end)
+
+				--- In a diff split the buffer is one big hunk, so gitsigns has nothing to
+				--- navigate; hand those windows back to vim's own ]c/[c.
+				---@type fun(forward: boolean)
+				local change = repeatable(function(forward)
+					if vim.wo.diff then
+						vim.cmd.normal({ forward and "]c" or "[c", bang = true })
+					else
+						gitsigns.nav_hunk(forward and "next" or "prev", { count = vim.v.count1, wrap = true })
+					end
+				end)
+
+				--- Bind one direction of a repeatable move.
+				---@param move fun(forward: boolean)
+				---@param forward boolean
+				---@return fun()
+				local function go(move, forward)
+					return function()
+						move(forward)
+					end
+				end
+
 				wk.add({
-					-- Navigation
-					{
-						"]c",
-						function()
-							if vim.wo.diff then
-								vim.cmd.normal({ "]c", bang = true })
-							else
-								gitsigns.nav_hunk("next")
-							end
-						end,
-						desc = "Next Hunk",
-						buffer = bufnr,
-					},
-					{
-						"[c",
-						function()
-							if vim.wo.diff then
-								vim.cmd.normal({ "[c", bang = true })
-							else
-								gitsigns.nav_hunk("prev")
-							end
-						end,
-						desc = "Prev Hunk",
-						buffer = bufnr,
-					},
+					-- Navigation. `-`/`_` are remapped to `]`/`[` in config/keymaps.lua,
+					-- so these are reachable as -h/_h and -H/_H too. `;` repeats the last
+					-- jump, `,` repeats it in the opposite direction.
+					{ "]h", go(hunk, true), desc = "Next Hunk", buffer = bufnr },
+					{ "[h", go(hunk, false), desc = "Prev Hunk", buffer = bufnr },
+					{ "]H", go(edge_hunk, true), desc = "Last Hunk", buffer = bufnr },
+					{ "[H", go(edge_hunk, false), desc = "First Hunk", buffer = bufnr },
+
+					-- Kept for muscle memory and for diff splits, where ]c is vim's own.
+					-- Being buffer-local, these shadow the global @class motion that
+					-- editor/treesitter.lua binds to the same keys, but only in a buffer
+					-- gitsigns attached to. ]h has no such clash.
+					{ "]c", go(change, true), desc = "Next Hunk", buffer = bufnr },
+					{ "[c", go(change, false), desc = "Prev Hunk", buffer = bufnr },
 
 					-- Actions
 					{ "<leader>gs", gitsigns.stage_hunk, desc = "Stage Hunk", buffer = bufnr },

@@ -28,16 +28,24 @@ row in the registry — the role, the docs and the editor all follow.
 
 ## What the role does
 
-1. **Refuses to install into a stale system.** `checkupdates` must be empty —
-   mixing new packages into a system that is behind is a partial upgrade, which is
-   how Arch breaks. Override with `nvim_require_current_system=false`.
-2. **Installs every package** in one yay transaction (repo and AUR alike).
-3. **Runs the bootstrap steps** no package can cover: rustup components, luarocks
+1. **Refuses to install against a sync database that is ahead of the system.**
+   Nothing here passes `-y`, so `pacman -Qu` must be empty: installing resolves
+   against the local database, and it is safe exactly while that database and the
+   installed packages agree. A database someone already refreshed is what turns an
+   install into a partial upgrade. Whether the mirrors hold something newer does
+   not matter. Override with `nvim_require_consistent_db=false`.
+2. **Removes packages the toolchain replaces** (`nvim_conflicting_packages`),
+   since pacman refuses a transaction whose members conflict — the repo `zls`
+   against the AUR `zls-bin` that matches the installed compiler.
+3. **Installs every package** in one yay transaction (repo and AUR alike).
+4. **Runs the bootstrap steps** no package can cover: rustup components, luarocks
    rocks, `cargo install bacon-ls`, and the unpackaged lua debug adapter. Each step
    is idempotent and guarded by `creates`.
-4. **Links the config**, refusing to clobber a checkout with uncommitted changes.
-5. **Syncs the plugins** with `nvim --headless "+Lazy! sync" +qa`.
-6. **Refreshes the tool store** and fails if a required tool is missing.
+5. **Links the config**, refusing to clobber a checkout with uncommitted changes.
+6. **Syncs the plugins** with `nvim --headless "+Lazy! sync" +qa`.
+7. **Builds the treesitter parsers** with `nvim --headless "+TSSyncInstall" +qa`;
+   the editor's own install is async and would lose the race with `+qa`.
+8. **Refreshes the tool store** and fails if a required tool is missing.
 
 ## The tool store
 

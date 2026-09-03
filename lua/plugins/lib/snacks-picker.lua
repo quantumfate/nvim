@@ -61,7 +61,7 @@ return {
 			desc = "Command History",
 		},
 		{
-			"<leader>fb",
+			"<leader>dbf",
 			-- Collects all DAP breakpoints into a picker that jumps to the chosen line.
 			function()
 				local breakpoints = require("dap.breakpoints").get()

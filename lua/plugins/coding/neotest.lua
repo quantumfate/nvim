@@ -197,7 +197,7 @@ return {
 	end,
 	keys = {
 		{
-			"<leader>Td",
+			"<leader>dt",
 			function()
 				require("neotest").run.run({ strategy = "dap" })
 			end,

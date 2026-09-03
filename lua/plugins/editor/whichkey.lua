@@ -5,9 +5,9 @@ return {
 	event = "VeryLazy",
 	opts_extend = { "spec" },
 	opts = {
-		preset = "helix",
+		preset = "classic",
 		plugins = {
-			marks = false,
+			marks = true,
 			registers = true, -- show registers on " and <C-r>
 			spelling = {
 				enabled = false,
@@ -15,30 +15,30 @@ return {
 			},
 			-- Built-in help presets; none create keymaps.
 			presets = {
-				operators = false,
-				motions = false,
-				text_objects = false,
-				windows = false,
-				nav = false,
+				operators = true,
+				motions = true,
+				text_objects = true,
+				windows = true,
+				nav = true,
 				z = true, -- fold/spelling bindings prefixed with z
-				g = false,
+				g = true,
 			},
 		},
 		defaults = {},
 		-- Hide mappings that carry no description, plus mini.surround's `n`/`l`
 		-- (next/last) suffix variants — they triple the `gs` popup for a rare action.
-		filter = function(mapping)
-			if mapping.desc == "" then
-				return false
-			end
-			local lhs = mapping.lhs or ""
-			if lhs:match("^gs%a[nl]$") then
-				return false
-			end
-			-- `[` / `]` still work, but `-` / `_` are the primary spelling on this
-			-- layout; showing both doubles every motion in the popup.
-			return not lhs:match("^[%[%]]%a")
-		end,
+		-- filter = function(mapping)
+		-- 	if mapping.desc == "" then
+		-- 		return false
+		-- 	end
+		-- 	local lhs = mapping.lhs or ""
+		-- 	if lhs:match("^gs%a[nl]$") then
+		-- 		return false
+		-- 	end
+		-- 	-- `[` / `]` still work, but `-` / `_` are the primary spelling on this
+		-- 	-- layout; showing both doubles every motion in the popup.
+		-- 	return not lhs:match("^[%[%]]%a")
+		-- end,
 		-- win = {
 		-- 	no_overlap = true,
 		-- 	width = 100,

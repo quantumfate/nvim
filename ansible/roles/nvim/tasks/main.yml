@@ -38,26 +38,38 @@
   check_mode: false
 
 - name: Guard against a partial upgrade
-  # Pulling a new package into a system that is behind is what breaks Arch. With
-  # nothing to install, database age does not matter.
-  when: nvim_require_current_system and nvim_missing_packages.stdout_lines | length > 0
+  when: nvim_require_consistent_db and nvim_missing_packages.stdout_lines | length > 0
   block:
-    - name: Check for pending system updates
-      ansible.builtin.command: checkupdates
-      register: nvim_pending_updates
+    - name: Check whether the sync database is ahead of the system
+      # -Qu reads the local database only: no network, no refresh.
+      ansible.builtin.command: pacman -Qu
+      register: nvim_db_ahead
       changed_when: false
-      # checkupdates exits 2 when there is nothing to do.
-      failed_when: nvim_pending_updates.rc not in [0, 2]
+      # -Qu exits 1 when nothing is upgradable, which is the state we want.
+      failed_when: nvim_db_ahead.rc not in [0, 1]
       check_mode: false
 
     - name: Abort — installing now would be a partial upgrade
       ansible.builtin.fail:
         msg: >-
           {{ nvim_missing_packages.stdout_lines | length }} package(s) to install
-          ({{ nvim_missing_packages.stdout_lines | join(', ') | truncate(120) }}) while
-          {{ nvim_pending_updates.stdout_lines | length }} package(s) are out of date.
-          Run a full `yay -Syu` first. Set nvim_require_current_system=false to override.
-      when: nvim_pending_updates.stdout_lines | length > 0
+          ({{ nvim_missing_packages.stdout_lines | join(', ') | truncate(120) }}) while the
+          sync database is already ahead of {{ nvim_db_ahead.stdout_lines | length }}
+          installed package(s) ({{ nvim_db_ahead.stdout_lines | join(', ') | truncate(120) }}).
+          Finish the upgrade with `yay -Syu` first.
+          Set nvim_require_consistent_db=false to override.
+      when: nvim_db_ahead.stdout_lines | length > 0
+
+- name: Drop packages the toolchain replaces
+  # pacman refuses a transaction whose members conflict, and nothing else removes
+  # these. A name the registry itself wants is never a conflict.
+  when:
+    - nvim_install_packages
+    - nvim_conflicting_packages | difference(nvim_wanted_packages) | length > 0
+  community.general.pacman:
+    name: "{{ nvim_conflicting_packages | difference(nvim_wanted_packages) }}"
+    state: absent
+  become: true
 
 - name: Install the toolchain packages
   when: nvim_install_packages and nvim_missing_packages.stdout_lines | length > 0
@@ -201,6 +213,36 @@
     - name: Re-raise the plugin sync failure
       ansible.builtin.fail:
         msg: "{{ ansible_failed_result.msg | default('lazy.nvim sync failed') }}"
+
+- name: Build the treesitter parsers headlessly
+  # The editor installs missing parsers asynchronously on startup, which loses its
+  # race with `+qa`; TSSyncInstall is the blocking form.
+  when: nvim_install_parsers
+  become: false
+  block:
+    - name: Install every missing parser
+      ansible.builtin.command: nvim --headless "+TSSyncInstall" +qa
+      register: nvim_ts_install
+      changed_when: "'Installed' in (nvim_ts_install.stderr | default(''))"
+      timeout: 1800
+  rescue:
+    - name: Report the parser build failure
+      ansible.builtin.command:
+        argv:
+          - "{{ nvim_notify_script }}"
+          - --phase
+          - parsers
+          - --exit
+          - "1"
+          - --detail
+          - "{{ ansible_failed_result.msg | default('treesitter parser install failed') | truncate(300) }}"
+      changed_when: false
+      when: nvim_notify_failures
+
+    # Parsers rebuild on demand in the editor; a failure here is not fatal.
+    - name: Continue past the parser build failure
+      ansible.builtin.debug:
+        msg: "treesitter parser install failed; the editor will retry on first use"
 
 - name: Refresh the tool store
   # Neovim owns the store; the role only asks for a re-probe, then reads it.

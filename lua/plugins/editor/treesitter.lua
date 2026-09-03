@@ -15,7 +15,7 @@ return {
 		build = ":TSUpdate",
 		branch = "main",
 		event = { "VeryLazy" },
-		cmd = { "TSUpdate", "TSInstall", "TSUninstall" },
+		cmd = { "TSUpdate", "TSInstall", "TSUninstall", "TSSyncInstall" },
 		opts = {
 			ensure_installed = {
 				"bash",
@@ -23,10 +23,21 @@ return {
 				"cpp",
 				"css",
 				"diff",
+				"dockerfile",
+				"git_config",
+				"gitcommit",
+				"gitignore",
 				"go",
+				"gomod",
+				"gosum",
+				"gowork",
 				"html",
 				"javascript",
 				"jsdoc",
+				-- Injected into templated yaml scalars by after/queries/yaml/injections.scm.
+				-- jinja parses the delimiters, jinja_inline the expression inside.
+				"jinja",
+				"jinja_inline",
 				"json",
 				"latex",
 				"lua",
@@ -52,6 +63,7 @@ return {
 				"vue",
 				"xml",
 				"yaml",
+				-- No `zon` grammar upstream; .zon files fall back to the zig parser.
 				"zig",
 				"qmljs",
 			},
@@ -64,14 +76,30 @@ return {
 			local ts = require("nvim-treesitter")
 			ts.setup(opts)
 
-			local installed = ts.get_installed and ts.get_installed() or {}
-			local to_install = vim.tbl_filter(function(lang)
-				return not vim.tbl_contains(installed, lang)
-			end, opts.ensure_installed or {})
+			--- Parsers from `ensure_installed` that are not on disk yet.
+			---@return string[]
+			local function missing_parsers()
+				local installed = ts.get_installed and ts.get_installed() or {}
+				return vim.tbl_filter(function(lang)
+					return not vim.tbl_contains(installed, lang)
+				end, opts.ensure_installed or {})
+			end
 
+			local to_install = missing_parsers()
 			if #to_install > 0 then
 				ts.install(to_install)
 			end
+
+			-- Blocking form of the install above, for `nvim --headless` provisioning:
+			-- the async one loses its race with `+qa`.
+			vim.api.nvim_create_user_command("TSSyncInstall", function()
+				local pending = missing_parsers()
+				if #pending == 0 then
+					return
+				end
+				-- Compiling this many grammars from scratch is minutes, not seconds.
+				ts.install(pending):wait(600000)
+			end, { desc = "Install every missing parser, blocking until done" })
 
 			-- Compound filetypes have no parser of their own; point them at their base grammar
 			-- so highlight/indent/folds work in e.g. Ansible playbooks.

@@ -376,14 +376,46 @@ return {
 			dap.configurations.cpp = dap.configurations.rust
 
 			-- Zig (codelldb debugs any ELF binary; sourceLanguages improves stdlib frame rendering)
+
+			--- Build the project, then hand codelldb an executable out of zig-out/bin.
+			--- Prompting for a path before building is how you end up debugging a stale
+			--- binary, or none at all.
+			---@return thread|string
+			local function zig_executable()
+				local util_root = require("util.root")
+				local buf = vim.api.nvim_get_current_buf()
+				-- `zig build` only means anything from the directory holding build.zig.
+				local root = util_root.detectors.pattern(buf, "build.zig")[1] or util_root.get({ buf = buf })
+				local build = vim.system({ "zig", "build" }, { cwd = root, text = true }):wait()
+				if build.code ~= 0 then
+					error("zig build failed:\n" .. (build.stderr or ""))
+				end
+
+				local candidates = vim.fn.glob(root .. "/zig-out/bin/*", false, true)
+				if #candidates == 0 then
+					return vim.fn.input("Path to executable: ", root .. "/zig-out/bin/", "file")
+				end
+				if #candidates == 1 then
+					return candidates[1]
+				end
+
+				-- More than one artifact: ask, but only among what the build produced.
+				local co = coroutine.running()
+				vim.ui.select(candidates, {
+					prompt = "Zig executable",
+					format_item = vim.fs.basename,
+				}, function(choice)
+					coroutine.resume(co, choice)
+				end)
+				return coroutine.yield()
+			end
+
 			dap.configurations.zig = {
 				{
 					name = "Launch",
 					type = "codelldb",
 					request = "launch",
-					program = function()
-						return vim.fn.input("Path to executable: ", vim.fn.getcwd() .. "/zig-out/bin/", "file")
-					end,
+					program = zig_executable,
 					cwd = "${workspaceFolder}",
 					stopOnEntry = false,
 					sourceLanguages = { "zig" },

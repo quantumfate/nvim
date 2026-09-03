@@ -9,6 +9,25 @@
 ---@field init_options? table Initialization options passed to server
 ---@field capabilities? table Server capability overrides
 
+--- Where the distro package puts @vue/typescript-plugin. Volar 3 needs tsserver to
+--- load it before ts_ls can answer anything inside a .vue file.
+---@return string|nil
+local function find_vue_typescript_plugin()
+	local candidates = {
+		"/usr/lib/node_modules/@vue/language-server/node_modules/@vue/typescript-plugin",
+		"/usr/lib/node_modules/@vue/typescript-plugin",
+		"/usr/lib/vue-language-server/node_modules/@vue/typescript-plugin",
+	}
+	for _, path in ipairs(candidates) do
+		if vim.uv.fs_stat(path) then
+			return path
+		end
+	end
+	return nil
+end
+
+local vue_typescript_plugin = find_vue_typescript_plugin()
+
 ---@type table<string, LspServerConfig>
 local M = {
 	lua_ls = {
@@ -87,7 +106,9 @@ local M = {
 
 	ts_ls = {
 		cmd = { "typescript-language-server", "--stdio" },
-		filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+		filetypes = vue_typescript_plugin
+				and { "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" }
+			or { "javascript", "javascriptreact", "typescript", "typescriptreact" },
 		root_markers = { "package.json", "tsconfig.json", "jsconfig.json", ".git" },
 		init_options = {
 			preferences = {
@@ -95,6 +116,16 @@ local M = {
 				includeCompletionsForModuleExports = true,
 				includeCompletionsWithSnippetText = true,
 			},
+			-- Volar 3 hybrid mode: tsserver itself resolves .vue modules through this
+			-- plugin, so `vue` joins ts_ls's filetypes below. Absent when the package
+			-- is not installed, in which case ts_ls stays a plain TS server.
+			plugins = vue_typescript_plugin and {
+				{
+					name = "@vue/typescript-plugin",
+					location = vue_typescript_plugin,
+					languages = { "vue" },
+				},
+			} or nil,
 		},
 		settings = {
 			typescript = {
@@ -176,7 +207,8 @@ local M = {
 				globPattern = "*@(.sh|.inc|.bash|.command|PKGBUILD)",
 			},
 		},
-		filetypes = { "sh", "bash", "PKGBUILD" },
+		-- PKGBUILD resolves to filetype `bash`; globPattern is what actually picks it up.
+		filetypes = { "sh", "bash" },
 	},
 
 	clangd = {
@@ -256,6 +288,10 @@ local M = {
 			"tailwind.config.mjs",
 			"postcss.config.js",
 			"postcss.config.cjs",
+			"postcss.config.mjs",
+			-- Tailwind v4 configures itself from `@import "tailwindcss"` in a stylesheet,
+			-- so a project can legitimately have no config file at all.
+			"package.json",
 		},
 	},
 
@@ -286,14 +322,18 @@ local M = {
 		root_markers = { ".marksman.toml", ".git" },
 	},
 
-	vuels = {
+	-- Volar 3. TypeScript inside an SFC is answered by ts_ls through the
+	-- @vue/typescript-plugin wired into its init_options above; vue_ls owns the
+	-- template, style and script-setup halves.
+	vue_ls = {
 		cmd = { "vue-language-server", "--stdio" },
 		filetypes = { "vue" },
-		root_markers = { "package.json", "vue.config.js" },
+		root_markers = { "package.json", "vue.config.js", "vite.config.ts", ".git" },
 	},
 	zls = {
 		cmd = { "zls" },
-		filetypes = { "zig", "zir" },
+		-- `.zon` files resolve to filetype `zig` (runtime filetype.lua); zls reads both.
+		filetypes = { "zig" },
 		root_markers = { "zls.json", "build.zig", "build.zig.zon", ".git" },
 		settings = {
 			-- ZLS 0.16 settings (see `zls --show-config-path` / zigtools schema).
@@ -301,9 +341,9 @@ local M = {
 				enable_snippets = true,
 				enable_argument_placeholders = true,
 				completion_label_details = true,
-				-- Build-on-save: null by default auto-enables when build.zig declares a
-				-- 'check' step; force it on so plain projects still get compile errors.
-				enable_build_on_save = true,
+				-- enable_build_on_save is deliberately unset: ZLS's default enables it
+				-- only when build.zig declares the `check` step named below. Forcing it
+				-- on makes every project without that step fail the build on each save.
 				build_on_save_args = { "check" },
 				semantic_tokens = "full",
 				warn_style = false,
@@ -334,6 +374,54 @@ local M = {
 			end,
 		},
 	},
+	-- Lint diagnostics, import sorting and quick fixes; basedpyright is types only.
+	ruff = {
+		cmd = { "ruff", "server" },
+		filetypes = { "python" },
+		root_markers = { "pyproject.toml", "ruff.toml", ".ruff.toml", ".git" },
+		init_options = {
+			settings = {
+				-- conform runs `ruff format` on save; the server only lints and fixes.
+				lineLength = 88,
+				fixAll = true,
+				organizeImports = true,
+			},
+		},
+	},
+
+	html = {
+		cmd = { "vscode-html-language-server", "--stdio" },
+		filetypes = { "html", "templ" },
+		root_markers = { "package.json", ".git" },
+		-- The server does nothing until told which snippets to offer.
+		init_options = {
+			provideFormatter = false, -- prettier via conform
+			embeddedLanguages = { css = true, javascript = true },
+			configurationSection = { "html", "css", "javascript" },
+		},
+	},
+
+	cssls = {
+		cmd = { "vscode-css-language-server", "--stdio" },
+		filetypes = { "css", "scss", "less" },
+		root_markers = { "package.json", ".git" },
+		init_options = { provideFormatter = false },
+		settings = {
+			-- Tailwind's at-rules are unknown to the plain CSS grammar.
+			css = { validate = true, lint = { unknownAtRules = "ignore" } },
+			scss = { validate = true, lint = { unknownAtRules = "ignore" } },
+			less = { validate = true },
+		},
+	},
+
+	dockerls = {
+		cmd = { "docker-langserver", "--stdio" },
+		filetypes = { "dockerfile" },
+		root_markers = { "Dockerfile", "Containerfile", ".git" },
+		-- hadolint via nvim-lint owns the rule diagnostics; this is completion only.
+		settings = { docker = { languageserver = { formatter = { ignoreMultilineInstructions = true } } } },
+	},
+
 	--codebook = {},
 }
 

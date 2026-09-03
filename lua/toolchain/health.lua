@@ -21,6 +21,57 @@ local function under(path, prefixes)
 	return false
 end
 
+--- First dotted version in a `--version` line, trimmed to `level` components.
+---@param version string?
+---@param level "major"|"minor"
+---@return string?
+local function version_key(version, level)
+	if not version then
+		return nil
+	end
+	local major, minor = version:match("(%d+)%.(%d+)")
+	if not major then
+		return nil
+	end
+	return level == "major" and major or (major .. "." .. minor)
+end
+
+--- Report every registry version pair whose members disagree.
+---@param doc table Store document
+local function check_version_pairs(doc)
+	for _, pair in ipairs(registry.version_pairs) do
+		local found = {}
+		for _, tool in ipairs((doc.ecosystems[pair.eco] or {}).tools or {}) do
+			if vim.tbl_contains(pair.tools, tool.name) and tool.present then
+				found[tool.name] = tool.version
+			end
+		end
+
+		-- A missing half is already reported as a missing tool; say nothing twice.
+		local keys, labels = {}, {}
+		for _, name in ipairs(pair.tools) do
+			local key = version_key(found[name], pair.level)
+			if not key then
+				keys = nil
+				break
+			end
+			table.insert(keys, key)
+			table.insert(labels, ("%s %s"):format(name, found[name]))
+		end
+		if keys then
+			local label = table.concat(pair.tools, " / ")
+			if keys[1] == keys[2] then
+				vim.health.ok(("%s agree on %s"):format(label, keys[1]))
+			else
+				vim.health.error(("%s version mismatch"):format(label), {
+					table.concat(labels, " vs "),
+					pair.why,
+				})
+			end
+		end
+	end
+end
+
 function M.check()
 	vim.health.start("toolchain")
 
@@ -54,6 +105,8 @@ function M.check()
 	else
 		vim.health.warn(("%d tools missing"):format(#missing), missing)
 	end
+
+	check_version_pairs(doc)
 
 	if #foreign == 0 then
 		vim.health.ok("no shadowed tools")

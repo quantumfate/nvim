@@ -47,9 +47,8 @@
 - python                       runtime / base
 - uv                           runtime / base
 - basedpyright                 lsp basedpyright
+- ruff                         lsp ruff
 - ruff                         fmt ruff_format
-- python-black                 fmt black
-- ruff                         lint ruff
 - python-debugpy               dap debugpy
 
 ## node
@@ -59,7 +58,9 @@
 - typescript-language-server   lsp ts_ls
 - svelte-language-server       lsp svelte
 - tailwindcss-language-server  lsp tailwindcss
-- vue-language-server          lsp vuels
+- vue-language-server          lsp vue_ls
+- vscode-langservers-extracted lsp html
+- vscode-langservers-extracted lsp cssls
 - prettierd                    fmt prettierd
 - prettier                     fmt prettier
 - deno                         fmt deno_fmt
@@ -89,7 +90,6 @@
 ## c
 - clang                        lsp clangd
 - clang                        fmt clang_format
-- python-cpplint               lint cpplint
 
 ## shell
 - bash-language-server         lsp bashls
@@ -98,8 +98,11 @@
 - shellcheck                   lint shellcheck
 
 ## zig
-- zls                          lsp zls
+- zig                          runtime / base
+- zls-bin                      lsp zls
 - zig                          fmt zigfmt
+- codelldb-bin                 dap codelldb
+- zig                          tool zig
 
 ## json
 - vscode-json-languageserver   lsp jsonls
@@ -121,6 +124,7 @@
 - markdownlint-cli             lint markdownlint
 
 ## docker
+- dockerfile-language-server   lsp dockerls
 - hadolint-bin                 lint hadolint
 
 ## qml

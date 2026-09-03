@@ -9,13 +9,14 @@
 ---@param buf integer
 ---@return string
 local function lint_root(buf)
-	local name = vim.api.nvim_buf_get_name(buf)
-	if name == "" then
-		return vim.fn.getcwd()
-	end
-	local markers = { "ansible.cfg", ".ansible-lint", "galaxy.yml", ".git" }
-	local found = vim.fs.find(markers, { upward = true, path = vim.fs.dirname(name) })[1]
-	return found and vim.fs.dirname(found) or vim.fn.getcwd()
+	-- detect(), not get(): get() ignores a custom spec and caches under the default one.
+	local roots = require("util.root").detect({
+		buf = buf,
+		all = false,
+		-- Linter config beats the LSP's idea of the workspace; cwd ends the chain.
+		spec = { { "ansible.cfg", ".ansible-lint", "galaxy.yml", ".git" }, "cwd" },
+	})
+	return roots[1].paths[1]
 end
 return {
 	"mfussenegger/nvim-lint",
@@ -97,8 +98,8 @@ return {
 			yaml = { "yamllint" },
 			["yaml.ansible"] = { "ansible_lint" },
 			dockerfile = { "hadolint" },
-			c = { "cpplint" },
-			cpp = { "cpplint" },
+			-- c/cpp: clangd runs with --clang-tidy, so a second style linter would
+			-- report the same findings twice.
 			-- json: jsonls already reports syntax errors, a second linter only duplicates them.
 		}
 

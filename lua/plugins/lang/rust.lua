@@ -38,8 +38,9 @@ return {
 						},
 						runBuildScripts = true,
 					},
-					-- Add clippy lints for Rust if using rust-analyzer
-					checkOnSave = true,
+					-- bacon_ls publishes the cargo/clippy diagnostics (see conf/server.lua).
+					-- Letting rust-analyzer check too doubles every message.
+					checkOnSave = false,
 					-- Enable diagnostics if using rust-analyzer
 					diagnostics = {
 						enable = true,

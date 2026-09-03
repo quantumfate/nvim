@@ -137,7 +137,6 @@ nvim_ecosystems:
       - "uv"
       - "basedpyright"
       - "ruff"
-      - "python-black"
       - "python-debugpy"
     tools:
       - name: "basedpyright"
@@ -145,18 +144,13 @@ nvim_ecosystems:
         bin: "basedpyright"
         package: "basedpyright"
         optional: false
-      - name: "ruff_format"
-        kind: "fmt"
+      - name: "ruff"
+        kind: "lsp"
         bin: "ruff"
         package: "ruff"
         optional: false
-      - name: "black"
+      - name: "ruff_format"
         kind: "fmt"
-        bin: "black"
-        package: "python-black"
-        optional: false
-      - name: "ruff"
-        kind: "lint"
         bin: "ruff"
         package: "ruff"
         optional: false
@@ -174,6 +168,7 @@ nvim_ecosystems:
       - "svelte-language-server"
       - "tailwindcss-language-server"
       - "vue-language-server"
+      - "vscode-langservers-extracted"
       - "prettierd"
       - "prettier"
       - "deno"
@@ -196,10 +191,20 @@ nvim_ecosystems:
         bin: "tailwindcss-language-server"
         package: "tailwindcss-language-server"
         optional: false
-      - name: "vuels"
+      - name: "vue_ls"
         kind: "lsp"
         bin: "vue-language-server"
         package: "vue-language-server"
+        optional: false
+      - name: "html"
+        kind: "lsp"
+        bin: "vscode-html-language-server"
+        package: "vscode-langservers-extracted"
+        optional: false
+      - name: "cssls"
+        kind: "lsp"
+        bin: "vscode-css-language-server"
+        package: "vscode-langservers-extracted"
         optional: false
       - name: "prettierd"
         kind: "fmt"
@@ -312,7 +317,6 @@ nvim_ecosystems:
   c:
     packages:
       - "clang"
-      - "python-cpplint"
     tools:
       - name: "clangd"
         kind: "lsp"
@@ -323,11 +327,6 @@ nvim_ecosystems:
         kind: "fmt"
         bin: "clang-format"
         package: "clang"
-        optional: false
-      - name: "cpplint"
-        kind: "lint"
-        bin: "cpplint"
-        package: "python-cpplint"
         optional: false
   shell:
     packages:
@@ -358,16 +357,27 @@ nvim_ecosystems:
         optional: false
   zig:
     packages:
-      - "zls"
       - "zig"
+      - "zls-bin"
+      - "codelldb-bin"
     tools:
       - name: "zls"
         kind: "lsp"
         bin: "zls"
-        package: "zls"
+        package: "zls-bin"
         optional: false
       - name: "zigfmt"
         kind: "fmt"
+        bin: "zig"
+        package: "zig"
+        optional: false
+      - name: "codelldb"
+        kind: "dap"
+        bin: "codelldb"
+        package: "codelldb-bin"
+        optional: false
+      - name: "zig"
+        kind: "tool"
         bin: "zig"
         package: "zig"
         optional: false
@@ -437,8 +447,14 @@ nvim_ecosystems:
         optional: false
   docker:
     packages:
+      - "dockerfile-language-server"
       - "hadolint-bin"
     tools:
+      - name: "dockerls"
+        kind: "lsp"
+        bin: "docker-langserver"
+        package: "dockerfile-language-server"
+        optional: false
       - name: "hadolint"
         kind: "lint"
         bin: "hadolint"

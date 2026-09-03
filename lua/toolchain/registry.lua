@@ -37,6 +37,24 @@ local M = {}
 ---@type toolchain.Kind[]
 M.kinds = { "lsp", "fmt", "lint", "dap", "tool" }
 
+---@class toolchain.VersionPair
+---@field eco string Ecosystem both tools belong to
+---@field tools string[] Registry tool names whose versions must agree
+---@field level "major"|"minor" How many version components must match
+---@field why string Shown by :checkhealth when they disagree
+
+--- Tools that are only correct at a matching version. Nothing enforces this at
+--- install time, so `:checkhealth toolchain` compares what the store probed.
+---@type toolchain.VersionPair[]
+M.version_pairs = {
+	{
+		eco = "zig",
+		tools = { "zig", "zls" },
+		level = "minor",
+		why = "zls is built against one compiler release; a mismatch breaks parsing and completion",
+	},
+}
+
 ---@type table<string, toolchain.Eco>
 M.eco = {
 	core = {
@@ -110,12 +128,12 @@ M.eco = {
 
 	python = {
 		sys = { "python", "uv" },
-		lsp = { { name = "basedpyright", bin = "basedpyright" } },
-		fmt = {
-			{ name = "ruff_format", bin = "ruff", pkg = "ruff" },
-			{ name = "black", bin = "black", pkg = "python-black" },
+		lsp = {
+			{ name = "basedpyright", bin = "basedpyright" },
+			-- `ruff server` owns lint diagnostics and import fixes; basedpyright only types.
+			{ name = "ruff", bin = "ruff" },
 		},
-		lint = { { name = "ruff", bin = "ruff" } },
+		fmt = { { name = "ruff_format", bin = "ruff", pkg = "ruff" } },
 		dap = { { name = "debugpy", bin = "python", pkg = "python-debugpy" } },
 	},
 
@@ -125,7 +143,10 @@ M.eco = {
 			{ name = "ts_ls", bin = "typescript-language-server", pkg = "typescript-language-server" },
 			{ name = "svelte", bin = "svelteserver", pkg = "svelte-language-server" },
 			{ name = "tailwindcss", bin = "tailwindcss-language-server", pkg = "tailwindcss-language-server" },
-			{ name = "vuels", bin = "vue-language-server", pkg = "vue-language-server" },
+			{ name = "vue_ls", bin = "vue-language-server", pkg = "vue-language-server" },
+			-- One package ships the html, css and eslint servers.
+			{ name = "html", bin = "vscode-html-language-server", pkg = "vscode-langservers-extracted" },
+			{ name = "cssls", bin = "vscode-css-language-server", pkg = "vscode-langservers-extracted" },
 		},
 		fmt = {
 			{ name = "prettierd", bin = "prettierd" },
@@ -189,7 +210,6 @@ M.eco = {
 	c = {
 		lsp = { { name = "clangd", bin = "clangd", pkg = "clang" } },
 		fmt = { { name = "clang_format", bin = "clang-format", pkg = "clang" } },
-		lint = { { name = "cpplint", bin = "cpplint", pkg = "python-cpplint" } },
 	},
 
 	shell = {
@@ -202,8 +222,15 @@ M.eco = {
 	},
 
 	zig = {
-		lsp = { { name = "zls", bin = "zls" } },
-		fmt = { { name = "zigfmt", bin = "zig", pkg = "zig" } },
+		sys = { "zig" },
+		-- `zig --version` is not a thing; the subcommand is bare.
+		tool = { { name = "zig", bin = "zig", version_args = { "version" } } },
+		-- The repo `zls` lags the compiler; zls-bin tracks the tagged release. Its
+		-- major.minor must equal `zig version` — see M.version_pairs.
+		lsp = { { name = "zls", bin = "zls", pkg = "zls-bin" } },
+		fmt = { { name = "zigfmt", bin = "zig", pkg = "zig", version_args = { "version" } } },
+		-- codelldb debugs any ELF binary; zig projects need it as much as rust ones.
+		dap = { { name = "codelldb", bin = "codelldb", pkg = "codelldb-bin", version_args = false } },
 	},
 
 	json = {
@@ -231,6 +258,7 @@ M.eco = {
 	},
 
 	docker = {
+		lsp = { { name = "dockerls", bin = "docker-langserver", pkg = "dockerfile-language-server" } },
 		lint = { { name = "hadolint", bin = "hadolint", pkg = "hadolint-bin" } },
 	},
 

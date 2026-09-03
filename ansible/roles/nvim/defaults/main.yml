@@ -14,11 +14,16 @@ nvim_ecosystem_filter: []
 nvim_extra_packages: []
 
 nvim_install_packages: true
+# Repo packages a wanted package replaces. The repo `zls` lags the compiler and
+# conflicts with the AUR `zls-bin` that matches it.
+nvim_conflicting_packages:
+  - zls
 nvim_run_bootstrap: true
 
-# Refuse to install into a system that is behind on updates: partial upgrades
-# break Arch hard.
-nvim_require_current_system: true
+# Refuse to install while the sync database is ahead of the installed system.
+# The role never passes -y, so a plain -S is safe as long as those two agree;
+# what breaks Arch is installing against a database someone already refreshed.
+nvim_require_consistent_db: true
 
 # Mason is gone: remove its package tree and the PATH entry shadowing /usr/bin.
 nvim_purge_mason: true
@@ -32,6 +37,9 @@ nvim_profile_file: "{{ ansible_facts.user_dir }}/.profile"
 
 # Run neovim once, headless, to install plugins and rewrite the tool store.
 nvim_sync_plugins: true
+# Compile the treesitter parsers in the same headless run; without it the first
+# interactive session spends minutes building grammars.
+nvim_install_parsers: true
 nvim_refresh_store: true
 nvim_store_path: "{{ nvim_state_dir }}/tools.json"
 

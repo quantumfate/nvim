@@ -16,7 +16,6 @@ local default_options = {
 	hlsearch = true, -- highlight all matches on previous search pattern
 	ignorecase = true, -- ignore case in search patterns
 	mouse = "a", -- allow the mouse to be used in neovim
-	pumheight = 10, -- pop up menu height
 	showmode = false, -- we don't need to see things like -- INSERT -- anymore
 	-- showtabline = -1, -- always show tabs
 	smartcase = true, -- smart case
@@ -35,8 +34,6 @@ local default_options = {
 	tabstop = 2, -- insert 2 spaces for a tab
 	cursorline = true, -- highlight the current line
 	number = true, -- set numbered lines
-	numberwidth = 4, -- set number column width to 2 {default 4}
-	signcolumn = "yes", -- always show the sign column, otherwise it would shift the text each time
 	wrap = false, -- display lines as one long line
 	scrolloff = 8, -- minimal number of screen lines to keep above and below the cursor.
 	sidescrolloff = 8, -- minimal number of screen lines to keep left and right of the cursor.
@@ -45,14 +42,6 @@ local default_options = {
 	laststatus = 3,
 	relativenumber = true,
 
-	-- --- Space -----------------------------------------------------------
-	-- The same aesthetic as the terminal surface (kitty + both tmux bars):
-	-- one accent, flat chrome, and air where the eye needs a boundary.
-	--
-	-- Division of labour: font size and LINE HEIGHT are cell-grid properties
-	-- and belong to kitty (modify_font cell_height, see system-config's zsh
-	-- role) — a terminal neovim cannot change how tall a text row is. What
-	-- neovim owns is everything inside the viewport: gutters, borders, popups.
 	numberwidth = 5, -- wider number gutter: digits stop touching the text
 	signcolumn = "yes:2", -- two sign slots = a permanent blank lane between gutter and code
 	pumheight = 12, -- a taller completion popup scrolls less
