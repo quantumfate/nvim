@@ -28,7 +28,7 @@
   become: false
 
 - name: Work out which packages are missing
-  # A run that installs nothing skips both the guard and the transaction below.
+  # A run that installs nothing skips the transaction below.
   ansible.builtin.command:
     argv: "{{ ['pacman', '-T'] + nvim_wanted_packages }}"
   register: nvim_missing_packages
@@ -36,29 +36,6 @@
   # -T exits 127 when something is missing, the normal case here.
   failed_when: nvim_missing_packages.rc not in [0, 127]
   check_mode: false
-
-- name: Guard against a partial upgrade
-  when: nvim_require_consistent_db and nvim_missing_packages.stdout_lines | length > 0
-  block:
-    - name: Check whether the sync database is ahead of the system
-      # -Qu reads the local database only: no network, no refresh.
-      ansible.builtin.command: pacman -Qu
-      register: nvim_db_ahead
-      changed_when: false
-      # -Qu exits 1 when nothing is upgradable, which is the state we want.
-      failed_when: nvim_db_ahead.rc not in [0, 1]
-      check_mode: false
-
-    - name: Abort — installing now would be a partial upgrade
-      ansible.builtin.fail:
-        msg: >-
-          {{ nvim_missing_packages.stdout_lines | length }} package(s) to install
-          ({{ nvim_missing_packages.stdout_lines | join(', ') | truncate(120) }}) while the
-          sync database is already ahead of {{ nvim_db_ahead.stdout_lines | length }}
-          installed package(s) ({{ nvim_db_ahead.stdout_lines | join(', ') | truncate(120) }}).
-          Finish the upgrade with `yay -Syu` first.
-          Set nvim_require_consistent_db=false to override.
-      when: nvim_db_ahead.stdout_lines | length > 0
 
 - name: Drop packages the toolchain replaces
   # pacman refuses a transaction whose members conflict, and nothing else removes

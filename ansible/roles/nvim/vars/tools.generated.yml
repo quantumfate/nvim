@@ -383,12 +383,12 @@ nvim_ecosystems:
         optional: false
   json:
     packages:
-      - "vscode-json-languageserver"
+      - "vscode-langservers-extracted"
     tools:
       - name: "jsonls"
         kind: "lsp"
         bin: "vscode-json-language-server"
-        package: "vscode-json-languageserver"
+        package: "vscode-langservers-extracted"
         optional: false
   toml:
     packages:

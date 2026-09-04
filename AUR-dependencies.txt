@@ -105,7 +105,7 @@
 - zig                          tool zig
 
 ## json
-- vscode-json-languageserver   lsp jsonls
+- vscode-langservers-extracted lsp jsonls
 
 ## toml
 - taplo-cli                    lsp taplo

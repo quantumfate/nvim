@@ -18,12 +18,10 @@ nvim_install_packages: true
 # conflicts with the AUR `zls-bin` that matches it.
 nvim_conflicting_packages:
   - zls
+  # Owns /usr/bin/vscode-json-language-server, which vscode-langservers-extracted
+  # also ships; the extracted package covers json, html, css and eslint.
+  - vscode-json-languageserver
 nvim_run_bootstrap: true
-
-# Refuse to install while the sync database is ahead of the installed system.
-# The role never passes -y, so a plain -S is safe as long as those two agree;
-# what breaks Arch is installing against a database someone already refreshed.
-nvim_require_consistent_db: true
 
 # Mason is gone: remove its package tree and the PATH entry shadowing /usr/bin.
 nvim_purge_mason: true

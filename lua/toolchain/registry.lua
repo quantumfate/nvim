@@ -234,7 +234,8 @@ M.eco = {
 	},
 
 	json = {
-		lsp = { { name = "jsonls", bin = "vscode-json-language-server", pkg = "vscode-json-languageserver" } },
+		-- Same package as the html/css servers; it owns the json binary too.
+		lsp = { { name = "jsonls", bin = "vscode-json-language-server", pkg = "vscode-langservers-extracted" } },
 	},
 
 	toml = {
