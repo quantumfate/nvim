@@ -149,3 +149,21 @@ end
 
 map("n", "<leader>md", duplicate("function.outer"), { desc = "Duplicate function" })
 map("n", "<leader>mD", duplicate("class.outer"), { desc = "Duplicate class" })
+
+--- Adds a parameter where the cursor sits in the enclosing signature.
+---@param force boolean Update call sites even when the parameter is optional
+local function add_param(force)
+	return function()
+		require("util.plugins.signature").add_param({ force = force })
+	end
+end
+
+map("n", "<leader>ra", add_param(false), { desc = "Add parameter" })
+map("n", "<leader>rA", add_param(true), { desc = "Add parameter (force call sites)" })
+
+vim.api.nvim_create_user_command("SigAdd", function(opts)
+	require("util.plugins.signature").add_param({
+		spec = opts.args ~= "" and opts.args or nil,
+		force = opts.bang,
+	})
+end, { nargs = "?", bang = true, desc = "Add parameter to the enclosing signature" })
