@@ -8,6 +8,19 @@
 ---@field expr? boolean Whether the function returns a string to execute
 ---@field cond? fun(): boolean Additional condition check
 
+--- Rename the symbol under the cursor. Prefers inc-rename for its live,
+--- cross-file preview; falls back to the built-in rename when unavailable.
+--- Returns a cmdline string, so callers must set `expr = true`.
+---@return string
+local function rename()
+	local modules = require("util.modules")
+	if modules.is_loaded("inc-rename.nvim") then
+		return ":IncRename " .. vim.fn.expand("<cword>")
+	end
+	vim.lsp.buf.rename()
+	return ""
+end
+
 --- Standard LSP keymaps, gated by capability in lspconfig's LspAttach handler.
 --- Navigation entries drive the Snacks picker (global).
 ---@type LspKeymapConfig[]
@@ -73,15 +86,7 @@ local M = {
 	},
 	{
 		keys = "grn",
-		func = function()
-			local modules = require("util.modules")
-			if modules.is_loaded("inc-rename.nvim") then
-				return ":IncRename " .. vim.fn.expand("<cword>")
-			else
-				vim.lsp.buf.rename()
-				return ""
-			end
-		end,
+		func = rename,
 		expr = true,
 		desc = "Rename",
 		method = "textDocument/rename",
@@ -144,16 +149,8 @@ local M = {
 		mode = { "n", "v" },
 	},
 	{
-		keys = "<leader>cr",
-		func = function()
-			local modules = require("util.modules")
-			if modules.is_loaded("inc-rename.nvim") then
-				return ":IncRename " .. vim.fn.expand("<cword>")
-			else
-				vim.lsp.buf.rename()
-				return ""
-			end
-		end,
+		keys = "<leader>rn",
+		func = rename,
 		expr = true,
 		desc = "Rename",
 		method = "textDocument/rename",

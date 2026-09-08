@@ -147,8 +147,8 @@ local function duplicate(capture)
 	end
 end
 
-map("n", "<leader>md", duplicate("function.outer"), { desc = "Duplicate function" })
-map("n", "<leader>mD", duplicate("class.outer"), { desc = "Duplicate class" })
+map("n", "<leader>rd", duplicate("function.outer"), { desc = "Duplicate function" })
+map("n", "<leader>rD", duplicate("class.outer"), { desc = "Duplicate class" })
 
 --- Adds a parameter where the cursor sits in the enclosing signature.
 ---@param force boolean Update call sites even when the parameter is optional

@@ -96,7 +96,18 @@ return {
 					["P"] = { "toggle_preview", config = { use_float = true } },
 				},
 			},
+			renderers = {
+				file = {
+					{ "indent" },
+					{ "icon" },
+					{ "name", use_git_status_colors = true },
+					{ "modified" }, -- dirty-buffer dot
+					{ "diagnostics" },
+					{ "git_status", highlight = "NeoTreeDimText" },
+				},
+			},
 			default_component_configs = {
+				modified = { symbol = "●", highlight = "NeoTreeModified" },
 				indent = {
 					with_expanders = true, -- if nil and file nesting is enabled, will enable expanders
 					expander_collapsed = "",
