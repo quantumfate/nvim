@@ -19,7 +19,7 @@ return {
 		adapters = {
 			["neotest-python"] = {
 				python = function()
-					return require("util.root").get() .. "/.venv/bin/python"
+					return require("lib.root").get() .. "/.venv/bin/python"
 				end,
 				args = { "-v" },
 				env = {
@@ -48,7 +48,7 @@ return {
 			["neotest-jest"] = {
 				jestCommand = "npx jest --no-color",
 				cwd = function()
-					return require("util.root").get()
+					return require("lib.root").get()
 				end,
 			},
 			["neotest-vitest"] = {
@@ -148,14 +148,14 @@ return {
 				end
 				vim.schedule(function()
 					local trouble = require("trouble")
-					local edgy_util = require("util.plugins.edgy")
-					if edgy_util.get_current_view() == edgy_util.views.neotest then
+					local dock = require("features.workspace").dock()
+					if dock.current() == dock.views.tests.title then
 						if failed == 0 then
-							edgy_util.restore_prev_view()
+							dock.back()
 						end
 					else
 						if failed ~= 0 then
-							edgy_util.open_view("neotest")
+							dock.open("tests")
 						end
 					end
 				end)

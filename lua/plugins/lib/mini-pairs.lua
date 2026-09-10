@@ -14,6 +14,6 @@ return {
 	---@param opts table
 	---@return nil
 	config = function(_, opts)
-		require("util.plugins.mini").pairs(opts)
+		require("features.mini").pairs(opts)
 	end,
 }

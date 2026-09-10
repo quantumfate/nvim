@@ -14,6 +14,66 @@ type(scope): short description
 # Body (optional): what & why, wrap at 72 cols
 ]]
 
+--- lua_ls configuration. Without one it guesses the runtime, and every `vim.*` call
+--- in a Neovim plugin reads as an undefined global.
+M.luarc = [[
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "LuaJIT",
+  "workspace.checkThirdParty": false,
+  "diagnostics.globals": ["vim"],
+  "format.enable": false
+}
+]]
+
+--- Zig build script for a project that has none. Exposes `run` and `test` steps,
+--- because the editor's build keys drive `zig build run` and `zig build test`.
+M.build_zig = [[
+const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const exe = b.addExecutable(.{
+        .name = "PROJECT",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    b.installArtifact(exe);
+
+    const run = b.addRunArtifact(exe);
+    if (b.args) |args| run.addArgs(args);
+    b.step("run", "Run the app").dependOn(&run.step);
+
+    const tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    b.step("test", "Run unit tests").dependOn(&b.addRunArtifact(tests).step);
+}
+]]
+
+--- clang-tidy checks worth having on by default. Deliberately not `*`: the full set
+--- reports style opinions that drown the bug-finding checks.
+M.clang_tidy = [[
+Checks: >
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  portability-*,
+  readability-inconsistent-declaration-parameter-name,
+  -bugprone-easily-swappable-parameters
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*'
+]]
+
 --- Baseline editor settings; matches the shfmt `-i 4` and tab conventions.
 M.editorconfig = [[
 root = true
@@ -326,6 +386,12 @@ end
 --- interface to every provisioning path.
 ---@param detection scaffold.Detection
 ---@return string
+--- What the generated extra recipes are for, so the justfile explains itself.
+---@type table<string, string>
+local EXTRA_COMMENTS = {
+	["compile-db"] = "Generate compile_commands.json (clangd, clang-tidy, and the editor's C actions read it)",
+}
+
 function M.justfile(detection)
 	local lines = {
 		"# Task runner. Run `just` to list recipes.",
@@ -359,6 +425,14 @@ function M.justfile(detection)
 	recipe("lint", tools.commands(detection, "lint"), "Static analysis")
 	recipe("test", tools.commands(detection, "test"))
 	recipe("build", tools.commands(detection, "build"))
+
+	-- Whatever an ecosystem contributes on top of the standard four, in a stable order.
+	local extras = tools.extras(detection)
+	local extra_names = vim.tbl_keys(extras)
+	table.sort(extra_names)
+	for _, name in ipairs(extra_names) do
+		recipe(name, extras[name], EXTRA_COMMENTS[name])
+	end
 
 	-- CI gate: formatting + tests only. Lint stays a separate advisory recipe (and a
 	-- pre-commit hook), since real code carries style warnings that shouldn't block CI.

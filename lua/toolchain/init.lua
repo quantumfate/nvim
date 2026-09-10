@@ -2,8 +2,11 @@
 ---@class toolchain
 local M = {}
 
-M.registry = require("toolchain.registry")
-M.store = require("toolchain.store")
+-- Lazy proxies: the registry is a 376-line table and the store only runs 2s after
+-- VeryLazy, but setup() has to register commands during startup.
+local lazy = require("lib.modules").require_on_index
+M.registry = lazy("toolchain.registry")
+M.store = lazy("toolchain.store")
 
 local function refresh_on_idle()
 	vim.api.nvim_create_autocmd("User", {

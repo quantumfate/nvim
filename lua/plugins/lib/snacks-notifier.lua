@@ -4,7 +4,19 @@ return {
 	"folke/snacks.nvim",
 	---@type snacks.Config
 	opts = {
-		notifier = {}, -- defaults
+		notifier = {
+			-- Defaults are 3s, 40% of the width and a single cell of margin, which is
+			-- too small for a refactoring conflict list or a crash summary: they wrapped
+			-- into a narrow column and were gone before they had been read.
+			timeout = 6000,
+			width = { min = 50, max = 0.55 },
+			height = { min = 1, max = 0.7 },
+			-- Air on every side, so a toast never sits flush against the edge or the
+			-- statusline.
+			margin = { top = 1, right = 2, bottom = 1 },
+			padding = true,
+			style = "fancy",
+		},
 	},
 	--- Aggregates LspProgress events into per-client notifications.
 	---@return nil

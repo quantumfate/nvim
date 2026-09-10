@@ -18,6 +18,14 @@ return {
 		cmd = { "TSUpdate", "TSInstall", "TSUninstall", "TSSyncInstall" },
 		opts = {
 			ensure_installed = {
+				-- Compiler output. The language actions in features/lang render assembly,
+				-- LLVM IR and disassembly into scratch buffers; without these they arrive
+				-- as unhighlighted text, which is the hardest possible way to read them.
+				"asm",
+				"llvm",
+				"objdump",
+				"disassembly",
+
 				"bash",
 				"c",
 				"cpp",
@@ -113,12 +121,12 @@ return {
 
 			-- Custom query directives from the local util module. Function textobjects
 			-- (af/if, ac/ic, ...) come from mini.ai, which handles counts and next/last.
-			local ts_util = require("util.plugins.treesitter")
+			local ts_util = require("features.treesitter")
 			vim.treesitter.query.add_directive("downcase!", ts_util.case_directive(string.lower), { force = true })
 			vim.treesitter.query.add_directive("upcase!", ts_util.case_directive(string.upper), { force = true })
 
 			-- Node-wise incremental selection, the treesitter answer to visual mode.
-			local ts_select = require("util.plugins.ts_select")
+			local ts_select = require("features.ts_select")
 			vim.keymap.set({ "n", "x" }, "<c-space>", ts_select.expand, { desc = "Expand selection to node" })
 			vim.keymap.set("x", "<bs>", ts_select.shrink, { desc = "Shrink selection to child node" })
 			vim.api.nvim_create_autocmd("ModeChanged", {

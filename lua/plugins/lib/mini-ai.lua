@@ -31,7 +31,7 @@ return {
 					{ "%u[%l%d]+%f[^%l%d]", "%f[%S][%l%d]+%f[^%l%d]", "%f[%P][%l%d]+%f[^%l%d]", "^[%l%d]+%f[^%l%d]" },
 					"^().*()$",
 				},
-				g = require("util.plugins.mini").ai_buffer, -- buffer
+				g = require("features.mini").ai_buffer, -- buffer
 				u = ai.gen_spec.function_call(), -- function call ("usage")
 				U = ai.gen_spec.function_call({ name_pattern = "[%w_]" }), -- call without dotted name
 			},
@@ -41,11 +41,11 @@ return {
 	---@param opts table
 	---@return nil
 	config = function(_, opts)
-		local modules_util = require("util.modules")
+		local modules_util = require("lib.modules")
 		require("mini.ai").setup(opts)
 		modules_util.on_load("which-key.nvim", function()
 			vim.schedule(function()
-				require("util.plugins.mini").ai_whichkey(opts)
+				require("features.mini").ai_whichkey(opts)
 			end)
 		end)
 	end,

@@ -10,7 +10,7 @@
 ---@return string
 local function lint_root(buf)
 	-- detect(), not get(): get() ignores a custom spec and caches under the default one.
-	local roots = require("util.root").detect({
+	local roots = require("lib.root").detect({
 		buf = buf,
 		all = false,
 		-- Linter config beats the LSP's idea of the workspace; cwd ends the chain.
@@ -31,7 +31,31 @@ return {
 				local linters = lint.linters_by_ft[ft] or {}
 
 				if #linters == 0 then
-					Snacks.notify.warn("No linters configured for " .. ft)
+					-- Several filetypes have no nvim-lint entry on purpose, because
+					-- something else already reports the same findings. Saying which is
+					-- the difference between "configured wrong" and "already covered".
+					local covered = {
+						c = "clangd runs clang-tidy",
+						cpp = "clangd runs clang-tidy",
+						lua = "lua_ls reports these",
+						sh = "bash-language-server runs shellcheck",
+						bash = "bash-language-server runs shellcheck",
+						json = "jsonls reports syntax errors",
+						rust = "rust-analyzer and bacon report these",
+						zig = "zls reports these",
+					}
+					local why = covered[ft]
+					if why then
+						Snacks.notify.info(
+							("No separate linter for %s — %s.\nA second pass would double every finding."):format(
+								ft,
+								why
+							),
+							{ title = "Lint" }
+						)
+					else
+						Snacks.notify.warn("No linters configured for " .. ft, { title = "Lint" })
+					end
 					return
 				end
 
@@ -84,24 +108,13 @@ return {
 			end,
 		})
 
-		lint.linters_by_ft = {
-			javascript = { "eslint_d" },
-			typescript = { "eslint_d" },
-			javascriptreact = { "eslint_d" },
-			typescriptreact = { "eslint_d" },
-			vue = { "eslint_d" },
-			svelte = { "eslint_d" },
-			-- bash_ls already does this
-			-- sh = { "shellcheck" },
-			-- bash = { "shellcheck" },
-			markdown = { "markdownlint" },
-			yaml = { "yamllint" },
-			["yaml.ansible"] = { "ansible_lint" },
-			dockerfile = { "hadolint" },
-			-- c/cpp: clangd runs with --clang-tidy, so a second style linter would
-			-- report the same findings twice.
-			-- json: jsonls already reports syntax errors, a second linter only duplicates them.
-		}
+		-- From the toolchain registry, so a linter is wired to a filetype in the same
+		-- table that installs it and probes for it. Filetypes deliberately left out
+		-- there: sh/bash (bash-language-server already runs shellcheck), c/cpp (clangd
+		-- runs with --clang-tidy), json (jsonls reports syntax errors), and lua (lua_ls).
+		-- first_alt_only: nvim-lint runs every linter in a list, so eslint_d's plain-eslint
+		-- fallback must not be run alongside it.
+		lint.linters_by_ft = require("toolchain.registry").by_ft("lint", { first_alt_only = true })
 
 		-- Slow, whole-project linters: only worth running against what is on disk.
 		---@type table<string, string[]>
@@ -109,17 +122,37 @@ return {
 			["yaml.ansible"] = { "FileType", "BufWritePost" },
 		}
 
-		-- Lint on enter/write/insert-leave, but only when the filetype has a linter.
 		local group = vim.api.nvim_create_augroup("nvim-lint", { clear = true })
-		local timer = assert(vim.uv.new_timer())
+
+		-- One timer per buffer. A single shared timer meant a burst of edits in one
+		-- buffer cancelled the pending run of every other.
+		---@type table<integer, uv.uv_timer_t>
+		local timers = {}
+
+		vim.api.nvim_create_autocmd("BufDelete", {
+			group = group,
+			callback = function(ev)
+				local timer = timers[ev.buf]
+				if timer then
+					timer:stop()
+					timer:close()
+					timers[ev.buf] = nil
+				end
+			end,
+		})
 
 		--- Run the filetype's linters against `buf`, honouring the write-only list.
 		---@param buf integer
 		---@param event string
 		local function lint_buf(buf, event)
+			-- Generated scratch buffers (:ProjectDoctor's report, diff previews) carry a
+			-- real filetype but no file, and linting them decorates output nobody can fix.
+			if vim.bo[buf].buftype ~= "" or not vim.bo[buf].modifiable then
+				return
+			end
+
 			local ft = vim.bo[buf].filetype
-			local linters = lint.linters_by_ft[ft] or {}
-			if #linters == 0 then
+			if #(lint.linters_by_ft[ft] or {}) == 0 then
 				return
 			end
 
@@ -128,18 +161,26 @@ return {
 				return
 			end
 
-			-- Coalesce bursts (TextChanged fires per edit) into one linter run.
+			-- Coalesce bursts (InsertLeave can fire repeatedly) into one linter run.
+			local timer = timers[buf]
+			if not timer then
+				timer = assert(vim.uv.new_timer())
+				timers[buf] = timer
+			end
 			timer:start(200, 0, function()
 				vim.schedule(function()
 					-- try_lint always targets the current buffer; skip if focus moved on.
-					if vim.api.nvim_get_current_buf() == buf then
+					if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_get_current_buf() == buf then
 						lint.try_lint(nil, { cwd = lint_root(buf) })
 					end
 				end)
 			end)
 		end
 
-		vim.api.nvim_create_autocmd({ "FileType", "BufEnter", "BufWritePost", "InsertLeave", "TextChanged" }, {
+		-- TextChanged and BufEnter are deliberately absent: they re-ran every linter on
+		-- every keystroke and every window switch, for diagnostics that only change when
+		-- an edit is finished.
+		vim.api.nvim_create_autocmd({ "FileType", "BufWritePost", "InsertLeave" }, {
 			group = group,
 			callback = function(ev)
 				lint_buf(ev.buf, ev.event)

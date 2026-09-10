@@ -21,7 +21,7 @@ vim.opt.rtp:prepend(lazypath)
 vim.g.mapleader = " " ---@type string external: read by every plugin mapping
 vim.g.maplocalleader = "\\" ---@type string external: read by every plugin mapping
 
-require("config")
+require("core")
 require("lazy").setup({
 	spec = {
 		{ import = "plugins" },
@@ -41,6 +41,6 @@ require("lazy").setup({
 })
 
 -- Root detection: register autocmds, then publish the spec globals it reads.
-require("util.root").setup()
-vim.g.root_spec = { "lsp", { ".git", "lua" }, "cwd" } ---@type util.RootSpec[] external: read by util.root
-vim.g.root_lsp_ignore = { "copilot" } ---@type string[] external: read by util.root.detectors.lsp
+require("lib.root").setup()
+vim.g.root_spec = { "lsp", { ".git", "lua" }, "cwd" } ---@type lib.RootSpec[] external: read by lib.root
+vim.g.root_lsp_ignore = { "copilot" } ---@type string[] external: read by lib.root.detectors.lsp

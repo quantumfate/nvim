@@ -57,101 +57,92 @@ return {
 			desc = "Format injected langs",
 		},
 	},
-	opts = {
-		formatters_by_ft = {
-			lua = { "stylua" },
-			-- ruff replaces black/isort: same layout, one tool, one config file.
-			python = { "ruff_organize_imports", "ruff_format" },
-			javascript = { "deno_fmt", "prettierd", "prettier" },
-			typescript = { "deno_fmt", "prettierd", "prettier" },
-			javascriptreact = { "deno_fmt", "prettierd", "prettier" },
-			typescriptreact = { "deno_fmt", "prettierd", "prettier" },
-			vue = { "prettierd", "prettier" },
-			svelte = { "prettierd", "prettier" },
-			json = { "prettierd", "prettier" },
-			jsonc = { "prettierd", "prettier" },
-			yaml = { "prettierd", "prettier" },
-			["yaml.ansible"] = { "prettierd" },
-			markdown = { "prettierd", "prettier" },
-			html = { "prettierd", "prettier" },
-			css = { "prettierd", "prettier" },
-			scss = { "prettierd", "prettier" },
-			sh = { "shfmt" },
-			bash = { "shfmt" },
-			fish = { "fish_indent" },
-			go = { "goimports", "gofmt" },
-			just = { "just" },
-			rust = { "rustfmt" },
-			-- `.zon` files carry filetype `zig`, but their grammar is not Zig's.
-			zig = function(bufnr)
-				local name = vim.api.nvim_buf_get_name(bufnr)
-				return { name:sub(-4) == ".zon" and "zonfmt" or "zigfmt" }
+	--- Built at spec-eval so `opts` stays a plain table. The filetype map comes from
+	--- the toolchain registry, which is also what the ansible role installs and what
+	--- :ToolchainStatus probes, so a formatter cannot be configured here and missing
+	--- from the machine's package list.
+	opts = function()
+		local registry = require("toolchain.registry")
+		local by_ft = registry.by_ft("fmt")
+
+		-- conform runs every formatter in a list. Where the list is alternatives rather
+		-- than a pipeline (prettierd falling back to prettier) it must stop at the first
+		-- one that works instead; where it is a pipeline (ruff imports then ruff format,
+		-- goimports then gofmt) every stage still runs.
+		for ft in pairs(registry.alt_fts("fmt")) do
+			by_ft[ft].stop_after_first = true
+		end
+
+		-- Entries the registry cannot express: one runs on every buffer, one is chosen
+		-- by file extension rather than filetype, and one has no ecosystem.
+		by_ft.just = { "just" }
+		-- `.zon` files carry filetype `zig`, but their grammar is not Zig's.
+		by_ft.zig = function(bufnr)
+			return { vim.api.nvim_buf_get_name(bufnr):sub(-4) == ".zon" and "zonfmt" or "zigfmt" }
+		end
+		by_ft["_"] = { "trim_whitespace" } -- filetypes with no formatter of their own
+		by_ft["*"] = { "codespell" } -- every buffer, on top of whatever else ran
+
+		return {
+			formatters_by_ft = by_ft,
+			--- Decide format-on-save per buffer; nil skips it. Honours vim.g/vim.b disable toggles.
+			format_on_save = function(bufnr)
+				local ignore_filetypes = { "sql" }
+				if vim.tbl_contains(ignore_filetypes, vim.bo[bufnr].filetype) then
+					return
+				end
+				-- vim.g/vim.b.disable_autoformat: toggles set by the Format* user commands below.
+				if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
+					return
+				end
+				return {
+					timeout_ms = 3000,
+					lsp_fallback = true,
+				}
 			end,
-			toml = { "taplo" },
-			c = { "clang-format" },
-			cpp = { "clang-format" },
-			objc = { "clang-format" },
-			cuda = { "clang-format" },
-			["_"] = { "trim_whitespace" },
-			["*"] = { "codespell" },
-		},
-		--- Decide format-on-save per buffer; nil skips it. Honours vim.g/vim.b disable toggles.
-		format_on_save = function(bufnr)
-			local ignore_filetypes = { "sql" }
-			if vim.tbl_contains(ignore_filetypes, vim.bo[bufnr].filetype) then
-				return
-			end
-			-- vim.g/vim.b.disable_autoformat: toggles set by the Format* user commands below.
-			if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
-				return
-			end
-			return {
-				timeout_ms = 3000,
-				lsp_fallback = true,
-			}
-		end,
-		formatters = {
-			injected = { options = { ignore_errors = true } },
-			-- Auto-fixes ansible-lint rules (FQCN, key order, deprecated syntax). Rewrites the
-			-- file in place rather than a stream, so it is opt-in via :AnsibleFix, never on save.
-			ansible_fix = {
-				command = "ansible-lint",
-				args = { "--fix", "--nocolor", "--offline", "$FILENAME" },
-				stdin = false,
-				-- Keep the real basename in the temp copy; ansible-lint classifies files by path.
-				tmpfile_format = ".conform.$RANDOM.$FILENAME",
-				exit_codes = { 0, 2 },
-			},
-			-- Zig ships its formatter with the compiler; reads stdin, writes stdout.
-			zigfmt = {
-				command = "zig",
-				args = { "fmt", "--stdin" },
-				stdin = true,
-			},
-			-- Same formatter, ZON grammar. Over stdin there is no extension to infer
-			-- it from, so the mode has to be stated.
-			zonfmt = {
-				command = "zig",
-				args = { "fmt", "--stdin", "--zon" },
-				stdin = true,
-			},
-			shfmt = {
-				prepend_args = { "-i", "4" }, -- 4 space indent
-			},
-			prettierd = {
-				env = {
-					PRETTIERD_LOCAL_PRETTIER_ONLY = "1",
+			formatters = {
+				injected = { options = { ignore_errors = true } },
+				-- Auto-fixes ansible-lint rules (FQCN, key order, deprecated syntax). Rewrites the
+				-- file in place rather than a stream, so it is opt-in via :AnsibleFix, never on save.
+				ansible_fix = {
+					command = "ansible-lint",
+					args = { "--fix", "--nocolor", "--offline", "$FILENAME" },
+					stdin = false,
+					-- Keep the real basename in the temp copy; ansible-lint classifies files by path.
+					tmpfile_format = ".conform.$RANDOM.$FILENAME",
+					exit_codes = { 0, 2 },
+				},
+				-- Zig ships its formatter with the compiler; reads stdin, writes stdout.
+				zigfmt = {
+					command = "zig",
+					args = { "fmt", "--stdin" },
+					stdin = true,
+				},
+				-- Same formatter, ZON grammar. Over stdin there is no extension to infer
+				-- it from, so the mode has to be stated.
+				zonfmt = {
+					command = "zig",
+					args = { "fmt", "--stdin", "--zon" },
+					stdin = true,
+				},
+				shfmt = {
+					prepend_args = { "-i", "4" }, -- 4 space indent
+				},
+				prettierd = {
+					env = {
+						PRETTIERD_LOCAL_PRETTIER_ONLY = "1",
+					},
+				},
+				-- conform picks the first formatter that is merely *installed*, so an
+				-- unguarded deno would reformat every npm project on this machine.
+				deno_fmt = {
+					condition = function(_, ctx)
+						return require("lib.root").detectors.pattern(ctx.buf, { "deno.json", "deno.jsonc" })[1] ~= nil
+					end,
 				},
 			},
-			-- conform picks the first formatter that is merely *installed*, so an
-			-- unguarded deno would reformat every npm project on this machine.
-			deno_fmt = {
-				condition = function(_, ctx)
-					return require("util.root").detectors.pattern(ctx.buf, { "deno.json", "deno.jsonc" })[1] ~= nil
-				end,
-			},
-		},
-	},
+		}
+	end,
 	--- Register :FormatDisable/:FormatEnable/:FormatToggle to control format-on-save.
 	init = function()
 		vim.api.nvim_create_user_command("AnsibleFix", function()

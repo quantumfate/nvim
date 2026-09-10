@@ -24,7 +24,8 @@ end
 ---@return unknown promise resolving to the fold ranges
 local function lsp_then_treesitter(bufnr)
 	local promise = require("promise")
-	return promise.resolve()
+	return promise
+		.resolve()
 		:thenCall(function()
 			return require("ufo.provider.lsp").getFolds(bufnr)
 		end)

@@ -206,7 +206,7 @@ return {
 	--- Runs before the plugin loads, so the first require("async") from either
 	--- refactoring.nvim or nvim-ufo already resolves to the right copy.
 	init = function()
-		require("util.async_shim").setup()
+		require("lib.async_shim").setup()
 	end,
 	---@type refactor.UserConfig
 	opts = {
@@ -232,16 +232,10 @@ return {
 				wk.add({
 					buffer = buf,
 					{ "<leader>r", group = "refactor" },
-					{
-						"<leader>rr",
-						function()
-							-- prefer_ex_cmd populates `:Refactor <name> ` so the
-							-- edit renders in the inccommand preview before it lands.
-							require("refactoring").select_refactor({ prefer_ex_cmd = true })
-						end,
-						desc = "Menu, preview in cmdline before applying",
-						mode = { "n", "x" },
-					},
+					-- `<leader>rr` is deliberately absent: it belongs to the engine's menu
+					-- in lua/features/refactor/, which lists these refactorings too. This
+					-- plugin's own picker is still one entry inside it, and `<leader>rR`
+					-- below reaches it directly.
 					{
 						"<leader>rR",
 						function()

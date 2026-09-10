@@ -23,7 +23,7 @@ return {
 				--- Toggles the picker's cwd between the project root and the process cwd.
 				---@param p snacks.Picker
 				toggle_cwd = function(p)
-					local root = require("util.root").get({ buf = p.input.filter.current_buf, normalize = true })
+					local root = require("lib.root").get({ buf = p.input.filter.current_buf, normalize = true })
 					local cwd = vim.fs.normalize((vim.uv or vim.loop).cwd() or ".")
 					p:set_cwd(p:cwd() == root and cwd or root)
 					p:find()
@@ -35,7 +35,7 @@ return {
 		{
 			"<leader><cr>",
 			function()
-				Snacks.picker.smart({ filter = { cwd = require("util.root")() } })
+				Snacks.picker.smart({ filter = { cwd = require("lib.root")() } })
 			end,
 			desc = "Find files based on current project root",
 		},

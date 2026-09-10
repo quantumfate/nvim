@@ -48,21 +48,8 @@ return {
 		},
 	},
 	keys = {
-		{
-			"<leader>iT",
-			-- Toggles the terminal, saving the cursor on open and restoring it on close.
-			function()
-				local ui_util = require("util.ui")
-				if old_cursor_pos then
-					Snacks.terminal.toggle()
-					ui_util.restore_win_and_cursor(old_cursor_pos)
-					old_cursor_pos = nil
-				else
-					old_cursor_pos = ui_util.save_win_and_cursor()
-					Snacks.terminal.toggle()
-				end
-			end,
-			desc = "Toggle terminal",
-		},
+		-- `<leader>iT` lives in the dock (lua/features/workspace/dock.lua), which owns
+		-- the bottom slot: the same key puts the terminal away, a different one swaps to
+		-- diagnostics or the debugger, and the terminal keeps its shell either way.
 	},
 }

@@ -1,5 +1,13 @@
---- Edgy window-layout (lazy.nvim spec): docks Trouble, DAP, Neo-tree and terminals
---- into edge panels and registers LSP-dependent toggle keymaps.
+--- Edgy window-layout (lazy.nvim spec): the edges of the workspace.
+---
+--- Deliberately short. A panel earns a permanent slot only if it is worth always
+--- knowing where it is; everything else opens on demand through `:Trouble` and closes
+--- again. The previous version docked nineteen things, five of which were filetypes
+--- from nvim-dap-ui — a plugin this config no longer uses.
+---
+--- The editor area itself (main | aux | outline) is not edgy's business; that is
+--- lua/features/workspace/, which also lends `aux` to transient views like navbuddy
+--- and the assembly pane so they stop covering the code they describe.
 
 ---@class EdgyViewConfig
 ---@field ft string Filetype for the panel
@@ -37,7 +45,7 @@ local function add_neotree_panels(opts)
 	}
 	local neotree_opts = require("lazy.core.plugin").values(lazy_config.spec.plugins["neo-tree.nvim"], "opts", false)
 	local sources = (neotree_opts or {}).sources or { "filesystem" }
-	local project_root = require("util.root").get
+	local project_root = require("lib.root").get
 
 	for i, source in ipairs(sources) do
 		table.insert(opts.left, i, {
@@ -74,8 +82,6 @@ return {
 		opts = {
 			exit_when_last = true,
 			bottom = {
-				{ title = "Spectre", ft = "spectre_panel", size = { height = 0.4 } },
-				{ title = "Neotest Output", ft = "neotest-output-panel", size = { height = 15 } },
 				{
 					ft = "trouble",
 					title = "Diagnostics",
@@ -83,21 +89,12 @@ return {
 					filter = trouble_mode_filter("diagnostics"),
 					size = { height = 0.3 },
 				},
-				-- { ft = "qf", title = "QuickFix" },
 				{
 					ft = "trouble",
 					title = "QuickFix List",
 					open = "Trouble qflist",
 					filter = trouble_mode_filter("quickfix"),
 					size = { height = 0.3 },
-				},
-				{
-					ft = "help",
-					size = { height = 20 },
-					--- Docks only real help buffers, not help-filetype scratch buffers.
-					filter = function(buf)
-						return vim.bo[buf].buftype == "help"
-					end,
 				},
 				{
 					ft = "snacks_terminal",
@@ -111,77 +108,28 @@ return {
 							and not vim.w[win].trouble_preview
 					end,
 				},
-				{
-					ft = "dap-view",
-					title = "Debug",
-					size = { height = 0.3 },
-				},
-				{
-					ft = "dapui_console",
-					title = "Console",
-					size = { height = 0.25 },
-				},
-				{
-					ft = "dap-repl",
-					title = "REPL",
-					size = { height = 0.25 },
-				},
+				-- nvim-dap-view is one panel with winbar tabs: scopes, breakpoints,
+				-- watches and threads are sections inside it, not separate windows. Only
+				-- the debuggee's own terminal is a second buffer.
+				{ ft = "dap-view", title = "Debug", size = { height = 0.35 } },
+				{ ft = "dap-view-term", title = "Debuggee", size = { height = 0.25 } },
+				{ ft = "neotest-output-panel", title = "Test Output", size = { height = 0.3 } },
 			},
 			left = {
-				-- DAP UI left panels
-				{
-					ft = "dapui_scopes",
-					title = "Scopes",
-					size = { width = 60 },
-				},
-				{
-					ft = "dapui_stacks",
-					title = "Stacks",
-					size = { width = 60 },
-				},
-				{
-					ft = "dapui_breakpoints",
-					title = "Breakpoints",
-					size = { width = 60 },
-				},
-				{
-					ft = "dapui_watches",
-					title = "Watches",
-					size = { width = 60 },
-				},
 				"neo-tree",
 			},
 			right = {
-				{ title = "Neotest Summary", ft = "neotest-summary" },
+				-- The outline. One symbols panel, always in the same place; trouble
+				-- follows the active buffer on its own, so it tracks whichever editor
+				-- window the cursor is in.
 				{
 					ft = "trouble",
-					title = "Symbols",
+					title = "Outline",
 					open = "Trouble symbols focus=false",
 					filter = trouble_mode_filter("symbols"),
-					size = { width = 0.3 },
+					size = { width = 0.22 },
 				},
-				{
-					ft = "trouble",
-					title = "LSP",
-					open = "Trouble lsp focus=false",
-					filter = trouble_mode_filter("lsp"),
-					size = { width = 0.3 },
-				},
-				{
-					ft = "trouble",
-					title = "QuickFix List",
-					open = "Trouble qflist",
-					filter = trouble_mode_filter("qflist"),
-					size = { height = 0.3 },
-				},
-
-				{
-					ft = "trouble",
-					title = "Location List",
-					open = "Trouble loclist",
-					filter = trouble_mode_filter("loclist"),
-					size = { height = 0.3 },
-				},
+				{ title = "Tests", ft = "neotest-summary", size = { width = 0.22 } },
 			},
 			animate = {
 				enabled = false,
@@ -198,16 +146,58 @@ return {
 		config = function(_, opts)
 			add_neotree_panels(opts)
 			require("edgy").setup(opts)
-			local edgy_util = require("util.plugins.edgy")
 
-			-- Panel-management keymaps available regardless of LSP state.
+			-- One key per dock view, each a plain toggle. The previous version had a
+			-- push/pop stack of eight "view presets" behind `<leader>i*`, which meant
+			-- learning which letter opened which *combination* — and none of them were
+			-- mutually exclusive, so panels stacked at the bottom anyway.
+			--
+			-- The dock holds one view at a time (lua/features/workspace/dock.lua): the
+			-- same key puts it away, a different key swaps to it, and closing tears the
+			-- window down.
+			local dock = require("features.workspace").dock()
 			require("which-key").add({
+				{
+					"<leader>iq",
+					function()
+						dock.toggle("diagnostics")
+					end,
+					desc = "Diagnostics",
+				},
+				{
+					"<leader>iT",
+					function()
+						dock.toggle("terminal")
+					end,
+					desc = "Terminal",
+				},
+				{
+					"<leader>iD",
+					function()
+						dock.toggle("debug")
+					end,
+					desc = "Debug",
+				},
+				{
+					"<leader>in",
+					function()
+						dock.toggle("tests")
+					end,
+					desc = "Tests",
+				},
 				{
 					"<leader>ic",
 					function()
-						edgy_util.close_all()
+						dock.close()
 					end,
-					desc = "Edgy: Close All",
+					desc = "Close the dock",
+				},
+				{
+					"<leader>ie",
+					function()
+						require("features.workspace").equalize()
+					end,
+					desc = "Equalize Windows",
 				},
 				{
 					"<leader>is",
@@ -216,40 +206,6 @@ return {
 					end,
 					desc = "Edgy Select Window",
 				},
-			})
-
-			-- View toggles keyed by their trigger; each toggles one edgy view set.
-			local view_toggles = {
-				{ "<leader>iD", "debug", "Debug" },
-				{ "<leader>ia", "full_trouble", "Diagnostics, Symbols and LSP" },
-				{ "<leader>id", "diagnostics", "Diagnostics and Symbols" },
-				{ "<leader>ip", "project_diagnostics", "Project Wide Diagnostics" },
-				{ "<leader>il", "lsp", "Symbols and LSP" },
-				{ "<leader>in", "neotest", "Neotest" },
-				{ "<leader>iT", "list_trouble", "Symbols, Local- and Quickfix list" },
-				{ "<leader>if", "symbols", "Symbols" },
-			}
-
-			-- View toggles depend on LSP, so bind them per buffer on LspAttach.
-			vim.api.nvim_create_autocmd("LspAttach", {
-				group = vim.api.nvim_create_augroup("edgy_lsp_keymaps", { clear = true }),
-				callback = function(event)
-					local buf = event.buf
-					local map = function(key, fn, desc)
-						vim.keymap.set("n", key, fn, { buffer = buf, desc = desc })
-					end
-
-					for _, toggle in ipairs(view_toggles) do
-						local key, view, desc = toggle[1], toggle[2], toggle[3]
-						map(key, function()
-							edgy_util.toggle_view(edgy_util.views[view])
-						end, desc)
-					end
-
-					map("<leader>ie", function()
-						vim.cmd("wincmd =")
-					end, "Equalize Windows")
-				end,
 			})
 		end,
 	},

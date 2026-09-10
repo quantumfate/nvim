@@ -14,13 +14,17 @@ fmt-check:
 	stylua --check .
 	prettier --check '**/*.md'
 
+# Regression tests. They drive a real editor, so they run inside nvim.
+test:
+	nvim --headless -c 'luafile tests/run.lua'
+
 # Static analysis
 lint:
 	luacheck .
 	yamllint .
 
 # CI/pre-commit gate: formatting + tests (lint is advisory)
-check: fmt-check toolchain-check
+check: fmt-check test toolchain-check
 
 # Bootstrap the local dev environment (hooks, toolchain, PATH)
 setup:

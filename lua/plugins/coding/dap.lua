@@ -232,10 +232,9 @@ return {
 				desc = "View Value for Expression under the cursor",
 			},
 		},
-		--- Define breakpoint signs, virtual text, edgy hooks, and per-language adapters/configs.
+		--- Define breakpoint signs, virtual text, dock hooks, and per-language adapters/configs.
 		config = function()
 			local dap = require("dap")
-			local edgy_util = require("util.plugins.edgy")
 
 			-- icons: global sign glyph table defined during Neovim startup.
 			vim.fn.sign_define("DapBreakpoint", { text = icons.debugging.Breakpoint, texthl = "DiagnosticError" })
@@ -262,16 +261,16 @@ return {
 			-- Unfortunately, the way these events are emitted it's the state history of edgy util is completely flushed
 			-- I prefer a working util over compensating for dap
 			dap.listeners.before.attach.edgy_view = function()
-				edgy_util.open_view("debug")
+				require("features.workspace").dock().open("debug")
 			end
 			dap.listeners.before.launch.edgy_view = function()
-				edgy_util.open_view("debug")
+				require("features.workspace").dock().open("debug")
 			end
 			dap.listeners.before.event_terminated.edgy_view = function()
-				edgy_util.close_all()
+				require("features.workspace").dock().close()
 			end
 			dap.listeners.before.event_exited.edgy_view = function()
-				edgy_util.close_all()
+				require("features.workspace").dock().close()
 			end
 
 			-- Adapters ship as system packages (see lua/toolchain/registry.lua); the two
@@ -382,7 +381,7 @@ return {
 			--- binary, or none at all.
 			---@return thread|string
 			local function zig_executable()
-				local util_root = require("util.root")
+				local util_root = require("lib.root")
 				local buf = vim.api.nvim_get_current_buf()
 				-- `zig build` only means anything from the directory holding build.zig.
 				local root = util_root.detectors.pattern(buf, "build.zig")[1] or util_root.get({ buf = buf })

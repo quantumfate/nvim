@@ -3,12 +3,11 @@
 ---@class scaffold.detect
 local M = {}
 
-local fs = require("util.fs")
-
 --- Root-level marker files identifying an ecosystem; checked before extension scans.
 ---@type table<string, string[]>
 local MARKERS = {
 	rust = { "Cargo.toml" },
+	zig = { "build.zig", "build.zig.zon" },
 	go = { "go.mod" },
 	node = { "package.json" },
 	python = { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt" },
@@ -25,6 +24,7 @@ local EXTENSIONS = {
 	c = { "c", "h", "cc", "cpp", "cxx", "hpp" },
 	go = { "go" },
 	rust = { "rs" },
+	zig = { "zig", "zon" },
 	shell = { "sh", "bash" },
 	yaml = { "yml", "yaml" },
 	markdown = { "md", "markdown" },
@@ -54,7 +54,7 @@ local BUILD_MARKERS = {
 ---@param name string Filename to probe
 ---@return boolean
 local function has_file(root, name)
-	return vim.uv.fs_stat(fs.join_paths(root, name)) ~= nil
+	return vim.uv.fs_stat(vim.fs.joinpath(root, name)) ~= nil
 end
 
 --- True if any file with one of `exts` exists under `root` (early-exit scan).

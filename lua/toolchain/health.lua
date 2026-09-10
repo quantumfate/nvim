@@ -72,8 +72,48 @@ local function check_version_pairs(doc)
 	end
 end
 
+--- The registry says which servers exist; features/lsp/servers.lua says how to
+--- configure them. Neither can derive the other, so the only thing keeping them in
+--- step is noticing when they drift.
+local function check_lsp_coverage()
+	local configured = require("features.lsp.servers")
+	local missing_config, missing_registry = {}, {}
+
+	for _, name in ipairs(registry.names("lsp")) do
+		if not configured[name] then
+			table.insert(missing_config, name)
+		end
+	end
+
+	local known = {}
+	for _, name in ipairs(registry.names("lsp")) do
+		known[name] = true
+	end
+	for name in pairs(configured) do
+		if not known[name] then
+			table.insert(missing_registry, name)
+		end
+	end
+
+	table.sort(missing_config)
+	table.sort(missing_registry)
+
+	if #missing_config == 0 and #missing_registry == 0 then
+		vim.health.ok("registry and lsp server configs agree")
+		return
+	end
+	if #missing_config > 0 then
+		vim.health.warn("in the registry, no config in features/lsp/servers.lua", missing_config)
+	end
+	if #missing_registry > 0 then
+		vim.health.warn("configured but not in the registry, so never installed or probed", missing_registry)
+	end
+end
+
 function M.check()
 	vim.health.start("toolchain")
+
+	check_lsp_coverage()
 
 	local doc = store.read()
 	if not doc then

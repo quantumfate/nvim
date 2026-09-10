@@ -13,9 +13,11 @@ return {
 		resizing_mappings = false, -- Binds arrow keys to resizing the floating window.
 		post_open_hook = nil, -- A function taking two arguments, a buffer and a window to be ran as a hook.
 		post_close_hook = nil, -- A function taking two arguments, a buffer and a window to be ran as a hook.
-		references = { -- Configure the telescope UI for slowing the references cycling window.
-			provider = "snacks", -- telescope|fzf_lua|snacks|mini_pick|default
-			telescope = require("telescope.themes").get_dropdown({ hide_preview = false }),
+		-- Only `provider` is read. The `telescope` key next to it used to call
+		-- require("telescope.themes") at spec-eval time, which dragged telescope and
+		-- plenary into startup to configure a picker this config does not use.
+		references = { -- telescope|fzf_lua|snacks|mini_pick|default
+			provider = "snacks",
 		},
 		-- These two configs can also be passed down to the goto-preview definition and implementation calls for one off "peak" functionality.
 		force_close = true, -- passed into vim.api.nvim_win_close's second argument. See :h nvim_win_close

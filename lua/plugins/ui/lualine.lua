@@ -1,5 +1,5 @@
 --- Lualine (lazy.nvim spec): statusline and winbar assembled from the shared
---- component and color helpers in util.plugins.lualine.
+--- component and color helpers in features.lualine.
 
 ---@class LualineConfig
 ---@field options table Statusline appearance and behavior configuration
@@ -16,8 +16,8 @@ return {
 	event = "User FileOpened",
 	--- Builds the config from the shared color theme and component helpers.
 	opts = function()
-		local color = require("util.plugins.lualine.color")
-		local lualine_components = require("util.plugins.lualine.components")
+		local color = require("features.lualine.color")
+		local lualine_components = require("features.lualine.components")
 		-- `icons` and `Snacks` below are globals set up elsewhere in the config.
 		return {
 			options = {
@@ -83,6 +83,9 @@ return {
 				},
 				lualine_x = {
 					Snacks.profiler.status(),
+					-- First in the group: a running compile is the most time-sensitive
+					-- thing the statusline has to say.
+					lualine_components.lang_job,
 					lualine_components.command_status,
 					lualine_components.mode_status,
 					lualine_components.debug_status,
@@ -136,6 +139,9 @@ return {
 					lualine_components.filetype,
 				},
 				lualine_c = {
+					-- An output pane names itself; everything else gets the file path and
+					-- the symbol breadcrumb.
+					lualine_components.lang_output,
 					lualine_components.path,
 					lualine_components.navic,
 				},
@@ -145,6 +151,7 @@ return {
 					lualine_components.filetype,
 				},
 				lualine_c = {
+					lualine_components.lang_output,
 					lualine_components.path,
 				},
 			},

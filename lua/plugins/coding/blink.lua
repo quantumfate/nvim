@@ -90,7 +90,7 @@ return {
 					opts = {
 						--- Anchor path completion at the project root, not the buffer's directory.
 						get_cwd = function(_)
-							return require("util.root").get()
+							return require("lib.root").get()
 						end,
 					},
 				},

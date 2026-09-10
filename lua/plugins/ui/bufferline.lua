@@ -51,40 +51,44 @@ return {
 			desc = "Buffers",
 		},
 	},
-	opts = {
-		options = {
-			-- Snacks is a global plugin API providing buffer deletion.
-			close_command = function(n)
-				Snacks.bufdelete(n)
-			end,
-			right_mouse_command = function(n)
-				Snacks.bufdelete(n)
-			end,
-			diagnostics = "nvim_lsp",
-			always_show_bufferline = false,
-			--- Renders the error/warning counts on each buffer.
-			diagnostics_indicator = function(_, _, diag)
-				-- `icons` is a global table set up elsewhere in the config.
-				local icons = icons.diagnostics
-				local ret = (diag.error and icons.Error .. diag.error .. " " or "")
-					.. (diag.warning and icons.Warning .. diag.warning or "")
-				return vim.trim(ret)
-			end,
-			offsets = {
-				{
-					filetype = "neo-tree",
-					text = "Neo-tree",
-					highlight = "Directory",
-					text_align = "left",
+	--- Built lazily: the diagnostics indicator reads the `icons` global, and a plain table would read it while lazy.nvim
+	--- imports this file, pulling the glyph table into startup.
+	opts = function()
+		return {
+			options = {
+				-- Snacks is a global plugin API providing buffer deletion.
+				close_command = function(n)
+					Snacks.bufdelete(n)
+				end,
+				right_mouse_command = function(n)
+					Snacks.bufdelete(n)
+				end,
+				diagnostics = "nvim_lsp",
+				always_show_bufferline = false,
+				--- Renders the error/warning counts on each buffer.
+				diagnostics_indicator = function(_, _, diag)
+					-- `icons` is a global table set up elsewhere in the config.
+					local icons = icons.diagnostics
+					local ret = (diag.error and icons.Error .. diag.error .. " " or "")
+						.. (diag.warning and icons.Warning .. diag.warning or "")
+					return vim.trim(ret)
+				end,
+				offsets = {
+					{
+						filetype = "neo-tree",
+						text = "Neo-tree",
+						highlight = "Directory",
+						text_align = "left",
+					},
+					{
+						filetype = "snacks_layout_box",
+					},
 				},
-				{
-					filetype = "snacks_layout_box",
-				},
+				--- Resolves each buffer's icon from mini.icons by filetype.
+				get_element_icon = function(opts)
+					return require("mini.icons").get("filetype", opts.filetype)
+				end,
 			},
-			--- Resolves each buffer's icon from mini.icons by filetype.
-			get_element_icon = function(opts)
-				return require("mini.icons").get("filetype", opts.filetype)
-			end,
-		},
-	},
+		}
+	end,
 }

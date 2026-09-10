@@ -23,7 +23,7 @@ return {
 
 				local buf = event.buf
 
-				local keymaps = require("plugins.lang.conf.keymaps")
+				local keymaps = require("features.lsp.keymaps")
 
 				-- Bind each keymap only when its LSP method and optional condition hold.
 				for _, map in ipairs(keymaps) do
@@ -75,13 +75,10 @@ return {
 					})
 				end
 
-				-- Server-specific tweaks
-				if client.name == "clangd" then
-					vim.keymap.set("n", "<leader>ch", "<cmd>ClangdSwitchSourceHeader<cr>", {
-						buffer = buf,
-						desc = "Switch Source/Header",
-					})
-				end
+				-- Header/source switching used to be bound here as a clangd-only
+				-- `<leader>ch`. It is now `<leader>vh`, the same key that reaches Rust's
+				-- parent module, so "go to the related file" does not depend on the
+				-- language. See lua/features/lang/.
 			end,
 		})
 
@@ -128,13 +125,24 @@ return {
 				},
 			}),
 		})
-		-- Merge each server's config over the defaults, then enable them all.
-		local server_configs = require("plugins.lang.conf.server")
+		-- Merge each server's config over the defaults, then enable them.
+		--
+		-- `enabled = false` is this config's own marker, not something nvim understands:
+		-- a server another plugin owns is listed here for the registry cross-check but
+		-- must not be started a second time. rust_analyzer is the case that matters —
+		-- rustaceanvim starts its own, and enabling both meant two full rust-analyzer
+		-- processes indexing the same project.
+		local server_configs = require("features.lsp.servers")
 
+		local servers = {}
 		for server, config in pairs(server_configs) do
-			vim.lsp.config[server] = vim.tbl_deep_extend("force", vim.lsp.config[server] or {}, config)
+			if config.enabled ~= false then
+				table.insert(servers, server)
+				local settings = vim.deepcopy(config)
+				settings.enabled = nil
+				vim.lsp.config[server] = vim.tbl_deep_extend("force", vim.lsp.config[server] or {}, settings)
+			end
 		end
-		local servers = vim.tbl_keys(server_configs)
 		vim.lsp.enable(servers)
 
 		-- :Lsp* commands for inspecting and controlling clients.

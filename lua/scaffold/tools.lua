@@ -1,10 +1,21 @@
---- Single source of truth mapping each ecosystem to its tools. Every generated
---- artefact (justfile, flake, ansible playbook, .envrc, CI) derives from here, so a
---- new language is one row in `M.eco`.
+--- Per-ecosystem *project* wiring: how to format, lint, test and build a repo, and
+--- which packages a devShell or playbook needs to do it. Every generated artefact
+--- (justfile, flake, ansible playbook, .envrc, CI) derives from here, so a new
+--- language is one row in `M.eco`.
+---
+--- Deliberately NOT the same table as lua/toolchain/registry.lua, which answers a
+--- different question: the registry is this machine's editor toolchain (which LSP,
+--- formatter and debug adapter to install and probe for, by Arch package name), while
+--- this is a generated project's toolchain, in cross-distro and nix vocabulary. The
+--- `bootstrap` fields read alike but are not: the registry installs `nlua` and
+--- `bacon-ls` for nvim, this runs `npm install` in the project being scaffolded.
+---
+--- `bin_paths` is the one fact both need, and it is owned by the registry.
 ---@class scaffold.tools
 local M = {}
 
 ---@class scaffold.ToolSpec
+---@field extra? table<string, string[]> Named recipes beyond the standard four
 ---@field fmt? string[] Commands that reformat the tree in place
 ---@field fmt_check? string[] Commands that verify formatting without writing
 ---@field lint? string[] Static-analysis commands
@@ -12,8 +23,11 @@ local M = {}
 ---@field build? string[] Build commands
 ---@field nix? string[] nixpkgs attribute names providing the above tools
 ---@field sys? string[] System (Arch/pacman) package names providing the same tools
----@field bin_paths? string[] Per-user tool bin dirs to add to PATH (shell-expandable), e.g. "$HOME/.cargo/bin"
----@field bootstrap? string[] User-level setup commands (install rocks/components), run by setup.sh and ansible
+---@field bin_paths? string[] Project-local bin dirs, e.g. "node_modules/.bin". Per-user
+--- dirs like "$HOME/.cargo/bin" live in the toolchain registry and are merged in by M.bin_paths
+---@field bootstrap? string[] Setup commands for the scaffolded project (npm install,
+--- ansible-galaxy install), run by setup.sh and ansible. Not the registry's bootstrap,
+--- which provisions this machine's editor tooling
 
 --- Per-ecosystem toolchain. Commands stay non-interactive so they run from a task
 --- runner or CI; `git ls-files` limits file-list tools to tracked files.
@@ -26,7 +40,6 @@ M.eco = {
 		-- luacheck ships declaratively in nix; the sys path installs it via bootstrap.
 		nix = { "stylua", "luajit", "lua-language-server", "luarocks", "luaPackages.luacheck" },
 		sys = { "stylua", "lua-language-server", "luarocks" },
-		bin_paths = { "$HOME/.luarocks/bin" },
 		bootstrap = { "command -v luarocks >/dev/null && luarocks install --local luacheck >/dev/null 2>&1 || true" },
 	},
 	python = {
@@ -45,18 +58,18 @@ M.eco = {
 		build = { "npm run build" },
 		nix = { "nodejs", "prettier" },
 		sys = { "nodejs", "npm", "prettier" },
+		-- Project-local; the registry owns the per-user dirs.
 		bin_paths = { "node_modules/.bin", "$HOME/.npm-global/bin" },
 		bootstrap = { "[ -f package.json ] && npm install >/dev/null 2>&1 || true" },
 	},
 	rust = {
 		fmt = { "cargo fmt" },
 		fmt_check = { "cargo fmt --check" },
-		lint = { "cargo clippy -- -D warnings" },
+		lint = { "cargo clippy --all-targets -- -D warnings" },
 		test = { "cargo test" },
 		build = { "cargo build" },
-		nix = { "cargo", "rustc", "rustfmt", "clippy" },
-		sys = { "rust" },
-		bin_paths = { "$HOME/.cargo/bin" },
+		nix = { "cargo", "rustc", "rustfmt", "clippy", "rust-analyzer" },
+		sys = { "rust", "rust-analyzer" },
 		bootstrap = { "command -v rustup >/dev/null && rustup component add rustfmt clippy >/dev/null 2>&1 || true" },
 	},
 	go = {
@@ -67,14 +80,38 @@ M.eco = {
 		build = { "go build ./..." },
 		nix = { "go", "gopls" },
 		sys = { "go", "gopls" },
-		bin_paths = { "$HOME/go/bin" },
 		bootstrap = { "command -v go >/dev/null && go install golang.org/x/tools/gopls@latest >/dev/null 2>&1 || true" },
 	},
 	c = {
 		fmt = { "git ls-files '*.c' '*.h' '*.cpp' '*.hpp' '*.cc' | xargs -r clang-format -i" },
 		fmt_check = { "git ls-files '*.c' '*.h' '*.cpp' '*.hpp' '*.cc' | xargs -r clang-format --dry-run --Werror" },
-		nix = { "clang-tools", "cmake" },
-		sys = { "clang", "cmake" },
+		-- clang-tidy reads compile_commands.json, so `just compile-db` has to have run.
+		lint = { "git ls-files '*.c' '*.cpp' '*.cc' | xargs -r clang-tidy --quiet" },
+		build = { "make -j$(nproc)" },
+		test = { "ctest --test-dir build --output-on-failure || make test" },
+		nix = { "clang-tools", "cmake", "bear", "gdb" },
+		sys = { "clang", "cmake", "bear", "gdb" },
+		-- The editor reads compile_commands.json to preprocess and disassemble with the
+		-- project's real flags. Without it, `<leader>ve` and `<leader>va` fall back to
+		-- defaults and quietly show you a different program than the one that ships.
+		extra = {
+			["compile-db"] = {
+				"@if [ -f CMakeLists.txt ]; then cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && ln -sf build/compile_commands.json .; \\",
+				"\telif [ -f meson.build ]; then meson setup build && ln -sf build/compile_commands.json .; \\",
+				"\telse bear -- $(MAKE) -B; fi",
+			},
+		},
+	},
+
+	zig = {
+		fmt = { "zig fmt ." },
+		fmt_check = { "zig fmt --check ." },
+		-- `ast-check` is the parse-only gate; the compiler itself is the real linter.
+		lint = { "git ls-files '*.zig' | xargs -r -n1 zig ast-check" },
+		test = { "zig build test" },
+		build = { "zig build" },
+		nix = { "zig", "zls" },
+		sys = { "zig", "zls" },
 	},
 	shell = {
 		fmt = { "shfmt -w -i 4 ." },
@@ -193,17 +230,38 @@ function M.commands(detection, action)
 	return out
 end
 
+--- Named recipes an ecosystem contributes beyond the standard four, as name -> lines.
+---@param detection scaffold.Detection
+---@return table<string, string[]>
+function M.extras(detection)
+	local out = {}
+	for _, eco in ipairs(M.ordered()) do
+		if detection.ecosystems[eco] then
+			for name, cmds in pairs((M.eco[eco] or {}).extra or {}) do
+				out[name] = cmds
+			end
+		end
+	end
+	return out
+end
+
 --- Per-user tool bin dirs that must be on PATH for user-installed tools to resolve.
 --- Consumed by .envrc and the ansible playbook.
 ---@param detection scaffold.Detection
 ---@return string[]
 function M.bin_paths(detection)
-	local out = {}
+	local ecos = {}
 	for _, eco in ipairs(M.ordered()) do
-		local spec = M.eco[eco]
-		if detection.ecosystems[eco] and spec and spec.bin_paths then
-			extend_unique(out, spec.bin_paths)
+		if detection.ecosystems[eco] then
+			table.insert(ecos, eco)
 		end
+	end
+
+	-- The per-user install dirs ($HOME/.cargo/bin and friends) are the registry's;
+	-- only the project-local ones below belong to a scaffolded repo.
+	local out = require("toolchain.registry").bin_paths(ecos)
+	for _, eco in ipairs(ecos) do
+		extend_unique(out, (M.eco[eco] or {}).bin_paths or {})
 	end
 	return out
 end

@@ -3,7 +3,9 @@
 ---@class toolchain.store
 local M = {}
 
-local registry = require("toolchain.registry")
+-- Lazy: M.read() is just a JSON parse and is called from the dashboard at startup.
+-- Only refresh() needs the registry, and that runs on idle.
+local registry = require("lib.modules").require_on_index("toolchain.registry")
 
 -- Readers refuse a shape they do not know.
 local SCHEMA = 1
