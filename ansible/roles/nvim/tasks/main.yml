@@ -143,12 +143,20 @@
       check_mode: false
       when: nvim_config_dir_stat.stat.exists and not nvim_config_dir_stat.stat.islnk
 
+    - name: Abort — config target is not a git checkout
+      ansible.builtin.fail:
+        msg: >-
+          {{ nvim_config_dir }} exists but is not a git checkout
+          ({{ nvim_config_dir_dirty.stderr | default(nvim_config_dir_dirty.msg | default('')) }});
+          move it aside before re-linking the config.
+      when: nvim_config_dir_dirty is not skipped and nvim_config_dir_dirty.rc != 0
+
     - name: Abort — config target is a git checkout with uncommitted changes
       ansible.builtin.fail:
         msg: >-
           {{ nvim_config_dir }} has uncommitted changes; commit or move them
           before re-linking the config.
-      when: nvim_config_dir_dirty is defined and nvim_config_dir_dirty.stdout | length > 0
+      when: nvim_config_dir_dirty is not skipped and nvim_config_dir_dirty.stdout | length > 0
 
     - name: Remove the old config target
       ansible.builtin.file:
