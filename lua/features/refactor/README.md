@@ -154,3 +154,7 @@ no `kind` at all — including "Generate trait from impl".
 Add an entry to `M.ops` in `init.lua` and a file under `ops/`. Build a plan, record
 conflicts for anything unsafe and skips for anything merely unhandled, then call
 `signature.finish(plan, opts)`. Preview and undo come free.
+
+---
+
+Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › features/refactor`.

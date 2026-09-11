@@ -11,3 +11,7 @@ Generic helpers. No plugin may be required from here except lazy's own config.
 | `async_shim.lua` | routes `require("async")` to the copy each plugin expects |
 
 Anything that knows about a specific plugin belongs in `lua/features/`.
+
+---
+
+Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › lib`.

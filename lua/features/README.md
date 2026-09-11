@@ -20,3 +20,7 @@ code they call lives here.
 | `bufferline.lua` `harpoon.lua` `navbuddy.lua` `chezmoi.lua` | per-plugin glue                                     |
 
 `refactor/` is the largest of these and documents itself; start at its README.
+
+---
+
+Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › features`.

@@ -157,3 +157,7 @@ K                     hover
 
 If a mapping does not behave as documented, `:verbose map <lhs>` names the file
 that won — anything loading on an event overrides `lua/core/keymaps.lua`.
+
+---
+
+Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › core`.

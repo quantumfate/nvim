@@ -74,3 +74,7 @@ Pass one explicitly when working on a tree you just built:
 `coredumpctl` for the picker, `gdb` for source locations, `binutils` (`addr2line`,
 `readelf`) for oops decoding. Core dumps must actually be captured — check
 `/proc/sys/kernel/core_pattern` points at `systemd-coredump`, and `ulimit -c` is not 0.
+
+---
+
+Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › features/crash`.

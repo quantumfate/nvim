@@ -57,3 +57,7 @@ return {
 ```
 
 Partial is fine — anything omitted stays derived.
+
+---
+
+Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › theme`.

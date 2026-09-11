@@ -121,3 +121,7 @@ happened to the toolchain.
         nvim_repo_path: /path/to/checkout
         nvim_ecosystem_filter: [core, lua, rust] # default: every ecosystem
 ```
+
+---
+
+Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › ansible`.

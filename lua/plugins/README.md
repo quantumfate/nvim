@@ -25,3 +25,7 @@ Check what actually loaded at startup:
 ```vim
 :lua =vim.tbl_count(vim.tbl_filter(function(p) return p._.loaded end, require("lazy.core.config").plugins))
 ```
+
+---
+
+Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › plugins`.
