@@ -26,7 +26,3 @@ Non-destructive unless `--force`.
 | `bootstrap` | `npm install` in the scaffolded project | `nlua`, `bacon-ls` for nvim                        |
 
 `bin_paths` is the one shared fact, and the registry owns it.
-
----
-
-Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › scaffold`.

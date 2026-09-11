@@ -52,30 +52,6 @@ Arrows point at what a layer is allowed to require.
 - Windows have names, and transient views borrow a pane instead of opening their own —
   see [`lua/features/workspace/`](./lua/features/workspace/README.md).
 
-## Why
-
-Linux lost the mainstream to config files and CLI tools. Agents love exactly that, so
-everyone building with agents now depends on Linux and its stability. This config is the
-training ground for the layer underneath: it shows what the machine does with code —
-assembly, layouts, crashes, syscalls, the kernel — through tools an agent can drive too.
-
-## Roadmap
-
-Tracked in the Linear project
-[Neovim Configuration](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b).
-Issues carry a `Module` label named after a directory below; each module README names its
-label.
-
-| Milestone                  | Done when                                                             |
-| -------------------------- | --------------------------------------------------------------------- |
-| M1 · Trustworthy core      | tests isolated and green in CI, no crash on save, verify never lies  |
-| M2 · Read the machine      | layout, binary, profile, syscalls, crashes — every language, to source |
-| M3 · Change code safely    | every declaration, impl and override updated, or a conflict           |
-| M4 · Kernel workflow       | a real tree: navigate, check, boot in QEMU, debug, decode, send       |
-| M5 · Headless & scriptable | every analysis as a headless command with JSON output                 |
-| M6 · Practice & proof      | playground sessions by hand, a kernel study, write-ups                |
-| Neovim Agent Management    | the agent dashboard                                                   |
-
 ## Screens
 
 | Lazy loading               | Debugging                    |

@@ -170,7 +170,3 @@ One key per dock view, each a toggle; a different key swaps the view in the same
 | `<leader>iD` | debugger                          |
 | `<leader>in` | test output                       |
 | `<leader>ic` | close the dock                    |
-
----
-
-Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › features/workspace`.

@@ -144,7 +144,3 @@ possible way to read a disassembly.
 
 Write `lua/features/lang/<filetype>.lua` returning a table with any of the capability
 names above. Anything omitted is simply unbound.
-
----
-
-Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › features/lang`.

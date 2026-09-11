@@ -63,7 +63,3 @@ run, and confirm the count:
 21 passed, 1 failed, 22 total
 FAIL workspace › counts a rendering as a content pane
 ```
-
----
-
-Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › tests`.

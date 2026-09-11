@@ -47,7 +47,3 @@ Two installed tools are deliberately not wired, because they do not work here:
   AVX-512, which valgrind cannot emulate. ASan (`<leader>xr`) covers the same bugs.
 - **rr** needs `kernel.perf_event_paranoid ≤ 1` and, on Zen CPUs, the SpecLockMap
   workaround from rr's wiki.
-
----
-
-Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › features/sys`.

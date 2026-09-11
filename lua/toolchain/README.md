@@ -120,7 +120,3 @@ same fields as the event log — `x-nvim-phase`, `x-nvim-ecosystem`, `x-nvim-too
 reads those instead of parsing the message text.
 
 Details, including the full role behaviour: [`ansible/Readme.md`](../../ansible/Readme.md).
-
----
-
-Issues: [Linear](https://linear.app/quantumfate/project/neovim-configuration-382d73d48a3b), label `Module › toolchain`.
