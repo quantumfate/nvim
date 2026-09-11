@@ -12,6 +12,12 @@ function M.enclosing(capture)
 		return nil
 	end
 
+	-- The queries ship with a lazily loaded plugin, and query.get caches a miss: asked
+	-- once before the plugin loads, it answers nil for the rest of the session. So load
+	-- first. Move used to report "not inside a function" until something else had.
+	pcall(function()
+		require("lazy").load({ plugins = { "nvim-treesitter-textobjects" } })
+	end)
 	local query = vim.treesitter.query.get(parser:lang(), "textobjects")
 	local tree = query and parser:parse()[1]
 	if not tree then

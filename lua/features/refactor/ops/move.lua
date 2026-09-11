@@ -25,18 +25,46 @@ function M.run(opts)
 	end
 	local srow, scol, erow, ecol = range[1], range[2], range[3], range[4]
 
-	-- The doc comment travels with the declaration; leaving it behind would strand it
-	-- on whatever follows, and the moved function would arrive undocumented.
-	local from = syntax.doc_start(bufnr, srow)
-	local body = table.concat(vim.api.nvim_buf_get_text(bufnr, from, 0, erow, ecol, {}), "\n")
-
-	local node = vim.treesitter.get_node({ bufnr = bufnr, pos = { srow, scol } })
-	local name_node = node and node:field("name")[1]
-	local name = name_node and syntax.text(name_node, bufnr) or "declaration"
+	-- The node spanning the whole range, not the one at its first character: that is
+	-- `pub` in `pub fn`, which has no name and no visibility.
+	local parser = syntax.parser(bufnr)
+	local tree = parser and parser:parse()[1]
+	local node = tree and tree:root():named_descendant_for_range(srow, scol, erow, ecol)
 	if not node then
 		Snacks.notify.warn("Cannot identify the declaration to move", { title = "Refactor" })
 		return
 	end
+	local name_node = node:field("name")[1]
+	local name = name_node and syntax.text(name_node, bufnr) or "declaration"
+
+	-- A method belongs to its type; pasted at the top level of another file it is a
+	-- free function with a dangling receiver.
+	local container = node:parent()
+	while container do
+		local kind = container:type()
+		if
+			kind == "impl_item"
+			or kind == "declaration_list"
+			or kind == "struct_declaration"
+			or kind == "class_definition"
+			or kind == "class_body"
+			or kind == "class_declaration"
+		then
+			Snacks.notify.warn("`" .. name .. "` is a method; move its type instead", { title = "Refactor" })
+			return
+		end
+		container = container:parent()
+	end
+
+	-- Decorators come along with the function they decorate.
+	if node:parent() and node:parent():type() == "decorated_definition" then
+		srow = node:parent():start()
+	end
+
+	-- The doc comment travels with the declaration; leaving it behind would strand it
+	-- on whatever follows, and the moved function would arrive undocumented.
+	local from = syntax.doc_start(bufnr, srow)
+	local body = table.concat(vim.api.nvim_buf_get_text(bufnr, from, 0, erow, ecol, {}), "\n")
 
 	local proceed = function(path)
 		if not path or vim.trim(path) == "" then
@@ -55,7 +83,19 @@ function M.run(opts)
 		-- Paste at the end of the destination, creating the buffer if the file is new.
 		local target = plan:bufnr(vim.uri_from_fname(path))
 		local last = vim.api.nvim_buf_line_count(target)
-		plan:edit(target, syntax.insert(last, 0, "\n" .. body .. "\n"))
+		local empty = last == 1 and (vim.api.nvim_buf_get_lines(target, 0, 1, false)[1] or "") == ""
+		local header = ""
+		-- A new Go file is not a Go file until it names its package.
+		if empty and vim.bo[bufnr].filetype == "go" then
+			for _, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, 50, false)) do
+				local pkg = line:match("^package%s+([%w_]+)")
+				if pkg then
+					header = "package " .. pkg .. "\n"
+					break
+				end
+			end
+		end
+		plan:edit(target, syntax.insert(last, 0, header .. "\n" .. body .. "\n"))
 
 		-- A file-private symbol cannot be reached from its new home. Nothing about the
 		-- move says so, and the callers left behind only fail at run time.
@@ -63,7 +103,10 @@ function M.run(opts)
 		if vis == "unknown" then
 			plan:skipped_check("visibility", vim.bo[bufnr].filetype .. " does not mark visibility syntactically")
 		end
-		if vis == "private" then
+		-- Go's lowercase names are package-scoped, so a move within the directory is fine.
+		local same_package = vim.bo[bufnr].filetype == "go"
+			and vim.fs.dirname(path) == vim.fs.dirname(vim.api.nvim_buf_get_name(bufnr))
+		if vis == "private" and not same_package then
 			plan:note(
 				"conflict",
 				bufnr,
@@ -89,7 +132,8 @@ function M.run(opts)
 			plan:skipped_check("imports", "not written automatically for " .. vim.bo[bufnr].filetype)
 		end
 
-		usages.lsp(bufnr, { include_declaration = false }, function(found, _, reason)
+		local name_pos = name_node and { name_node:start() } or nil
+		usages.lsp(bufnr, { include_declaration = false, position = name_pos }, function(found, _, reason)
 			if not found then
 				plan:skipped_check("call sites", reason or "usages unavailable")
 			end

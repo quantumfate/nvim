@@ -120,6 +120,7 @@ return {
 					{ "<leader>s", group = "search/replace" },
 					{ "<leader>t", group = "toggle" },
 					{ "<leader>i", group = "interfaces" },
+					{ "<leader>x", group = "systems" },
 					{ "<leader>p", group = "popups" },
 					{ "<leader>w", group = "windows" },
 					{ "<leader>e", group = "explorer" },

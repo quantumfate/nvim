@@ -111,6 +111,9 @@ local function invocation(buf, extra)
 	return cmd, dir or project(buf), true
 end
 
+--- Exposed for features/sys, which compiles with the same flags for pahole.
+M.invocation = invocation
+
 --- Notifies when output came from a guess rather than the project's own flags, since
 --- that is the difference between real preprocessor output and something misleading.
 ---@param from_db boolean

@@ -24,7 +24,7 @@ local bufferline = {
 			local warning
 			if bo[bufnr].modified then
 				warning = fmt([[No write since last change for (%s)]], fnamemodify(bufname, ":t"))
-			elseif api.nvim_buf_get_option(bufnr, "buftype") == "terminal" then
+			elseif vim.bo[bufnr].buftype == "terminal" then
 				warning = fmt([[Terminal %s will be killed]], bufname)
 			end
 			if warning then

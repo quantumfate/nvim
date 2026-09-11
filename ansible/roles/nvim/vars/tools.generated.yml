@@ -149,6 +149,11 @@ nvim_ecosystems:
         bin: "ruff"
         package: "ruff"
         optional: false
+      - name: "ruff_organize_imports"
+        kind: "fmt"
+        bin: "ruff"
+        package: "ruff"
+        optional: false
       - name: "ruff_format"
         kind: "fmt"
         bin: "ruff"
@@ -169,9 +174,9 @@ nvim_ecosystems:
       - "tailwindcss-language-server"
       - "vue-language-server"
       - "vscode-langservers-extracted"
+      - "deno"
       - "prettierd"
       - "prettier"
-      - "deno"
       - "eslint_d"
       - "eslint"
       - "vscode-js-debug-bin"
@@ -206,6 +211,11 @@ nvim_ecosystems:
         bin: "vscode-css-language-server"
         package: "vscode-langservers-extracted"
         optional: false
+      - name: "deno_fmt"
+        kind: "fmt"
+        bin: "deno"
+        package: "deno"
+        optional: false
       - name: "prettierd"
         kind: "fmt"
         bin: "prettierd"
@@ -215,11 +225,6 @@ nvim_ecosystems:
         kind: "fmt"
         bin: "prettier"
         package: "prettier"
-        optional: false
-      - name: "deno_fmt"
-        kind: "fmt"
-        bin: "deno"
-        package: "deno"
         optional: false
       - name: "eslint_d"
         kind: "lint"
@@ -299,15 +304,15 @@ nvim_ecosystems:
         bin: "gopls"
         package: "gopls"
         optional: false
-      - name: "gofmt"
-        kind: "fmt"
-        bin: "gofmt"
-        package: "go"
-        optional: false
       - name: "goimports"
         kind: "fmt"
         bin: "goimports"
         package: "go-tools"
+        optional: false
+      - name: "gofmt"
+        kind: "fmt"
+        bin: "gofmt"
+        package: "go"
         optional: false
       - name: "delve"
         kind: "dap"
@@ -317,6 +322,11 @@ nvim_ecosystems:
   c:
     packages:
       - "clang"
+      - "bear"
+      - "meson"
+      - "ninja"
+      - "gdb"
+      - "binutils"
     tools:
       - name: "clangd"
         kind: "lsp"
@@ -328,6 +338,111 @@ nvim_ecosystems:
         bin: "clang-format"
         package: "clang"
         optional: false
+      - name: "clang_tidy"
+        kind: "lint"
+        bin: "clang-tidy"
+        package: "clang"
+        optional: false
+      - name: "bear"
+        kind: "tool"
+        bin: "bear"
+        package: "bear"
+        optional: false
+      - name: "meson"
+        kind: "tool"
+        bin: "meson"
+        package: "meson"
+        optional: true
+      - name: "ninja"
+        kind: "tool"
+        bin: "ninja"
+        package: "ninja"
+        optional: true
+      - name: "gdb"
+        kind: "tool"
+        bin: "gdb"
+        package: "gdb"
+        optional: false
+      - name: "addr2line"
+        kind: "tool"
+        bin: "addr2line"
+        package: "binutils"
+        optional: false
+  sys:
+    packages:
+      - "pahole"
+      - "qemu-system-x86"
+      - "perf"
+      - "strace"
+      - "ltrace"
+      - "valgrind"
+      - "bpftrace"
+      - "hyperfine"
+      - "b4"
+      - "rr"
+      - "sparse"
+      - "coccinelle"
+    tools:
+      - name: "pahole"
+        kind: "tool"
+        bin: "pahole"
+        package: "pahole"
+        optional: false
+      - name: "qemu"
+        kind: "tool"
+        bin: "qemu-system-x86_64"
+        package: "qemu-system-x86"
+        optional: false
+      - name: "perf"
+        kind: "tool"
+        bin: "perf"
+        package: "perf"
+        optional: false
+      - name: "strace"
+        kind: "tool"
+        bin: "strace"
+        package: "strace"
+        optional: false
+      - name: "ltrace"
+        kind: "tool"
+        bin: "ltrace"
+        package: "ltrace"
+        optional: false
+      - name: "valgrind"
+        kind: "tool"
+        bin: "valgrind"
+        package: "valgrind"
+        optional: false
+      - name: "bpftrace"
+        kind: "tool"
+        bin: "bpftrace"
+        package: "bpftrace"
+        optional: false
+      - name: "hyperfine"
+        kind: "tool"
+        bin: "hyperfine"
+        package: "hyperfine"
+        optional: false
+      - name: "b4"
+        kind: "tool"
+        bin: "b4"
+        package: "b4"
+        optional: false
+      - name: "rr"
+        kind: "tool"
+        bin: "rr"
+        package: "rr"
+        optional: true
+      - name: "sparse"
+        kind: "tool"
+        bin: "sparse"
+        package: "sparse"
+        optional: true
+      - name: "coccinelle"
+        kind: "tool"
+        bin: "spatch"
+        package: "coccinelle"
+        optional: true
   shell:
     packages:
       - "bash-language-server"
@@ -399,6 +514,11 @@ nvim_ecosystems:
         bin: "taplo"
         package: "taplo-cli"
         optional: false
+      - name: "taplo"
+        kind: "fmt"
+        bin: "taplo"
+        package: "taplo-cli"
+        optional: false
   yaml:
     packages:
       - "yaml-language-server"
@@ -418,12 +538,18 @@ nvim_ecosystems:
     packages:
       - "ansible"
       - "ansible-language-server"
+      - "prettierd"
       - "ansible-lint"
     tools:
       - name: "ansiblels"
         kind: "lsp"
         bin: "ansible-language-server"
         package: "ansible-language-server"
+        optional: false
+      - name: "prettierd"
+        kind: "fmt"
+        bin: "prettierd"
+        package: "prettierd"
         optional: false
       - name: "ansible_lint"
         kind: "lint"

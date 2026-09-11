@@ -32,7 +32,7 @@ M.views = {
 			Snacks.terminal()
 		end,
 		close = function()
-			for _, win in ipairs(vim.api.nvim_list_wins()) do
+			for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 				local buf = vim.api.nvim_win_get_buf(win)
 				if vim.bo[buf].filetype == "snacks_terminal" and vim.api.nvim_win_is_valid(win) then
 					pcall(vim.api.nvim_win_close, win, false)
@@ -53,6 +53,21 @@ M.views = {
 		title = "Diagnostics",
 		ft = "trouble",
 		open = "Trouble diagnostics open filter.buf=0 focus=false open_no_results=true",
+		close = "Trouble diagnostics close",
+	},
+	-- Every file, not just this one. Servers that can report on files you have not
+	-- opened (workspace/diagnostic) are asked to first; the rest only know open buffers.
+	project = {
+		title = "Project Diagnostics",
+		ft = "trouble",
+		open = function()
+			for _, client in ipairs(vim.lsp.get_clients()) do
+				if client:supports_method("workspace/diagnostic") then
+					pcall(vim.lsp.buf.workspace_diagnostics, { client_id = client.id })
+				end
+			end
+			vim.cmd("Trouble diagnostics open focus=false open_no_results=true")
+		end,
 		close = "Trouble diagnostics close",
 	},
 	quickfix = {
@@ -101,7 +116,7 @@ function M.is_open(name)
 		return false
 	end
 	local fts = type(view.ft) == "table" and view.ft or { view.ft }
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if vim.api.nvim_win_is_valid(win) then
 			local ft = vim.bo[vim.api.nvim_win_get_buf(win)].filetype
 			if vim.tbl_contains(fts, ft) then

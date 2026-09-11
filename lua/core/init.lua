@@ -31,3 +31,6 @@ require("features.workspace").setup()
 
 -- :Crashes / :CrashOpen / :CrashDecode. See lua/features/crash/.
 require("features.crash").setup()
+
+-- <leader>x: struct layout, ELF, disassembly, stack traces, kernel tree. See lua/features/sys/.
+require("features.sys").setup()

@@ -269,6 +269,27 @@ M.eco = {
 		},
 	},
 
+	-- What a systems engineer reaches for when the source is not enough. The editor
+	-- drives pahole, nm/objdump, gdb and QEMU directly (lua/features/sys/); the rest are
+	-- for the terminal beside it and installed so they are there when needed.
+	sys = {
+		tool = {
+			{ name = "pahole", bin = "pahole" },
+			{ name = "qemu", bin = "qemu-system-x86_64", pkg = "qemu-system-x86" },
+			{ name = "perf", bin = "perf" },
+			{ name = "strace", bin = "strace" },
+			{ name = "ltrace", bin = "ltrace" },
+			{ name = "valgrind", bin = "valgrind" },
+			{ name = "bpftrace", bin = "bpftrace" },
+			{ name = "hyperfine", bin = "hyperfine" },
+			{ name = "b4", bin = "b4" },
+			-- AUR: absence is not an error.
+			{ name = "rr", bin = "rr", optional = true },
+			{ name = "sparse", bin = "sparse", optional = true },
+			{ name = "coccinelle", bin = "spatch", pkg = "coccinelle", optional = true },
+		},
+	},
+
 	shell = {
 		lsp = { { name = "bashls", bin = "bash-language-server", pkg = "bash-language-server" } },
 		fmt = {
@@ -339,6 +360,7 @@ local BASE_ORDER = {
 	"rust",
 	"go",
 	"c",
+	"sys",
 	"shell",
 	"zig",
 	"json",

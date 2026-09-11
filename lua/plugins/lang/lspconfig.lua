@@ -152,7 +152,7 @@ return {
 		end, { desc = "Show LSP info" })
 
 		vim.api.nvim_create_user_command("LspLog", function()
-			vim.cmd.edit(vim.lsp.get_log_path())
+			vim.cmd.edit(vim.lsp.log.get_filename())
 		end, { desc = "Open LSP log" })
 
 		vim.api.nvim_create_user_command("LspStart", function(opts)
@@ -170,7 +170,7 @@ return {
 			local clients = #opts.fargs > 0 and vim.lsp.get_clients({ name = opts.fargs[1] })
 				or vim.lsp.get_clients({ bufnr = 0 })
 			for _, c in ipairs(clients) do
-				vim.lsp.stop_client(c.id)
+				c:stop()
 			end
 		end, {
 			nargs = "?",
@@ -189,7 +189,7 @@ return {
 				end, vim.lsp.get_clients({ bufnr = 0 }))
 			for _, name in ipairs(targets) do
 				for _, c in ipairs(vim.lsp.get_clients({ name = name })) do
-					vim.lsp.stop_client(c.id)
+					c:stop()
 				end
 			end
 			vim.defer_fn(function()

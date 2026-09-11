@@ -323,11 +323,7 @@ return {
 					name = "Launch file",
 					program = "${file}",
 					pythonPath = function()
-						local venv = os.getenv("VIRTUAL_ENV") or os.getenv("CONDA_PREFIX")
-						if venv then
-							return venv .. "/bin/python"
-						end
-						return vim.fn.exepath("python3") or vim.fn.exepath("python") or "python"
+						return require("features.lang.python").interpreter()
 					end,
 				},
 				{
@@ -340,11 +336,34 @@ return {
 						return vim.split(args_string, " +")
 					end,
 					pythonPath = function()
-						local venv = os.getenv("VIRTUAL_ENV") or os.getenv("CONDA_PREFIX")
-						if venv then
-							return venv .. "/bin/python"
-						end
-						return vim.fn.exepath("python3") or vim.fn.exepath("python") or "python"
+						return require("features.lang.python").interpreter()
+					end,
+				},
+			}
+
+			-- Go (delve's own DAP server; no nvim-dap-go needed)
+			dap.adapters.delve = function(cb, config)
+				if config.request == "attach" and config.mode == "remote" then
+					cb({ type = "server", host = config.host or "127.0.0.1", port = config.port or 38697 })
+					return
+				end
+				cb({
+					type = "server",
+					port = "${port}",
+					executable = { command = vim.fn.exepath("dlv"), args = { "dap", "-l", "127.0.0.1:${port}" } },
+				})
+			end
+
+			dap.configurations.go = {
+				{ type = "delve", name = "Debug package", request = "launch", program = "${fileDirname}" },
+				{ type = "delve", name = "Debug tests (package)", request = "launch", mode = "test", program = "${fileDirname}" },
+				{
+					type = "delve",
+					name = "Attach to process",
+					request = "attach",
+					mode = "local",
+					processId = function()
+						return require("dap.utils").pick_process()
 					end,
 				},
 			}
@@ -371,8 +390,56 @@ return {
 					stopOnEntry = false,
 				},
 			}
-			dap.configurations.c = dap.configurations.rust
-			dap.configurations.cpp = dap.configurations.rust
+			-- gdb speaks DAP itself since 14. It is the one that attaches to QEMU's gdbstub
+			-- for kernel work (<leader>xa), and the one that knows the kernel's gdb scripts.
+			dap.adapters.gdb = {
+				type = "executable",
+				command = "gdb",
+				args = { "--interpreter=dap", "--eval-command", "set print pretty on" },
+			}
+
+			--- The project's binary, from the same picker `<leader>br` uses. C and C++
+			--- used to share Rust's table here, which asked rust-analyzer for debuggables.
+			---@return thread|string
+			local function project_binary()
+				local co = coroutine.running()
+				local root = require("lib.root").get()
+				require("features.lang.binary").select(root, {}, function(path)
+					coroutine.resume(co, path)
+				end)
+				return coroutine.yield()
+			end
+
+			local native = {
+				{
+					name = "Launch (codelldb)",
+					type = "codelldb",
+					request = "launch",
+					program = project_binary,
+					cwd = "${workspaceFolder}",
+					stopOnEntry = false,
+				},
+				{
+					name = "Launch (gdb)",
+					type = "gdb",
+					request = "launch",
+					program = project_binary,
+					cwd = "${workspaceFolder}",
+				},
+				{
+					name = "Attach to QEMU gdbstub :1234",
+					type = "gdb",
+					request = "attach",
+					target = "localhost:1234",
+					program = function()
+						local vmlinux = vim.fs.joinpath(vim.fn.getcwd(), "vmlinux")
+						return vim.uv.fs_stat(vmlinux) and vmlinux or vim.fn.input("Symbols: ", vim.fn.getcwd() .. "/", "file")
+					end,
+					cwd = "${workspaceFolder}",
+				},
+			}
+			dap.configurations.c = native
+			dap.configurations.cpp = native
 
 			-- Zig (codelldb debugs any ELF binary; sourceLanguages improves stdlib frame rendering)
 

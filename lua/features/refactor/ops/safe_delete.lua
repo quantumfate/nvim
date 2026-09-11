@@ -18,7 +18,7 @@ local DECLS = {
 	rust = { "function_item", "struct_item", "enum_item", "const_item", "static_item" },
 	go = { "function_declaration", "method_declaration", "type_declaration", "var_declaration" },
 	python = { "function_definition", "class_definition" },
-	zig = { "FnProto", "VarDecl" },
+	zig = { "function_declaration", "variable_declaration" },
 	c = { "function_definition", "declaration" },
 	javascript = { "function_declaration", "class_declaration", "lexical_declaration" },
 	typescript = { "function_declaration", "class_declaration", "lexical_declaration" },
@@ -77,7 +77,10 @@ function M.run(opts)
 	end
 
 	local plan = Plan.new("Safe delete " .. (name or "declaration"))
-	local srow, scol, erow = decl:range()
+	-- Decorators belong to the function: left behind, they silently decorate whatever
+	-- follows.
+	local outer = decl:parent() and decl:parent():type() == "decorated_definition" and decl:parent() or decl
+	local srow, scol, erow = outer:range()
 
 	-- Whole lines, doc comment included: deleting the node's exact range would leave
 	-- the comment describing it, plus a blank line where the code was.

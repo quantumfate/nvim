@@ -86,14 +86,22 @@ end
 ---@param mode lang.OutputMode
 ---@param buf integer
 ---@return integer win
-local function window_for(title, mode, buf)
+local function window_for(title, mode, buf, source)
 	local existing = views[title]
 	if existing and existing.win and vim.api.nvim_win_is_valid(existing.win) then
 		vim.api.nvim_win_set_buf(existing.win, buf)
 		return existing.win
 	end
 
-	local source_win = vim.api.nvim_get_current_win()
+	-- Output arrives asynchronously, by which time the cursor may be in a picker, the
+	-- dock or the other pane. Anchor on the window showing the source instead.
+	local source_win = source and vim.fn.bufwinid(source) or -1
+	if source_win == -1 then
+		source_win = vim.api.nvim_get_current_win()
+	end
+	if vim.api.nvim_win_get_config(source_win).relative ~= "" then
+		source_win = require("features.workspace").current_editor() or source_win
+	end
 	local win
 
 	if mode == "float" then
@@ -360,12 +368,13 @@ function M.show(opts)
 	vim.bo[buf].bufhidden = "hide"
 	vim.b[buf].lang_output = true
 	vim.b[buf].lang_output_title = title
+	vim.b[buf].lang_output_source = opts.source
 
 	if opts.filetype and opts.filetype ~= "" then
 		vim.bo[buf].filetype = opts.filetype
 	end
 
-	local win = window_for(title, mode, buf)
+	local win = window_for(title, mode, buf, opts.source)
 	local release = views[title] and views[title].release
 	local view = { buf = buf, win = win, mode = mode, source = opts.source, release = release }
 	views[title] = view
@@ -404,7 +413,8 @@ end
 --- stderr is shown too when the command fails: a preprocessor or compiler that refuses
 --- is telling you something, and hiding it to keep the pane tidy would be exactly the
 --- wrong call in the one case you needed the output.
----@param opts { cmd: string[], title: string, filetype?: string, cwd?: string, artifact?: string, mode?: lang.OutputMode, link?: boolean, on_lines?: fun(lines: string[]): string[] }
+--- `stderr = true` is for tools that write their real output there (Go's `-S` and `-m`).
+---@param opts { cmd: string[], title: string, filetype?: string, cwd?: string, artifact?: string, mode?: lang.OutputMode, link?: boolean, stderr?: boolean, on_lines?: fun(lines: string[]): string[], table<integer, integer>? }
 function M.run(opts)
 	local title = opts.title
 	local source = vim.api.nvim_get_current_buf()
@@ -427,6 +437,9 @@ function M.run(opts)
 		vim.schedule(function()
 			finished()
 			local text = res.stdout or ""
+			if opts.stderr then
+				text = (res.stderr or "") .. "\n" .. text
+			end
 			if opts.artifact and res.code == 0 then
 				local ok, content = pcall(vim.fn.readfile, opts.artifact)
 				text = ok and table.concat(content, "\n") or ""
@@ -434,7 +447,7 @@ function M.run(opts)
 			if opts.artifact then
 				pcall(vim.fn.delete, opts.artifact)
 			end
-			if res.code ~= 0 then
+			if res.code ~= 0 and not opts.stderr then
 				text = (res.stderr or "") .. "\n" .. text
 			end
 

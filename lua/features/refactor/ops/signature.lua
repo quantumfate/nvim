@@ -29,7 +29,7 @@ end
 ---@class SigShape
 ---@field node string Treesitter node type
 ---@field list string Field name of the parameter/argument list, or its node type
----@field implicit? integer|fun(node: TSNode): integer Leading entries the writer does not spell out
+---@field implicit? integer|fun(node: TSNode, ctx?: SigCtx, bufnr?: integer): integer Leading entries the writer does not spell out
 
 ---@class SigLang
 ---@field decls SigShape[]
@@ -59,10 +59,81 @@ end
 
 ---@param shape SigShape
 ---@param node TSNode
+---@param ctx? SigCtx
+---@param bufnr? integer Buffer `node` lives in
 ---@return integer
-local function implicit(shape, node)
+local function implicit(shape, node, ctx, bufnr)
 	local n = shape.implicit or 0
-	return type(n) == "function" and n(node) or n --[[@as integer]]
+	return type(n) == "function" and n(node, ctx, bufnr) or n --[[@as integer]]
+end
+
+--- What a parameter is, for ordering rules: variadic (`*args`, `...rest`, a bare `*`),
+--- defaulted, or plain.
+---@param node TSNode
+---@param bufnr integer
+---@return "variadic"|"default"|"plain"
+local function param_kind(node, bufnr)
+	local kind = node:type()
+	local text = syntax.text(node, bufnr)
+	if
+		kind:find("splat")
+		or kind:find("rest")
+		or kind:find("variadic")
+		or kind:find("separator")
+		or text:match("^%*")
+		or text:match("^%.%.%.")
+	then
+		return "variadic"
+	end
+	if kind:find("default") or kind == "assignment_pattern" or node:field("value")[1] or node:field("default_value")[1] then
+		return "default"
+	end
+	return "plain"
+end
+
+--- Why a parameter order would not compile, or nil when it would.
+---@param kinds string[]
+---@return string?
+local function order_problem(kinds)
+	local seen_default, seen_variadic = false, false
+	for _, kind in ipairs(kinds) do
+		if seen_variadic then
+			return "a parameter after `*`/`...` is keyword-only or invalid; call sites cannot be updated by position"
+		elseif kind == "variadic" then
+			seen_variadic = true
+		elseif kind == "default" then
+			seen_default = true
+		elseif seen_default then
+			return "a required parameter cannot follow one with a default"
+		end
+	end
+end
+
+--- The name a nameless function is bound to: `const f = () => {}`, `f := func() {}`,
+--- `f = lambda: 0`, `local f = function() end`. References are asked there.
+---@param decl TSNode
+---@return TSNode?
+local function binding_name(decl)
+	local parent = decl:parent()
+	if parent and parent:type():find("expression_list") then
+		if parent:named_child_count() ~= 1 then
+			return nil
+		end
+		parent = parent:parent()
+	end
+	if not parent or parent:type() == "keyword_argument" then
+		return nil
+	end
+	local target = parent:field("name")[1] or parent:field("left")[1] or parent:field("key")[1]
+	if not target and parent:type() == "assignment_statement" then
+		target = parent:named_child(0)
+	end
+	while target and target:type():find("list") and target:named_child_count() == 1 do
+		target = target:named_child(0)
+	end
+	if target and (target:type():find("identifier") or target:type():find("index_expression")) then
+		return target
+	end
 end
 
 --- The parameter/argument list of `node`, by field where the grammar has one and by
@@ -80,6 +151,29 @@ local function list_of(node, shape)
 			return child
 		end
 	end
+	-- C: definition > (pointer_declarator >) function_declarator > parameter_list.
+	local declarator = node:field("declarator")[1]
+	if declarator then
+		return list_of(declarator, shape)
+	end
+end
+
+local C_FAMILY = { c = true, cpp = true, objc = true, cuda = true }
+
+--- The identifier a C declarator names: `add` in `int *add(int)`, `method` in
+--- `int Calc::method(int)`.
+---@param decl TSNode
+---@return TSNode?
+local function declarator_name(decl)
+	local node = decl:field("declarator")[1]
+	while node do
+		local inner = node:field("declarator")[1] or node:field("name")[1]
+		if not inner then
+			break
+		end
+		node = inner
+	end
+	return node
 end
 
 --- Nearest enclosing node matching one of `shapes`.
@@ -91,6 +185,11 @@ local function enclosing(node, shapes)
 		local shape = shape_for(shapes, node)
 		if shape and list_of(node, shape) then
 			return node, shape
+		end
+		-- `y => y * x` has no parameter list to edit; climbing past it would silently
+		-- change the function around it instead.
+		if node:type() == "arrow_function" and node:field("parameter")[1] then
+			return nil
 		end
 		node = node:parent()
 	end
@@ -112,6 +211,10 @@ local function parse_spec(input)
 	left = left or input
 	local name, type_ = left:match("^([^:]+):(.*)$")
 	name = name or left
+	if vim.trim(name):find("%s") then
+		Snacks.notify.warn("Write the parameter as `name:type`, e.g. `depth:int`", { title = "Refactor" })
+		return nil
+	end
 
 	return {
 		name = vim.trim(name),
@@ -238,15 +341,6 @@ local function cursor_on_index(list)
 	return nil
 end
 
----@param bufnr integer
----@param pos lsp.Position
----@param encoding string
----@return integer row, integer col
-local function to_byte(bufnr, pos, encoding)
-	local line = vim.api.nvim_buf_get_lines(bufnr, pos.line, pos.line + 1, false)[1] or ""
-	local ok, col = pcall(vim.str_byteindex, line, encoding, pos.character, false)
-	return pos.line, ok and col or math.min(pos.character, #line)
-end
 --- Shared context for one signature change.
 ---@class SigCtx
 ---@field bufnr integer
@@ -258,6 +352,12 @@ end
 ---@field spec? SigParam
 ---@field mode "add"|"remove"|"reorder"
 ---@field to? integer Destination index, for reorder
+---@field name_pos? integer[] Where references are asked for: the declaration's (or binding's) name
+---@field self_receiver? boolean The first parameter is Python's `self`
+---@field owner? string Enclosing class name, for `Class.method(obj, ...)` calls
+---@field decl? TSNode The declaration being changed
+---@field decl_text? string Rendered new parameter, for other declarations of it
+---@field void? TSNode C's `void` standing in for an empty list
 
 --- Locates the declaration under the cursor and gathers everything both the
 --- declaration edit and the call-site walk need.
@@ -288,9 +388,35 @@ local function context()
 	end
 
 	local list = list_of(decl, shape)
+	ctx.decl = decl
 	ctx.params = elements(list)
 	ctx.index = cursor_index(list)
-	ctx.decl_implicit = implicit(shape, decl)
+	-- C's `(void)` is an empty list spelled with a word in it.
+	if #ctx.params == 1 and syntax.text(ctx.params[1], bufnr) == "void" then
+		ctx.void, ctx.params, ctx.index = ctx.params[1], {}, 0
+	end
+	ctx.decl_implicit = implicit(shape, decl, nil, bufnr)
+
+	-- Go's `a, b int` is one node but two arguments, so every index past it is off.
+	for _, param in ipairs(ctx.params) do
+		if #param:field("name") > 1 then
+			Snacks.notify.warn("Grouped parameters (`a, b int`) are not supported; ungroup them first", {
+				title = "Refactor",
+			})
+			return nil
+		end
+	end
+
+	-- Python's `Class.method(obj, ...)` passes the receiver explicitly; the call-site
+	-- shape needs the class name and whether the first parameter is `self` to see it.
+	local first = ctx.params[1]
+	ctx.self_receiver = ctx.decl_implicit > 0 and first ~= nil and syntax.text(first, bufnr):match("^self%f[^%w_]") ~= nil
+	local class = decl:parent()
+	while class and class:type() ~= "class_definition" do
+		class = class:parent()
+	end
+	local class_name = class and class:field("name")[1]
+	ctx.owner = class_name and syntax.text(class_name, bufnr) or nil
 
 	-- References are asked for at the function's name, never at the cursor: the cursor
 	-- is usually inside the parameter list, where the server answers about a parameter.
@@ -298,7 +424,7 @@ local function context()
 	-- And at the *last* segment of that name. `function M.area()` has a name field of
 	-- `M.area`, whose start is `M` — asking there returns every use of the module
 	-- table and not one call of the function.
-	local name = decl:field("name")[1]
+	local name = decl:field("name")[1] or (C_FAMILY[ft] and declarator_name(decl)) or binding_name(decl)
 	if name then
 		while name:named_child_count() > 0 do
 			local last = name:named_child(name:named_child_count() - 1)
@@ -309,8 +435,43 @@ local function context()
 		end
 		local nrow, ncol = name:start()
 		ctx.name_pos = { nrow, ncol }
+	else
+		-- Asking at the cursor instead answers about a parameter, and every call site is
+		-- then silently missed.
+		Snacks.notify.warn("Anonymous function with no name bound to it: its call sites cannot be found", {
+			title = "Refactor",
+		})
+		return nil
 	end
 	return ctx, decl, shape
+end
+
+--- Applies the declaration edit to another declaration of the same function: a C
+--- prototype in a header, or an in-class declaration of an out-of-line definition.
+---@param plan refactor.Plan
+---@param bufnr integer
+---@param list TSNode
+---@param ctx SigCtx
+local function declaration_site(plan, bufnr, list, ctx)
+	local items = elements(list)
+	if #items == 1 and syntax.text(items[1], bufnr) == "void" then
+		if ctx.mode == "add" and #ctx.params == 0 then
+			return plan:edit(bufnr, syntax.replace(items[1], ctx.decl_text))
+		end
+		items = {}
+	end
+	if #items ~= #ctx.params then
+		local lrow, lcol = list:start()
+		return plan:note("skip", bufnr, lrow, lcol, "this declaration has a different parameter count")
+	end
+	if ctx.mode == "add" then
+		return plan:edit(bufnr, edit_for(list, ctx.index, ctx.decl_text, ctx.lang))
+	elseif ctx.mode == "remove" then
+		return plan:edit(bufnr, remove_edit(list, ctx.index))
+	end
+	local a, b = items[ctx.index + 1], items[ctx.to + 1]
+	plan:edit(bufnr, syntax.replace(a, syntax.text(b, bufnr)))
+	plan:edit(bufnr, syntax.replace(b, syntax.text(a, bufnr)))
 end
 
 --- Rewrites one call site, or explains why it was left alone.
@@ -325,15 +486,33 @@ local function call_site(plan, usage, encoding, ctx)
 		plan:note("skip", bufnr, row, col, text)
 	end
 
+	-- A header opens as cpp and its callers as c: the same family counts as the same
+	-- language, and each buffer is read with its own grammar's shapes.
 	local parser, ft = parser_for(bufnr)
-	if not parser or ft ~= ctx.ft then
+	local lang = langs()[ft]
+	if not parser or not lang or (ft ~= ctx.ft and not (C_FAMILY[ft] and C_FAMILY[ctx.ft])) then
 		return note("unparsed or foreign filetype")
 	end
 	parser:parse(true)
 
 	local node = vim.treesitter.get_node({ bufnr = bufnr, pos = { row, col } })
-	local call, shape = (ctx.lang.find_call or function(n)
-		return enclosing(n, ctx.lang.calls)
+
+	if C_FAMILY[ft] then
+		local other, other_shape = enclosing(node, lang.decls)
+		local named = other and declarator_name(other)
+		if named then
+			local nrow, ncol = named:start()
+			if nrow == row and ncol == col then
+				if bufnr == ctx.bufnr and other:equal(ctx.decl) then
+					return
+				end
+				return declaration_site(plan, bufnr, list_of(other, other_shape), ctx)
+			end
+		end
+	end
+
+	local call, shape = (lang.find_call or function(n)
+		return enclosing(n, lang.calls)
 	end)(node)
 	if not call or not shape then
 		return note("reference is not a call")
@@ -344,18 +523,36 @@ local function call_site(plan, usage, encoding, ctx)
 		return note("call does not parse cleanly")
 	end
 
+	-- Inside the argument list, the function is passed as a value, not called.
+	local lrow, lcol = list:start()
+	if row > lrow or (row == lrow and col >= lcol) then
+		return note("reference is an argument, not the callee")
+	end
+
 	local args = elements(list)
-	local index = ctx.index - ctx.decl_implicit + implicit(shape, call)
+	local receiver = implicit(shape, call, ctx, bufnr)
+	local index = ctx.index - ctx.decl_implicit + receiver
 
 	if #args > #ctx.params then
 		return note("argument count does not match the declaration")
 	end
 
-	if ctx.mode == "add" then
-		if index > #args then
-			return note("earlier optional arguments are absent")
+	-- Positional arguments end at the first keyword argument or splat; past that an
+	-- index says nothing about which parameter an argument binds to.
+	local positional = #args
+	for i, arg in ipairs(args) do
+		local kind = arg:type()
+		if kind:find("keyword_argument") or kind:find("splat") or kind:find("spread") then
+			positional = i - 1
+			break
 		end
-		local text = ctx.lang.render_arg(ctx.spec)
+	end
+
+	if ctx.mode == "add" then
+		if index > positional then
+			return note("earlier optional arguments are absent, or later ones are passed by keyword")
+		end
+		local text = lang.render_arg(ctx.spec)
 		if text == "" then
 			return note("no call-site text for this parameter")
 		end
@@ -367,11 +564,14 @@ local function call_site(plan, usage, encoding, ctx)
 		if not target then
 			return note("argument is already absent")
 		end
+		if index >= positional then
+			return note("argument is passed by keyword or splat")
+		end
 		return plan:edit(bufnr, remove_edit(list, index))
 	end
 
 	-- reorder
-	local to = ctx.to - ctx.decl_implicit + implicit(shape, call)
+	local to = ctx.to - ctx.decl_implicit + receiver
 	local from_node, to_node = args[index + 1], args[to + 1]
 	if not from_node or not to_node then
 		return note("argument positions are not both present")
@@ -399,7 +599,9 @@ local function build(ctx, decl_edits, title, done)
 	local plan = Plan.new(title)
 	plan:edits_for(ctx.bufnr, decl_edits)
 
-	usages.lsp(ctx.bufnr, { include_declaration = false, position = ctx.name_pos }, function(found, client, reason)
+	-- C and C++ also need the other declarations (prototypes), which come back only
+	-- with the declaration included; call_site tells them apart.
+	usages.lsp(ctx.bufnr, { include_declaration = C_FAMILY[ctx.ft] or false, position = ctx.name_pos }, function(found, client, reason)
 		if not found then
 			plan:note("skip", ctx.bufnr, 0, 0, (reason or "no usages available") .. "; call sites untouched")
 			done(plan)
@@ -439,7 +641,8 @@ function M.add_param(opts)
 
 		local list = list_of(decl, shape)
 		local text = spec.verbatim or ctx.lang.render_param(spec)
-		local decl_edits = { edit_for(list, ctx.index, text, ctx.lang) }
+		ctx.decl_text = text
+		local decl_edits = { ctx.void and syntax.replace(ctx.void, text) or edit_for(list, ctx.index, text, ctx.lang) }
 		if ctx.lang.extra_edits then
 			vim.list_extend(decl_edits, ctx.lang.extra_edits(ctx, decl) or {})
 		end
@@ -453,6 +656,19 @@ function M.add_param(opts)
 		local optional = ctx.lang.defaults and spec.default and not shifts and not opts.force
 
 		local finish = function(plan)
+			local kinds = vim.tbl_map(function(param)
+				return param_kind(param, ctx.bufnr)
+			end, ctx.params)
+			local text_kind = (text:match("^%*") or text:match("^%.%.%.")) and "variadic"
+				or (spec.default or text:find("=")) and "default"
+				or "plain"
+			table.insert(kinds, math.min(ctx.index, #kinds) + 1, text_kind)
+			local problem = order_problem(kinds)
+			if problem then
+				local drow, dcol = decl:start()
+				plan:note("conflict", ctx.bufnr, drow, dcol, problem)
+			end
+
 			if spec.name == "" then
 				plan:skipped_check("collision detection", "the parameter text is verbatim, with no name to check")
 			elseif not locals.available(ctx.bufnr) then
@@ -499,7 +715,7 @@ function M.remove_param(opts)
 	end
 
 	local list = list_of(decl, shape)
-	local index = cursor_on_index(list)
+	local index = not ctx.void and cursor_on_index(list) or nil
 	if not index then
 		Snacks.notify.warn("Cursor is not on a parameter", { title = "Refactor" })
 		Plan.done()
@@ -576,6 +792,15 @@ function M.reorder_param(opts)
 		syntax.replace(b, syntax.text(a, ctx.bufnr)),
 	}
 	build(ctx, decl_edits, "Reorder parameters", function(plan)
+		local kinds = vim.tbl_map(function(param)
+			return param_kind(param, ctx.bufnr)
+		end, ctx.params)
+		kinds[from + 1], kinds[to + 1] = kinds[to + 1], kinds[from + 1]
+		local problem = order_problem(kinds)
+		if problem then
+			local arow, acol = a:start()
+			plan:note("conflict", ctx.bufnr, arow, acol, problem)
+		end
 		Plan.finish(plan, opts)
 	end)
 end

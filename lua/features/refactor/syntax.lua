@@ -104,7 +104,8 @@ function M.param_name(node, bufnr)
 
 	-- A parameter's name is the first identifier in it: the type, default value and
 	-- any modifiers all come after.
-	local named = node:field("name")[1] or node:field("pattern")[1]
+	-- C puts the name in the declarator (`const Foo &f`), after the type.
+	local named = node:field("name")[1] or node:field("pattern")[1] or node:field("declarator")[1]
 	if named then
 		return M.param_name(named, bufnr)
 	end
@@ -112,7 +113,8 @@ function M.param_name(node, bufnr)
 	for child in node:iter_children() do
 		if child:named() then
 			local kind = child:type()
-			if kind == "identifier" or kind:find("identifier") then
+			local is_type = kind:find("type") or kind == "namespace_identifier"
+			if kind == "identifier" or (kind:find("identifier") and not is_type) then
 				return M.text(child, bufnr)
 			end
 			local nested = M.param_name(child, bufnr)
@@ -136,7 +138,9 @@ end
 ---@param row integer 0-indexed row of the declaration
 ---@return integer first_row
 function M.doc_start(bufnr, row)
-	local parser = M.parser(bufnr)
+	-- Parsed, not just fetched: a buffer nobody has displayed (a call site the plan
+	-- opened, a headless run) has no tree yet, and get_node then finds nothing.
+	local parser = M.parsed(bufnr)
 	if not parser then
 		return row
 	end
@@ -152,7 +156,17 @@ function M.doc_start(bufnr, row)
 			bufnr = bufnr,
 			pos = { candidate, math.max(#(line:match("^%s*") or ""), 0) },
 		})
-		if not node or not node:type():find("comment") then
+		-- Attributes (`#[inline]`) travel with the item like its doc comment does.
+		local attached = false
+		while node and node:start() == candidate do
+			local kind = node:type()
+			if kind:find("comment") or kind == "attribute_item" or kind == "decorator" then
+				attached = true
+				break
+			end
+			node = node:parent()
+		end
+		if not attached then
 			break
 		end
 		first = candidate

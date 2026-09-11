@@ -31,7 +31,7 @@ end
 ---@return table<integer, boolean>
 local function changed_lines(before, after)
 	local changed = {}
-	local hunks = vim.diff(table.concat(before, "\n") .. "\n", table.concat(after, "\n") .. "\n", {
+	local hunks = vim.text.diff(table.concat(before, "\n") .. "\n", table.concat(after, "\n") .. "\n", {
 		result_type = "indices",
 		algorithm = "histogram",
 	})

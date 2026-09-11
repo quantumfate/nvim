@@ -128,7 +128,15 @@ local M = {
 			},
 		},
 		calls = {
-			{ node = "call_expression", list = "arguments" },
+			{
+				node = "call_expression",
+				list = "arguments",
+				-- `Type::method(&obj, x)` spells out the receiver that `obj.method(x)` hides.
+				implicit = function(call, ctx)
+					local fn = call:field("function")[1]
+					return ctx and ctx.decl_implicit > 0 and fn and fn:type() == "scoped_identifier" and 1 or 0
+				end,
+			},
 			{ node = "method_call_expression", list = "arguments" },
 		},
 		defaults = false,
@@ -145,11 +153,14 @@ local M = {
 	},
 
 	go = {
+		-- Fields, not node types: a method has two `parameter_list` children, and the
+		-- first is the receiver.
 		decls = {
-			{ node = "function_declaration", list = "parameter_list" },
-			{ node = "method_declaration", list = "parameter_list" },
+			{ node = "function_declaration", list = "parameters" },
+			{ node = "method_declaration", list = "parameters" },
+			{ node = "func_literal", list = "parameters" },
 		},
-		calls = { { node = "call_expression", list = "argument_list" } },
+		calls = { { node = "call_expression", list = "arguments" } },
 		defaults = false,
 		render_param = function(spec)
 			return spec.name .. (spec.type and (" " .. spec.type) or "")
@@ -158,8 +169,25 @@ local M = {
 	},
 
 	python = {
-		decls = { { node = "function_definition", list = "parameters", implicit = receiver({ "self", "cls" }) } },
-		calls = { { node = "call", list = "argument_list" } },
+		decls = {
+			{ node = "function_definition", list = "parameters", implicit = receiver({ "self", "cls" }) },
+			{ node = "lambda", list = "parameters" },
+		},
+		calls = {
+			{
+				node = "call",
+				list = "arguments",
+				-- `Shape.scale(s, 7)` passes `self` explicitly; `s.scale(7)` does not.
+				implicit = function(call, ctx, bufnr)
+					if not (ctx and ctx.self_receiver and ctx.owner) then
+						return 0
+					end
+					local fn = call:field("function")[1]
+					local object = fn and fn:type() == "attribute" and fn:field("object")[1]
+					return object and vim.treesitter.get_node_text(object, bufnr or 0) == ctx.owner and 1 or 0
+				end,
+			},
+		},
 		defaults = true,
 		render_param = typed,
 		render_arg = value,
@@ -170,17 +198,19 @@ local M = {
 for _, ft in ipairs({ "c", "cpp", "objc", "cuda" }) do
 	M[ft] = {
 		decls = {
-			-- The parameter list hangs off the declarator, not the definition, so the
-			-- list is found by child type rather than by field.
+			-- The list hangs off the declarator (through pointer/reference declarators
+			-- too); list_of follows the `declarator` field down to it.
 			{ node = "function_definition", list = "parameter_list" },
 			{ node = "declaration", list = "parameter_list" },
+			{ node = "field_declaration", list = "parameter_list" },
 		},
-		calls = { { node = "call_expression", list = "argument_list" } },
-		defaults = false,
+		calls = { { node = "call_expression", list = "arguments" } },
+		defaults = ft ~= "c",
 		render_param = function(spec)
 			-- C has no inference: a parameter without a type does not compile, so an
 			-- omitted one is spelled explicitly rather than silently dropped.
-			return (spec.type or "int") .. " " .. spec.name
+			local default = ft ~= "c" and spec.default and (" = " .. spec.default) or ""
+			return (spec.type or "int") .. " " .. spec.name .. default
 		end,
 		render_arg = value,
 	}

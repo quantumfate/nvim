@@ -27,10 +27,13 @@ return {
 			coq = false,
 		},
 		---@type boolean|(fun(root:string):boolean?)
-		--- Disable lazydev when the project ships its own .luarc.json.
-		--- vim.uv: libuv filesystem probe.
+		--- Off for standalone Lua projects that ship a .luarc.json, which should not see
+		--- `vim.*`; on for Neovim configs and plugins even when they have one. This config
+		--- is one: its luarc never expanded `$VIMRUNTIME`, so TSNode and friends were
+		--- undefined in every file.
 		enabled = function(root_dir)
-			return not vim.uv.fs_stat(root_dir .. "/.luarc.json")
+			local nvim_shaped = vim.uv.fs_stat(root_dir .. "/lua") ~= nil
+			return nvim_shaped or not vim.uv.fs_stat(root_dir .. "/.luarc.json")
 		end,
 	},
 }

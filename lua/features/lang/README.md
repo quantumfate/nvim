@@ -26,14 +26,17 @@ what works here.
 
 ## Coverage
 
-|                            | rust                     | c / cpp                      | zig              | lua                        |
-| -------------------------- | ------------------------ | ---------------------------- | ---------------- | -------------------------- |
-| build / run / test / check | cargo                    | make · cmake · ninja · meson | zig build        | luajit · busted · luacheck |
-| expand                     | `expandMacro`            | `-E -P`                      | —                | —                          |
-| assembly                   | `cargo rustc --emit asm` | `-S -masm=intel`             | `-femit-asm`     | luajit `-bl` bytecode      |
-| IR                         | `view_ir` (MIR/HIR)      | `-emit-llvm`                 | `-femit-llvm-ir` | —                          |
-| tree                       | `syntaxTree`             | clang `-ast-dump`            | —                | `:InspectTree`             |
-| related                    | parent module            | clangd header ↔ source       | —                | —                          |
+|                            | rust                     | c / cpp                      | zig              | lua                        | go                       | python                   |
+| -------------------------- | ------------------------ | ---------------------------- | ---------------- | -------------------------- | ------------------------ | ------------------------ |
+| build / run / test / check | cargo                    | make · cmake · ninja · meson | zig build        | luajit · busted · luacheck | go build · run · test · vet | py_compile · pytest · ruff |
+| expand                     | `expandMacro`            | `-E -P`                      | —                | —                          | —                        | —                        |
+| assembly                   | `cargo rustc --emit asm` | `-S -masm=intel`             | `-femit-asm`     | luajit `-bl` bytecode      | `-gcflags=-S`            | `dis` bytecode           |
+| IR                         | `view_ir` (MIR/HIR)      | `-emit-llvm`                 | `-femit-llvm-ir` | —                          | `-gcflags=-m` inlining & escapes | —                |
+| tree                       | `syntaxTree`             | clang `-ast-dump`            | —                | `:InspectTree`             | `:InspectTree`           | `python -m ast`          |
+| related                    | parent module            | clangd header ↔ source       | —                | —                          | `x.go` ↔ `x_test.go`     | `x.py` ↔ `test_x.py`     |
+
+Python runs under the project's interpreter: `$VIRTUAL_ENV`, then `.venv`, then conda,
+then PATH. neotest and the debugger use the same resolution.
 
 ## Why C reads compile_commands.json
 
@@ -96,9 +99,6 @@ Windows are created with `nvim_open_win`, never `:vsplit`. The command form fire
 whole `WinNew`/`WinEnter`/`BufEnter` chain, edgy re-runs its layout inside it, and that
 runs under a textlock — so the buffer swap that follows fails with
 `E788: Not allowed to edit another buffer now`.
-
-Output panes get their own background (`LangOutput`) so a rendering of your code never
-reads as your code.
 
 ### Linked cursor
 

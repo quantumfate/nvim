@@ -18,8 +18,9 @@ return {
 	opts = {
 		adapters = {
 			["neotest-python"] = {
+				-- Same resolution as `<leader>bt`: active venv, project .venv, then PATH.
 				python = function()
-					return require("lib.root").get() .. "/.venv/bin/python"
+					return require("features.lang.python").interpreter()
 				end,
 				args = { "-v" },
 				env = {
@@ -30,7 +31,14 @@ return {
 			},
 			["neotest-golang"] = {
 				go_test_args = { "-v", "-race", "-count=1", "-timeout=60s" },
-				dap_go_enabled = true,
+				-- nvim-dap-go is not installed; dap.lua defines the delve adapter itself.
+				dap_mode = "manual",
+				dap_manual_config = {
+					type = "delve",
+					name = "Debug test",
+					request = "launch",
+					mode = "test",
+				},
 				env = {
 					NO_COLOR = "1",
 					TERM = "dumb",

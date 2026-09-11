@@ -48,6 +48,7 @@
 - uv                           runtime / base
 - basedpyright                 lsp basedpyright
 - ruff                         lsp ruff
+- ruff                         fmt ruff_organize_imports
 - ruff                         fmt ruff_format
 - python-debugpy               dap debugpy
 
@@ -61,9 +62,9 @@
 - vue-language-server          lsp vue_ls
 - vscode-langservers-extracted lsp html
 - vscode-langservers-extracted lsp cssls
+- deno                         fmt deno_fmt
 - prettierd                    fmt prettierd
 - prettier                     fmt prettier
-- deno                         fmt deno_fmt
 - eslint_d                     lint eslint_d
 - eslint                       lint eslint
 - vscode-js-debug-bin          dap js-debug
@@ -83,13 +84,33 @@
 ## go
 - go                           runtime / base
 - gopls                        lsp gopls
-- go                           fmt gofmt
 - go-tools                     fmt goimports
+- go                           fmt gofmt
 - delve                        dap delve
 
 ## c
 - clang                        lsp clangd
 - clang                        fmt clang_format
+- clang                        lint clang_tidy
+- bear                         tool bear
+- meson                        tool meson [optional]
+- ninja                        tool ninja [optional]
+- gdb                          tool gdb
+- binutils                     tool addr2line
+
+## sys
+- pahole                       tool pahole
+- qemu-system-x86              tool qemu
+- perf                         tool perf
+- strace                       tool strace
+- ltrace                       tool ltrace
+- valgrind                     tool valgrind
+- bpftrace                     tool bpftrace
+- hyperfine                    tool hyperfine
+- b4                           tool b4
+- rr                           tool rr [optional]
+- sparse                       tool sparse [optional]
+- coccinelle                   tool coccinelle [optional]
 
 ## shell
 - bash-language-server         lsp bashls
@@ -109,6 +130,7 @@
 
 ## toml
 - taplo-cli                    lsp taplo
+- taplo-cli                    fmt taplo
 
 ## yaml
 - yaml-language-server         lsp yamlls
@@ -117,6 +139,7 @@
 ## ansible
 - ansible                      runtime / base
 - ansible-language-server      lsp ansiblels
+- prettierd                    fmt prettierd
 - ansible-lint                 lint ansible_lint
 
 ## markdown

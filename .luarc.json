@@ -6,9 +6,6 @@
     "globals": ["vim", "Snacks", "icons", "LazyVim"]
   },
   "workspace": {
-    "checkThirdParty": false,
-    "library": [
-      "$VIMRUNTIME/lua"
-    ]
+    "checkThirdParty": false
   }
 }

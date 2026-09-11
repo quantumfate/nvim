@@ -20,6 +20,12 @@
 ---@class workspace
 local M = {}
 
+--- Panes the workspace opened itself, by window id. Not a `w:` variable: `:vsplit`
+--- copies those, so a split the user made would inherit "ours" and collapse would
+--- close it. Window ids are never reused, so stale entries are harmless.
+---@type table<integer, true>
+local created_panes = {}
+
 ---@alias workspace.Slot "tree"|"main"|"aux"|"outline"|"dock"
 
 ---@class workspace.Loan
@@ -53,7 +59,7 @@ end
 ---@param slot workspace.Slot
 ---@return integer? win
 function M.win(slot)
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if vim.api.nvim_win_is_valid(win) and vim.w[win].workspace_slot == slot then
 			return win
 		end
@@ -80,7 +86,7 @@ function M.current_editor()
 	if M.is_editor(win) then
 		return win
 	end
-	for _, candidate in ipairs(vim.api.nvim_list_wins()) do
+	for _, candidate in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if M.is_editor(candidate) then
 			return candidate
 		end
@@ -122,7 +128,7 @@ function M.aux(opts)
 
 	-- A second editor window that nothing has claimed is adopted, rather than adding a
 	-- third one beside it.
-	for _, candidate in ipairs(vim.api.nvim_list_wins()) do
+	for _, candidate in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if M.is_editor(candidate) and candidate ~= main and vim.w[candidate].workspace_slot == nil then
 			tag(candidate, "aux")
 			return candidate
@@ -137,7 +143,7 @@ function M.aux(opts)
 	-- that edgy runs under a textlock, and the buffer swap after it fails with E788.
 	local created = vim.api.nvim_open_win(vim.api.nvim_win_get_buf(main), false, { split = "right", win = main })
 	tag(created, "aux")
-	vim.w[created].workspace_created = true
+	created_panes[created] = true
 	return created
 end
 
@@ -150,7 +156,7 @@ end
 ---@return integer[]
 local function editors_by_position()
 	local wins = {}
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if M.is_editor(win) then
 			table.insert(wins, win)
 		end
@@ -176,14 +182,14 @@ local function content_by_position()
 	-- debugger, a crash report — and closing one of those to satisfy a *horizontal*
 	-- limit is how pressing Enter on a crash frame ended up wiping the screen.
 	local top = math.huge
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if vim.api.nvim_win_get_config(win).relative == "" then
 			top = math.min(top, vim.api.nvim_win_get_position(win)[1])
 		end
 	end
 
 	local wins = {}
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		local buf = vim.api.nvim_win_get_buf(win)
 		local floating = vim.api.nvim_win_get_config(win).relative ~= ""
 		local on_top_row = vim.api.nvim_win_get_position(win)[1] == top
@@ -247,13 +253,35 @@ function M.enforce_two()
 
 	-- Still too many: trim from the left, which is the oldest, keeping the cursor's
 	-- pane and any rendering — the rendering is what was just asked for.
+	-- A rendering's source is spared too: output beside a different file reads as
+	-- that file's output.
 	local remaining = content_by_position()
+	local sources = {}
+	for _, win in ipairs(remaining) do
+		local source = vim.b[vim.api.nvim_win_get_buf(win)].lang_output_source
+		if source then
+			sources[source] = true
+		end
+	end
 	for _, win in ipairs(remaining) do
 		if #content_by_position() <= 2 then
 			break
 		end
-		if not vim.b[vim.api.nvim_win_get_buf(win)].lang_output then
+		local buf = vim.api.nvim_win_get_buf(win)
+		if not vim.b[buf].lang_output and not sources[buf] then
 			drop(win)
+		end
+	end
+
+	-- Still three: the new file wins over the rendering, which `q` would have closed anyway.
+	if #content_by_position() > 2 then
+		for _, win in ipairs(content_by_position()) do
+			local title = vim.b[vim.api.nvim_win_get_buf(win)].lang_output_title
+			if title and win ~= current then
+				require("features.lang.output").close(title)
+				closed = closed + 1
+				break
+			end
 		end
 	end
 
@@ -278,7 +306,7 @@ function M.other(win)
 	end
 
 	local created = vim.api.nvim_open_win(vim.api.nvim_win_get_buf(win), false, { split = "right", win = win })
-	vim.w[created].workspace_created = true
+	created_panes[created] = true
 	M.retag()
 	return created
 end
@@ -304,7 +332,7 @@ function M.lower(source_win)
 	if #wins < 2 then
 		local created =
 			vim.api.nvim_open_win(vim.api.nvim_win_get_buf(source_win), false, { split = "right", win = source_win })
-		vim.w[created].workspace_created = true
+		created_panes[created] = true
 		M.retag()
 		return created, source_win, true
 	end
@@ -422,13 +450,15 @@ function M.borrow(buf, opts)
 			-- A pane this borrow created has nothing to give back: restoring the buffer
 			-- it was seeded with leaves a second copy of the file you were already
 			-- reading, in a pane you never asked for.
-			if created and #(loans.aux or {}) == 0 then
-				pcall(vim.api.nvim_win_close, win, false)
+			if created and #(loans.aux or {}) == 0 and pcall(vim.api.nvim_win_close, win, false) then
 				if opts.on_release then
 					opts.on_release()
 				end
 				return
 			end
+			-- Could not close it (the last window): it now holds the user's file, so it
+			-- is theirs, and collapse must not treat it as ours.
+			created_panes[win] = nil
 
 			if vim.api.nvim_buf_is_valid(loan.buf) then
 				-- A borrowed view pins itself with `winfixbuf` so nothing wanders into
@@ -490,7 +520,7 @@ end
 
 --- Re-derives every slot from what is on screen. Cheap, and idempotent.
 function M.retag()
-	for _, win in ipairs(vim.api.nvim_list_wins()) do
+	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if vim.w[win].workspace_slot == "main" or vim.w[win].workspace_slot == "aux" then
 			vim.w[win].workspace_slot = nil
 		end
@@ -513,7 +543,7 @@ function M.collapse()
 	local current = M.current_editor()
 	for _, win in ipairs(content_by_position()) do
 		local buf = vim.api.nvim_win_get_buf(win)
-		local ours = vim.w[win].workspace_created or vim.b[buf].lang_output
+		local ours = created_panes[win] or vim.b[buf].lang_output
 		if win ~= current and ours and vim.api.nvim_win_is_valid(win) then
 			pcall(vim.api.nvim_win_close, win, false)
 		end

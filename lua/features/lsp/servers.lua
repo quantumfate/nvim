@@ -90,6 +90,8 @@ local M = {
 				disableOrganizeImports = true, -- Use ruff via conform
 				analysis = {
 					typeCheckingMode = "standard",
+					-- Every file in the project, not only open ones: `<leader>iQ` needs it.
+					diagnosticMode = "workspace",
 					diagnosticSeverityOverrides = {
 						reportUnusedImport = "none", -- ruff handles this
 						reportUnusedVariable = "none", -- ruff handles this
@@ -363,14 +365,14 @@ local M = {
 		filetypes = { "qml", "qmljs" },
 		root_markers = { ".qmlls.ini", "shell.qml", ".git" },
 		handlers = {
-			["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
+			["textDocument/publishDiagnostics"] = function(err, result, ctx)
 				-- filter out known-bad Quickshell import diagnostics
 				if result and result.diagnostics then
 					result.diagnostics = vim.tbl_filter(function(d)
 						return not d.message:find("Type PanelWindow is not creatable.")
 					end, result.diagnostics)
 				end
-				vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx, config)
+				vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx)
 			end,
 		},
 	},

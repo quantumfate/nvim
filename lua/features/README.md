@@ -8,12 +8,13 @@ code they call lives here.
 | [`refactor/`](./refactor/README.md)                         | signature, rename, extract, inline, safe delete     |
 | [`lang/`](./lang/README.md)                                 | one keymap set per language: build, asm, IR, expand |
 | [`crash/`](./crash/README.md)                               | core dumps and kernel oops, with jumpable frames    |
+| [`sys/`](./sys/README.md)                                   | struct layout, ELF, disassembly, kernel tree, QEMU  |
+| [`workspace/`](./workspace/README.md)                       | two panes, borrowed views, the one-view dock        |
 | `lsp/`                                                      | capability-gated keymaps, per-server config         |
 | `lualine/`                                                  | statusline components and their colours             |
 | `ts_scope.lua`                                              | duplicate the textobject under the cursor           |
 | `ts_select.lua`                                             | treesitter-driven selection                         |
 | `treesitter.lua`                                            | parser and query helpers                            |
-| `edgy.lua`                                                  | docked panel groups: which view is current          |
 | `mini.lua`                                                  | shared mini.\* setup and which-key hints            |
 | `win_swap.lua`                                              | swap with a neighbouring split, skipping panels     |
 | `bufferline.lua` `harpoon.lua` `navbuddy.lua` `chezmoi.lua` | per-plugin glue                                     |

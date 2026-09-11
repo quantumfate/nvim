@@ -11,6 +11,26 @@ local M = {}
 local usages = require("features.refactor.usages")
 local Plan = require("features.refactor.plan")
 
+---@param a lsp.Position
+---@param b lsp.Position
+---@return boolean
+local function before(a, b)
+	return a.line < b.line or (a.line == b.line and a.character < b.character)
+end
+
+--- True when `range` intersects any edit already planned.
+---@param edits? lsp.TextEdit[]
+---@param range lsp.Range
+---@return boolean
+local function overlaps(edits, range)
+	for _, edit in ipairs(edits or {}) do
+		if before(edit.range.start, range["end"]) and before(range.start, edit.range["end"]) then
+			return true
+		end
+	end
+	return false
+end
+
 --- Renames the symbol under the cursor everywhere, prose included.
 --- `prose` controls the comment and string pass, which is additive: with it off the
 --- rename is still complete and correct, it just leaves stale comments behind.
@@ -50,7 +70,11 @@ function M.run(opts)
 
 			for target in pairs(seen) do
 				for _, usage in ipairs(usages.prose(target, old, { loose = opts.prose == "loose" })) do
-					plan:edit(target, { range = usage.range, newText = new })
+					-- Some servers (gopls) rename doc-comment mentions themselves; a second
+					-- edit on the same span garbles it.
+					if not overlaps(plan.edits[target], usage.range) then
+						plan:edit(target, { range = usage.range, newText = new })
+					end
 				end
 			end
 			Plan.finish(plan, opts)

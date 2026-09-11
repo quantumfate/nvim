@@ -51,11 +51,19 @@ function M.query(bufnr)
 	end
 
 	local out = { scopes = {}, definitions = {}, references = {} }
+	-- A query file inherited twice (javascript inherits ecma, and so does jsx) yields
+	-- every capture twice; a parameter then counts as its own second reference.
+	local seen = {}
 	for id, node in query:iter_captures(tree:root(), bufnr, 0, -1) do
 		local capture = query.captures[id]
+		local key = capture .. ":" .. node:id()
+		if seen[key] then
+			capture = nil
+		end
+		seen[key] = true
 		if capture == "local.scope" then
 			table.insert(out.scopes, node)
-		elseif capture:match("^local%.definition") then
+		elseif capture and capture:match("^local%.definition") then
 			table.insert(out.definitions, { name = syntax.text(node, bufnr), node = node })
 		elseif capture == "local.reference" then
 			table.insert(out.references, node)

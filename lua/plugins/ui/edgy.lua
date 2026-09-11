@@ -165,6 +165,13 @@ return {
 					desc = "Diagnostics",
 				},
 				{
+					"<leader>iQ",
+					function()
+						dock.toggle("project")
+					end,
+					desc = "Project diagnostics",
+				},
+				{
 					"<leader>iT",
 					function()
 						dock.toggle("terminal")

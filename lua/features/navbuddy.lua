@@ -6,7 +6,6 @@ local M = {
 	--- Action that comments the focused node's line range using Neovim's built-in engine.
 	---@return table action_config { callback, description }
 	override_comment = function()
-		navbuddy_actions.comment()
 
 		return {
 			-- Replicates the original action's window handling, swapping in native commenting.
