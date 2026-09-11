@@ -11,6 +11,8 @@ lists the keys and what each one is missing.
 | `<leader>xd` | the function under the cursor, disassembled **from the linked binary**   |
 | `<leader>xr` | run the binary with loud sanitizers/backtraces; frames go to quickfix    |
 | `<leader>xq` | any stack trace in the current buffer (a terminal, a log) to quickfix    |
+| `<leader>xp` | perf profile: `▮ 76.4%` at the end of hot lines, quickfix hottest first  |
+| `<leader>xs` | strace log; failed calls in red, `<CR>` jumps to the line that made them |
 | `<leader>xh` | hex view toggle, written back through `xxd -r`                           |
 | `<leader>xk` | checkpatch.pl on this file (kernel tree)                                 |
 | `<leader>xm` | get_maintainer.pl for this file                                          |
@@ -36,3 +38,12 @@ Toggles work like `<leader>v`: the same key closes the view.
 Debugging uses gdb's built-in DAP (`gdb -i dap`, gdb ≥ 14); C and C++ also keep
 codelldb. perf, strace, ltrace, valgrind, bpftrace, rr and friends are in the toolchain
 registry's `sys` group so provisioning installs them.
+
+The tools reuse the binary `<leader>br` remembers; `<leader>bR` picks another.
+
+Two installed tools are deliberately not wired, because they do not work here:
+
+- **valgrind** dies with SIGILL inside the dynamic loader: CachyOS builds glibc with
+  AVX-512, which valgrind cannot emulate. ASan (`<leader>xr`) covers the same bugs.
+- **rr** needs `kernel.perf_event_paranoid ≤ 1` and, on Zen CPUs, the SpecLockMap
+  workaround from rr's wiki.

@@ -40,11 +40,12 @@ end
 ---@param buf integer
 ---@return string[]? argv, string? dir
 local function compile_command(buf)
-	local dir = root.detectors.pattern(buf, "compile_commands.json")[1]
-	if not dir then
+	local db_path = M.database(buf)
+	if not db_path then
 		return nil
 	end
-	local ok, content = pcall(vim.fn.readfile, vim.fs.joinpath(dir, "compile_commands.json"))
+	local dir = vim.fs.dirname(db_path)
+	local ok, content = pcall(vim.fn.readfile, db_path)
 	if not ok then
 		return nil
 	end
@@ -55,16 +56,97 @@ local function compile_command(buf)
 
 	local target = vim.fs.normalize(vim.api.nvim_buf_get_name(buf))
 	for _, entry in ipairs(db) do
-		local file = vim.fs.normalize(entry.file or "")
-		if file == target or file:sub(-#target) == target then
+		-- meson writes `"file": "../src/main.c"`, relative to the entry's directory.
+		local file = entry.file or ""
+		if file:sub(1, 1) ~= "/" then
+			file = vim.fs.joinpath(entry.directory or dir, file)
+		end
+		if vim.fs.normalize(vim.uv.fs_realpath(file) or file) == target then
 			local argv = entry.arguments
 			if not argv and entry.command then
-				argv = vim.split(entry.command, "%s+")
+				argv = M.shell_split(entry.command)
 			end
 			return argv, entry.directory or dir
 		end
 	end
 	return nil
+end
+
+--- The compile database for a file: next to it or above it, else in the build
+--- directory cmake and meson write it to — the same places clangd looks.
+---@param buf integer
+---@return string?
+function M.database(buf)
+	local dir = root.detectors.pattern(buf, "compile_commands.json")[1]
+	if dir then
+		return vim.fs.joinpath(dir, "compile_commands.json")
+	end
+	local proj = project(buf)
+	for _, sub in ipairs({ "build", "builddir", "out" }) do
+		local path = vim.fs.joinpath(proj, sub, "compile_commands.json")
+		if vim.uv.fs_stat(path) then
+			return path
+		end
+	end
+	for name, kind in vim.fs.dir(proj) do
+		if kind == "directory" and name:match("^cmake%-build%-") then
+			local path = vim.fs.joinpath(proj, name, "compile_commands.json")
+			if vim.uv.fs_stat(path) then
+				return path
+			end
+		end
+	end
+	return nil
+end
+
+--- Splits a shell command line into words, honouring quotes and backslashes:
+--- `-DGREETING="\"hello world\""` is one argument, not two.
+---@param command string
+---@return string[]
+function M.shell_split(command)
+	local out, word, quote = {}, nil, nil
+	local i = 1
+	while i <= #command do
+		local ch = command:sub(i, i)
+		if quote == "'" then
+			if ch == "'" then
+				quote = nil
+			else
+				word = word .. ch
+			end
+		elseif ch == "\\" and i < #command and quote ~= "'" then
+			i = i + 1
+			word = (word or "") .. command:sub(i, i)
+		elseif quote == '"' then
+			if ch == '"' then
+				quote = nil
+			else
+				word = word .. ch
+			end
+		elseif ch == "'" or ch == '"' then
+			quote, word = ch, word or ""
+		elseif ch:match("%s") then
+			if word then
+				table.insert(out, word)
+				word = nil
+			end
+		else
+			word = (word or "") .. ch
+		end
+		i = i + 1
+	end
+	if word then
+		table.insert(out, word)
+	end
+	return out
+end
+
+--- True for headers, which compile to no code of their own.
+---@param buf integer
+---@return boolean
+local function is_header(buf)
+	local ext = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":e")
+	return ext == "h" or ext == "hh" or ext == "hpp" or ext == "hxx"
 end
 
 --- Compiler flags for a file: the recorded ones with the output and compile-only
@@ -97,7 +179,10 @@ local function invocation(buf, extra)
 			skip_next = true
 		elseif arg == "-c" or arg == "-S" or arg == "-E" or arg:match("^%-M") then
 			-- The mode is being replaced by `extra`.
-		elseif vim.fs.normalize(arg) == normalized or arg == basename then
+		elseif
+			vim.fs.normalize(arg:sub(1, 1) == "/" and arg or vim.fs.joinpath(dir or "", arg)) == normalized
+			or arg == basename
+		then
 			-- The source file, wherever it sits in the recorded command. Databases put
 			-- it before `-o`, not last, so matching only the final argument left it in
 			-- and the file was compiled twice.
@@ -203,7 +288,11 @@ end
 --- layers of macro as it is a function.
 ---@param buf integer
 function M.expand(buf)
-	local cmd, dir, from_db = invocation(buf, { "-E", "-P" })
+	local extra = { "-E", "-P" }
+	if is_header(buf) then
+		vim.list_extend(extra, { "-x", vim.bo[buf].filetype == "cpp" and "c++-header" or "c-header" })
+	end
+	local cmd, dir, from_db = invocation(buf, extra)
 	warn_flags(from_db)
 	output.run({ cmd = cmd, title = M.titles.expand, filetype = "c", cwd = dir })
 end
@@ -211,6 +300,12 @@ end
 --- Assembly, at the optimisation level the project actually builds with.
 ---@param buf integer
 function M.assembly(buf)
+	-- clang turns a header into a precompiled header on stdout: 2000 lines of binary.
+	if is_header(buf) then
+		Snacks.notify.info("A header produces no code of its own; <leader>vh switches to the source", { title = "C" })
+		return
+	end
+	local path = vim.api.nvim_buf_get_name(buf)
 	local cmd, dir, from_db = invocation(buf, {
 		"-S",
 		"-o",
@@ -230,7 +325,9 @@ function M.assembly(buf)
 		title = M.titles.assembly,
 		filetype = "asm",
 		cwd = dir,
-		on_lines = output.strip_asm,
+		on_lines = function(lines)
+			return output.strip_asm(lines, path)
+		end,
 	})
 end
 
@@ -239,6 +336,10 @@ end
 ---@param buf integer
 function M.ir(buf)
 	if not output.require_exe("clang") then
+		return
+	end
+	if is_header(buf) then
+		Snacks.notify.info("A header produces no code of its own; <leader>vh switches to the source", { title = "C" })
 		return
 	end
 	local cmd, dir, from_db = invocation(buf, { "-S", "-emit-llvm", "-o", "-", "-g" })

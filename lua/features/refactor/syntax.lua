@@ -34,7 +34,9 @@ end
 function M.elements(node)
 	local out = {}
 	for child in node:iter_children() do
-		if child:named() and child:type() ~= "comment" then
+		-- C's `...` is an unnamed token but a real entry: without it, the entry before
+		-- it looks last and an insert lands between `fmt,` and `...`.
+		if (child:named() and child:type() ~= "comment") or child:type() == "..." then
 			table.insert(out, child)
 		end
 	end

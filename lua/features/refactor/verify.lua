@@ -78,50 +78,116 @@ function M.check(plan, baseline, opts)
 		return "no language server on any edited file"
 	end
 
-	-- Servers publish diagnostics on their own schedule. Rather than a fixed sleep,
-	-- wait for a publish and then let it settle, giving up quietly on a slow server —
-	-- a verification that never arrives must not block the editor.
+	-- clangd reads other files' headers from disk, not from unsaved buffers: until an
+	-- edited header is written, every file including it reports the old prototype as a
+	-- conflict. Those files are checked once the header is saved.
+	local headers = vim.tbl_filter(function(b)
+		return vim.bo[b].modified and vim.api.nvim_buf_get_name(b):match("%.h[hp]*$") ~= nil
+	end, bufnrs)
+	if #headers > 0 and #headers < #bufnrs then
+		local now = headers
+		local later = vim.tbl_filter(function(b)
+			return not vim.tbl_contains(headers, b)
+		end, bufnrs)
+		Snacks.notify.info(
+			("Verifying %s now; %d other file(s) once it is saved"):format(
+				vim.fs.basename(vim.api.nvim_buf_get_name(headers[1])),
+				#later
+			),
+			{ title = "Refactor" }
+		)
+		vim.api.nvim_create_autocmd("BufWritePost", {
+			buffer = headers[1],
+			once = true,
+			callback = function()
+				M.wait_and_report(plan, baseline, later, opts)
+			end,
+		})
+		bufnrs = now
+	end
+
+	M.wait_and_report(plan, baseline, bufnrs, opts)
+end
+
+--- Waits until every buffer has diagnostics newer than the edit, then reports.
+---
+--- "Any publish" was not enough: clangd sends a pre-edit version right after the change,
+--- rust-analyzer publishes stale versions, and ts_ls sends two waves without a version.
+--- A publish counts for a buffer only when its version is the edited one or newer, or,
+--- when the server sends no version, when it arrives after the edit.
+---@param plan refactor.Plan
+---@param baseline table<string, table>
+---@param bufnrs integer[]
+---@param opts { timeout?: integer }
+function M.wait_and_report(plan, baseline, bufnrs, opts)
+	local want, fresh = {}, {}
+	for _, b in ipairs(bufnrs) do
+		want[vim.uri_from_bufnr(b)] = { bufnr = b, version = vim.lsp.util.buf_versions[b] or 0 }
+	end
+	local slow = false
+	for _, b in ipairs(bufnrs) do
+		for _, client in ipairs(vim.lsp.get_clients({ bufnr = b })) do
+			slow = slow or client.name == "rust_analyzer"
+		end
+	end
+	local timeout = opts.timeout or (slow and 20000 or 10000)
+
 	local settled = false
 	local timer = assert(vim.uv.new_timer())
-	local seen = 0
+	local method = "textDocument/publishDiagnostics"
+	local original = vim.lsp.handlers[method]
 
-	local group = vim.api.nvim_create_augroup("refactor_verify", { clear = true })
-	vim.api.nvim_create_autocmd("DiagnosticChanged", {
-		group = group,
-		callback = function()
-			seen = seen + 1
-			timer:stop()
-			timer:start(400, 0, function()
-				vim.schedule(function()
-					if not settled then
-						settled = true
-						M.report(plan, baseline, bufnrs)
-					end
-				end)
-			end)
-		end,
-	})
-
-	vim.defer_fn(function()
-		if not settled then
-			settled = true
-			timer:stop()
-			pcall(vim.api.nvim_del_augroup_by_id, group)
-			if seen > 0 then
-				M.report(plan, baseline, bufnrs)
-			else
-				-- The server never published anything in the window. Not the same as a
-				-- clean result, and the difference is the whole point of saying so.
-				Snacks.notify.warn(
-					("%s applied, but not verified: no diagnostics arrived within %dms"):format(
-						plan.title,
-						opts.timeout or 5000
-					),
-					{ title = "Refactor" }
-				)
+	local function all_fresh()
+		for _, b in ipairs(bufnrs) do
+			if not fresh[b] then
+				return false
 			end
 		end
-	end, opts.timeout or 5000)
+		return true
+	end
+
+	local function finish()
+		if settled then
+			return
+		end
+		settled = true
+		timer:stop()
+		vim.lsp.handlers[method] = original
+		local checked = vim.tbl_filter(function(b)
+			return fresh[b]
+		end, bufnrs)
+		local unchecked = #bufnrs - #checked
+		if #checked == 0 then
+			-- Not the same as a clean result, and the difference is the whole point of
+			-- saying so.
+			Snacks.notify.warn(
+				("%s applied, but not verified: no current diagnostics within %dms"):format(plan.title, timeout),
+				{ title = "Refactor" }
+			)
+			return
+		end
+		M.report(plan, baseline, checked)
+		if unchecked > 0 then
+			Snacks.notify.warn(("%d file(s) were not verified: their server did not answer in time"):format(unchecked), {
+				title = "Refactor",
+			})
+		end
+	end
+
+	vim.lsp.handlers[method] = function(err, result, ctx, config)
+		local entry = result and want[result.uri]
+		if entry and (result.version == nil or result.version >= entry.version) then
+			fresh[entry.bufnr] = true
+		end
+		local ret = original(err, result, ctx, config)
+		if all_fresh() then
+			timer:stop()
+			timer:start(400, 0, vim.schedule_wrap(finish))
+		end
+		return ret
+	end
+
+	vim.defer_fn(finish, timeout)
 end
 
 --- Notifies about errors that appeared, and offers to undo.

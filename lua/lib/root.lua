@@ -20,8 +20,9 @@ local M = setmetatable({}, {
 ---@type lib.RootSpec[]
 M.spec = { "lsp", { ".git", "lua" }, "cwd" }
 
---- Detected root per buffer, cleared by setup()'s autocmds.
----@type table<number, string>
+--- Detected root per buffer, with the buffer name it was detected for; cleared by
+--- setup()'s autocmds and ignored when the name no longer matches.
+---@type table<number, { name: string, root: string }>
 M.cache = {}
 
 --- Detection strategies keyed by name; each takes a buffer and returns paths.
@@ -211,11 +212,16 @@ function M.get(opts)
 	opts = opts or {}
 	local buf = opts.buf or vim.api.nvim_get_current_buf()
 
-	local ret = M.cache[buf]
+	-- Keyed by the buffer's name too: `:edit file` from an empty, unmodified buffer
+	-- reuses that buffer number without a BufEnter, so a root cached for the empty
+	-- buffer (the cwd, asked by the statusline) stuck to whatever file opened next.
+	local name = vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_name(buf) or ""
+	local cached = M.cache[buf]
+	local ret = cached and cached.name == name and cached.root or nil
 	if not ret then
 		local roots = M.detect({ all = false, buf = buf })
 		ret = roots[1] and roots[1].paths[1] or vim.uv.cwd()
-		M.cache[buf] = ret
+		M.cache[buf] = { name = name, root = ret }
 	end
 
 	if opts and opts.normalize then

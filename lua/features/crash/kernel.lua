@@ -14,9 +14,17 @@
 ---@class crash.kernel
 local M = {}
 
+---@class crash.KernelFrame
+---@field row integer
+---@field symbol string
+---@field offset integer
+---@field size? integer
+---@field module? string `[my_mod]`: the symbol lives in a module, not vmlinux
+---@field unreliable boolean `? ` frames are stack scan guesses
+
 --- Frames in a kernel backtrace, as `symbol+offset` pairs.
 ---@param lines string[]
----@return { row: integer, symbol: string, offset: integer, size: integer? }[]
+---@return crash.KernelFrame[]
 function M.frames(lines)
 	local out = {}
 	for row, line in ipairs(lines) do
@@ -31,10 +39,29 @@ function M.frames(lines)
 				symbol = symbol,
 				offset = tonumber(offset, 16),
 				size = size and tonumber(size, 16) or nil,
+				module = line:match("%[([%w_]+)%]%s*$"),
+				unreliable = line:match("%?%s+[%w_%.]+%+0x") ~= nil,
 			})
 		end
 	end
 	return out
+end
+
+--- `hex + offset` for a 64-bit address, as hex.
+---
+--- LuaJIT numbers are doubles: `0xffffffff81268ba0 + 0x6d` comes out as `…8800`, and
+--- every kernel address is past 2^53. So the arithmetic is done on the two halves.
+---@param hex string e.g. "ffffffff81268ba0"
+---@param offset integer
+---@return string "0x…"
+function M.add_offset(hex, offset)
+	hex = hex:gsub("^0x", "")
+	hex = ("0"):rep(16 - #hex) .. hex
+	local hi = tonumber(hex:sub(1, 8), 16)
+	local lo = tonumber(hex:sub(9), 16) + offset
+	hi = (hi + math.floor(lo / 2 ^ 32)) % 2 ^ 32
+	lo = lo % 2 ^ 32
+	return ("0x%08x%08x"):format(hi, lo)
 end
 
 --- Guesses where the running kernel's debug image is.
@@ -60,38 +87,10 @@ local function find_vmlinux()
 	return nil
 end
 
---- Resolves one `symbol+offset` to a source location.
----
---- Two steps, because addr2line takes addresses and an oops gives symbols: the symbol
---- table supplies the base address, and the offset is added to it.
+--- The symbol table of an ELF image, as name -> hex addresses. A list, because static
+--- functions repeat: this kernel has 41 `__refcount_add`s.
 ---@param vmlinux string
----@param symbols table<string, integer>
----@param frame { symbol: string, offset: integer }
----@return string?
-local function locate(vmlinux, symbols, frame)
-	local base = symbols[frame.symbol]
-	if not base then
-		return nil
-	end
-	local res = vim.system({
-		"addr2line",
-		"-e",
-		vmlinux,
-		"-f",
-		"-i",
-		"-p",
-		("0x%x"):format(base + frame.offset),
-	}, { text = true }):wait()
-	if res.code ~= 0 then
-		return nil
-	end
-	local first = vim.split(vim.trim(res.stdout or ""), "\n", { plain = true })[1]
-	return (first and first ~= "" and not first:match("^%?%?")) and first or nil
-end
-
---- The symbol table of an ELF image, as name -> address.
----@param vmlinux string
----@return table<string, integer>
+---@return table<string, string[]>
 local function symbol_table(vmlinux)
 	local res = vim.system({ "readelf", "-sW", vmlinux }, { text = true }):wait()
 	local out = {}
@@ -99,10 +98,41 @@ local function symbol_table(vmlinux)
 		-- Num: Value Size Type Bind Vis Ndx Name
 		local value, name = line:match("^%s*%d+:%s+(%x+)%s+%d+%s+FUNC%s+%S+%s+%S+%s+%S+%s+([%w_%.]+)")
 		if value and name then
-			out[name] = tonumber(value, 16)
+			out[name] = out[name] or {}
+			if not vim.tbl_contains(out[name], value) then
+				table.insert(out[name], value)
+			end
 		end
 	end
 	return out
+end
+
+--- True when the image carries DWARF; without it addr2line can only say `??:?`.
+---@param vmlinux string
+---@return boolean
+local function has_debug_info(vmlinux)
+	local res = vim.system({ "readelf", "-SW", vmlinux }, { text = true }):wait()
+	return (res.stdout or ""):find("%.debug_info") ~= nil
+end
+
+--- Parses one line of `addr2line -f -p`: nil when it found nothing.
+---@param line string
+---@return string?
+function M.parse_location(line)
+	line = vim.trim(line or "")
+	if line == "" or line:match("^%?%?") or line:find("??:", 1, true) then
+		return nil
+	end
+	return line
+end
+
+---@param buf integer
+---@param ns integer
+---@param row integer
+---@param text string
+---@param group string
+local function annotate(buf, ns, row, text, group)
+	vim.api.nvim_buf_set_extmark(buf, ns, row - 1, 0, { virt_text = { { "  " .. text, group } }, virt_text_pos = "eol" })
 end
 
 --- Annotates the kernel trace in the current buffer with source locations.
@@ -122,18 +152,24 @@ function M.decode(opts)
 		)
 		return
 	end
+	if not vim.uv.fs_stat(vmlinux) then
+		Snacks.notify.error("No such file: " .. vmlinux, { title = "Kernel" })
+		return
+	end
+	if not has_debug_info(vmlinux) then
+		Snacks.notify.warn(
+			vmlinux .. " has no debug info, so no line can be resolved.\nBuild with CONFIG_DEBUG_INFO, or pass that vmlinux.",
+			{ title = "Kernel" }
+		)
+		return
+	end
 
 	local buf = vim.api.nvim_get_current_buf()
-	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-	local frames = M.frames(lines)
+	local frames = M.frames(vim.api.nvim_buf_get_lines(buf, 0, -1, false))
 	if #frames == 0 then
 		Snacks.notify.warn("No `symbol+0xoffset` frames in this buffer", { title = "Kernel" })
 		return
 	end
-
-	Snacks.notify.info(("Decoding %d frame(s) against %s…"):format(#frames, vim.fn.fnamemodify(vmlinux, ":t")), {
-		title = "Kernel",
-	})
 
 	local symbols = symbol_table(vmlinux)
 	if vim.tbl_isempty(symbols) then
@@ -146,25 +182,52 @@ function M.decode(opts)
 	local ns = vim.api.nvim_create_namespace("crash_kernel")
 	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 
-	local resolved = 0
+	-- One addr2line run for every frame that has exactly one candidate address.
+	local cmd, asked = { "addr2line", "-e", vmlinux, "-f", "-p" }, {}
+	local modules, ambiguous = 0, 0
 	for _, frame in ipairs(frames) do
-		local where = locate(vmlinux, symbols, frame)
-		if where then
-			resolved = resolved + 1
-			vim.api.nvim_buf_set_extmark(buf, ns, frame.row - 1, 0, {
-				virt_text = { { "  " .. where, "DiagnosticVirtualTextWarn" } },
-				virt_text_pos = "eol",
-			})
+		local bases = symbols[frame.symbol]
+		if frame.module then
+			modules = modules + 1
+			annotate(buf, ns, frame.row, ("in module %s: decode against its .ko"):format(frame.module), "Comment")
+		elseif bases and #bases > 1 then
+			ambiguous = ambiguous + 1
+			annotate(buf, ns, frame.row, ("%d functions named %s"):format(#bases, frame.symbol), "Comment")
+		elseif bases then
+			table.insert(cmd, M.add_offset(bases[1], frame.offset))
+			table.insert(asked, frame)
 		end
 	end
 
+	local resolved = 0
+	if #asked > 0 then
+		local res = vim.system(cmd, { text = true }):wait()
+		local out = vim.split(res.stdout or "", "\n", { trimempty = true })
+		for i, frame in ipairs(asked) do
+			local where = M.parse_location(out[i])
+			if where then
+				resolved = resolved + 1
+				annotate(buf, ns, frame.row, (frame.unreliable and "? " or "") .. where, "DiagnosticVirtualTextWarn")
+			end
+		end
+	end
+
+	local extra = {}
+	if modules > 0 then
+		table.insert(extra, modules .. " in modules")
+	end
+	if ambiguous > 0 then
+		table.insert(extra, ambiguous .. " ambiguous")
+	end
+	local summary = ("Resolved %d/%d frames%s"):format(
+		resolved,
+		#frames,
+		#extra > 0 and (" (" .. table.concat(extra, ", ") .. ")") or ""
+	)
 	if resolved == 0 then
-		Snacks.notify.warn(
-			"No frames resolved. The vmlinux probably does not match the crashed kernel.",
-			{ title = "Kernel" }
-		)
+		Snacks.notify.warn(summary .. "\nThe vmlinux probably does not match the crashed kernel.", { title = "Kernel" })
 	else
-		Snacks.notify.info(("Resolved %d/%d frames"):format(resolved, #frames), { title = "Kernel" })
+		Snacks.notify.info(summary, { title = "Kernel" })
 	end
 end
 

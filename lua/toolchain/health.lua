@@ -14,7 +14,10 @@ local USER_PREFIXES = { "/.cargo/bin/", "/.rustup/", "/.luarocks/bin/", "/go/bin
 ---@return boolean
 local function under(path, prefixes)
 	for _, prefix in ipairs(prefixes) do
-		if path:find(prefix, 1, true) then
+		-- System prefixes are anchored: `/bin/` must not match `~/.nix-profile/bin/rg`.
+		-- User prefixes sit under a home directory, so those match anywhere.
+		local anchored = vim.tbl_contains(SYSTEM_PREFIXES, prefix)
+		if anchored and vim.startswith(path, prefix) or not anchored and path:find(prefix, 1, true) then
 			return true
 		end
 	end

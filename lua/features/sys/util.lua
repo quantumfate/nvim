@@ -45,6 +45,28 @@ function M.lines(res)
 	return vim.split(vim.trim(text), "\n", { plain = true })
 end
 
+--- The binary to inspect from `buf`: one named after the file (`syscalls.c` ->
+--- `syscalls`) when it was built, otherwise the project's remembered choice.
+---
+--- The remembered choice alone was wrong in practice: profile `hot`, open
+--- `syscalls.c`, press strace, and `hot` got traced without a word.
+---@param buf integer
+---@param on_pick fun(path: string)
+function M.binary(buf, on_pick)
+	local binary = require("features.lang.binary")
+	local root = require("lib.root").get({ buf = buf })
+	local stem = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":t:r")
+	if stem ~= "" then
+		for _, path in ipairs(binary.candidates(root)) do
+			if vim.fs.basename(path) == stem then
+				on_pick(path)
+				return
+			end
+		end
+	end
+	binary.select(root, {}, on_pick)
+end
+
 --- Toggle helper: closes the view when it is showing, otherwise runs `open`.
 ---@param title string
 ---@param open fun()

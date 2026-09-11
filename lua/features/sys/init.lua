@@ -59,6 +59,25 @@ M.keys = {
 		end,
 	},
 	{
+		key = "p",
+		desc = "Profile: hot lines marked (perf)",
+		needs = { "perf" },
+		run = function(buf)
+			require("features.sys.profile").run(buf)
+		end,
+	},
+	{
+		key = "s",
+		desc = "Syscalls, failures to source (strace)",
+		needs = { "strace", "addr2line" },
+		run = function(buf)
+			local trace = require("features.sys.trace")
+			require("features.sys.util").toggle(trace.title, function()
+				trace.run(buf)
+			end)
+		end,
+	},
+	{
 		key = "h",
 		desc = "Hex view toggle",
 		needs = { "xxd" },
@@ -108,20 +127,72 @@ M.keys = {
 	},
 }
 
---- Toggles a buffer between bytes and an xxd dump. Written back through `xxd -r`, so
---- editing the dump edits the file.
+--- The exact bytes a buffer stands for.
+---
+--- An unmodified buffer is read from disk: its lines already went through 'fileformat'
+--- and 'eol' when it was loaded, so a `\r` or a missing final newline is gone from
+--- them. A modified one is rebuilt with those same options.
+---@param buf integer
+---@return string
+local function buffer_bytes(buf)
+	local name = vim.api.nvim_buf_get_name(buf)
+	if not vim.bo[buf].modified and name ~= "" and vim.uv.fs_stat(name) then
+		return vim.fn.readblob(name)
+	end
+	local nl = vim.bo[buf].fileformat == "dos" and "\r\n" or "\n"
+	local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), nl)
+	if vim.bo[buf].eol or (vim.bo[buf].fixeol and not vim.bo[buf].binary) then
+		text = text .. nl
+	end
+	return text
+end
+
+--- Toggles a buffer between bytes and an xxd dump; editing the dump edits the bytes.
+---
+--- Both directions go through xxd on stdin, never through the buffer's own text
+--- conversions: `:%!xxd` round-tripped an ELF with a changed byte and a CRLF file
+--- without its `\r`s.
 ---@param buf integer
 function M.hex(buf)
 	if vim.b[buf].sys_hex then
-		vim.cmd("silent %!xxd -r")
+		local dump = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n") .. "\n"
+		local res = vim.system({ "xxd", "-r" }, { stdin = dump }):wait()
+		if res.code ~= 0 then
+			Snacks.notify.error("xxd -r failed:\n" .. (res.stderr or ""), { title = "Hex" })
+			return
+		end
+		local bytes = res.stdout or ""
+		local lines = vim.split(bytes, "\n", { plain = true })
+		local eol = lines[#lines] == ""
+		if eol then
+			table.remove(lines)
+		end
+		-- Exactly these bytes on write: no line-ending translation, no added newline.
+		vim.bo[buf].binary = true
+		vim.bo[buf].fileformat = "unix"
+		vim.bo[buf].fixeol = false
+		vim.bo[buf].eol = eol
+		-- A binary was read as latin1; writing would convert these raw bytes again.
+		vim.bo[buf].fileencoding = ""
+		vim.bo[buf].bomb = false
+		vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 		vim.bo[buf].filetype = vim.b[buf].sys_hex_ft or ""
 		vim.b[buf].sys_hex = nil
+		local name = vim.api.nvim_buf_get_name(buf)
+		if name ~= "" and vim.uv.fs_stat(name) and vim.fn.readblob(name) == bytes then
+			vim.bo[buf].modified = false
+		end
 	else
+		local res = vim.system({ "xxd", "-g1" }, { stdin = buffer_bytes(buf) }):wait()
+		if res.code ~= 0 then
+			Snacks.notify.error("xxd failed:\n" .. (res.stderr or ""), { title = "Hex" })
+			return
+		end
 		vim.b[buf].sys_hex_ft = vim.bo[buf].filetype
-		-- Without 'binary' a trailing newline is added on write and NULs get mangled.
-		vim.bo[buf].binary = true
-		vim.cmd("silent %!xxd -g1")
+		local was_modified = vim.bo[buf].modified
+		vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(vim.trim(res.stdout or ""), "\n", { plain = true }))
 		vim.bo[buf].filetype = "xxd"
+		vim.bo[buf].modified = was_modified
 		vim.b[buf].sys_hex = true
 	end
 end

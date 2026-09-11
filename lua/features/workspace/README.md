@@ -149,15 +149,24 @@ The previous version docked nineteen things, five of which were `dapui_*` filety
 from nvim-dap-ui, a plugin this config no longer uses. `nvim-dap-view` is **one** panel
 with winbar tabs: scopes, breakpoints, watches and threads are sections inside it.
 
-## Presets
+## Project diagnostics
 
-Three combinations remain, in `features/edgy.lua`, on `<leader>i`:
+`<leader>iq` is this file; `<leader>iQ` is every file. Servers that can report on files
+you never opened are asked to. lua_ls and clangd cannot, so `iQ` also runs
+`lua-language-server --check` and `run-clang-tidy` (over `compile_commands.json`) in the
+background — spinner in the statusline — and their findings join the list as ordinary
+diagnostics. Saving a file clears its batch findings; the live server takes over. See
+[`project_check.lua`](./project_check.lua).
 
-|              |                          |
-| ------------ | ------------------------ |
-| `<leader>iD` | debug                    |
-| `<leader>id` | diagnostics and quickfix |
-| `<leader>in` | tests                    |
+## Keys
 
-A preset earns its place by being a combination that is tedious to assemble by hand.
-Opening one panel is not that.
+One key per dock view, each a toggle; a different key swaps the view in the same window.
+
+|              |                                   |
+| ------------ | --------------------------------- |
+| `<leader>iq` | diagnostics (this file)           |
+| `<leader>iQ` | diagnostics (project) + the check |
+| `<leader>iT` | terminal                          |
+| `<leader>iD` | debugger                          |
+| `<leader>in` | test output                       |
+| `<leader>ic` | close the dock                    |

@@ -24,6 +24,41 @@ local function crate(buf)
 	return root.detectors.pattern(buf, "Cargo.toml")[1] or root.get({ buf = buf })
 end
 
+--- The cargo target a file belongs to. `cargo rustc` refuses extra rustc flags when a
+--- package has more than one target ("can only be passed to one target"), so a crate
+--- with both lib.rs and main.rs needs to be told which.
+---@param buf integer
+---@return string[]
+function M.target_args(buf)
+	local dir = crate(buf)
+	local rel = vim.fs.relpath(dir, vim.api.nvim_buf_get_name(buf)) or ""
+	local bin = rel:match("^src/bin/([^/]+)%.rs$") or rel:match("^src/bin/([^/]+)/main%.rs$")
+	if bin then
+		return { "--bin", bin }
+	end
+	local example = rel:match("^examples/([^/]+)%.rs$") or rel:match("^examples/([^/]+)/main%.rs$")
+	if example then
+		return { "--example", example }
+	end
+	local test = rel:match("^tests/([^/]+)%.rs$")
+	if test then
+		return { "--test", test }
+	end
+	local has_lib = vim.uv.fs_stat(vim.fs.joinpath(dir, "src", "lib.rs")) ~= nil
+	local has_main = vim.uv.fs_stat(vim.fs.joinpath(dir, "src", "main.rs")) ~= nil
+	if rel == "src/main.rs" or (has_main and not has_lib) then
+		local ok, manifest = pcall(vim.fn.readfile, vim.fs.joinpath(dir, "Cargo.toml"))
+		for _, line in ipairs(ok and manifest or {}) do
+			local name = line:match('^%s*name%s*=%s*"([^"]+)"')
+			if name then
+				return { "--bin", name }
+			end
+		end
+		return {}
+	end
+	return has_lib and { "--lib" } or {}
+end
+
 --- Runs a `:RustLsp` subcommand, which is how rustaceanvim exposes rust-analyzer's
 --- own extensions.
 ---@param sub string
@@ -82,10 +117,8 @@ function M.assembly(buf)
 		return
 	end
 	local asm = output.tempfile(".s")
-	output.run({
-		cmd = {
-			"cargo",
-			"rustc",
+	local cmd = vim.list_extend({ "cargo", "rustc" }, M.target_args(buf))
+	vim.list_extend(cmd, {
 			"--release",
 			"-q",
 			"--",
@@ -97,12 +130,17 @@ function M.assembly(buf)
 			-- in the playground, but a crate that does not still gets them here.
 			"-C",
 			"debuginfo=1",
-		},
+	})
+	output.run({
+		cmd = cmd,
 		title = M.titles.assembly,
 		filetype = "asm",
 		cwd = crate(buf),
 		artifact = asm,
-		on_lines = output.strip_asm,
+		-- The crate's asm carries core's and alloc's `.loc`s too; only this file's lines link.
+		on_lines = function(lines)
+			return output.strip_asm(lines, vim.api.nvim_buf_get_name(buf), { only_source_functions = true })
+		end,
 	})
 end
 

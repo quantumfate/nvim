@@ -217,6 +217,50 @@ local function link_cursor(view, map)
 			end
 		end,
 	})
+
+	-- `<CR>` crosses between the two, the cursor already synced on both sides. In the
+	-- source it only does that while this view is on screen; otherwise it is the
+	-- ordinary `<CR>`, so a closed view leaves nothing behind that behaves oddly.
+	vim.keymap.set("n", "<CR>", function()
+		local src_win = vim.fn.bufwinid(view.source)
+		if src_win ~= -1 then
+			vim.api.nvim_set_current_win(src_win)
+		end
+	end, { buffer = view.buf, nowait = true, desc = "Back to the source" })
+
+	-- An edited source makes the map wrong line by line. Better no link than a cursor
+	-- that confidently lands on the wrong statement.
+	vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+		group = group,
+		buffer = view.source,
+		once = true,
+		callback = function()
+			vim.schedule(function()
+				pcall(vim.api.nvim_del_augroup_by_id, group)
+				if vim.api.nvim_buf_is_valid(view.buf) then
+					vim.api.nvim_buf_clear_namespace(view.buf, ns, 0, -1)
+				end
+				Snacks.notify.info("Source edited: the line link is off until the view is re-run", { title = "Output" })
+			end)
+		end,
+	})
+
+	vim.keymap.set("n", "<CR>", function()
+		-- The view buffer is reused per title, so it may now show another file's output.
+		local current = view.win
+			and vim.api.nvim_win_is_valid(view.win)
+			and vim.api.nvim_win_get_buf(view.win) == view.buf
+			and vim.b[view.buf].lang_output_source == view.source
+		if current then
+			vim.schedule(function()
+				if vim.api.nvim_win_is_valid(view.win) then
+					vim.api.nvim_set_current_win(view.win)
+				end
+			end)
+			return ""
+		end
+		return "<CR>"
+	end, { buffer = view.source, expr = true, desc = "Into the linked view" })
 end
 
 --- Maps output rows to source lines, from the line markers compilers emit.
@@ -433,7 +477,9 @@ function M.run(opts)
 	-- on the slow ones.
 	local finished = jobs.start(title, opts.cmd[1])
 
-	vim.system(opts.cmd, { text = true, cwd = opts.cwd }, function(res)
+	-- vim.system throws when the program does not exist. Unguarded, the job was
+	-- registered but never finished: a spinner forever and "already running" on retry.
+	local ok, err = pcall(vim.system, opts.cmd, { text = true, cwd = opts.cwd }, function(res)
 		vim.schedule(function()
 			finished()
 			local text = res.stdout or ""
@@ -476,6 +522,10 @@ function M.run(opts)
 			end
 		end)
 	end)
+	if not ok then
+		finished()
+		Snacks.notify.error(("%s could not start: %s"):format(opts.cmd[1], tostring(err)), { title = title })
+	end
 end
 
 --- Runs a build-style command in a terminal, rooted at the project.
@@ -540,15 +590,25 @@ local KEEP = {
 --- actually survive.
 ---@param lines string[]
 ---@return string[] kept, table<integer, integer> map
-function M.strip_asm(lines)
+function M.strip_asm(lines, source, opts)
 	local out, map = {}, {}
 	local current
 	local in_debug = false
+	-- `.file N "dir" "name"`: which file each `.loc` number means. Inlined code from a
+	-- header or from Rust's core carries other files' line numbers, which must not
+	-- move the cursor around this buffer.
+	local files = {}
+	local want = source and vim.fs.basename(source)
 
 	for _, line in ipairs(lines) do
-		local loc = line:match("^%s*%.loc%s+%d+%s+(%d+)")
+		local file_id, a, b = line:match('^%s*%.file%s+(%d+)%s+"([^"]*)"%s*"?([^"]*)')
+		if file_id then
+			files[file_id] = (b ~= "" and b) or a
+		end
+		local loc_file, loc = line:match("^%s*%.loc%s+(%d+)%s+(%d+)")
 		if loc then
-			current = tonumber(loc)
+			local named = files[loc_file]
+			current = (not want or not named or vim.fs.basename(named) == want) and tonumber(loc) or nil
 		else
 			local directive, rest = line:match("^%s*(%.[%w_]+)%s*(.*)$")
 
@@ -566,6 +626,38 @@ function M.strip_asm(lines)
 					map[#out] = current
 				end
 			end
+		end
+	end
+
+	-- `cargo rustc --emit asm` covers the whole crate plus monomorphised std. Only the
+	-- functions with at least one line from this file are kept, label to label.
+	if opts and opts.only_source_functions and want then
+		local kept, kept_map = {}, {}
+		local block, block_map, has = {}, {}, false
+		local function flush()
+			if has then
+				for i, l in ipairs(block) do
+					table.insert(kept, l)
+					if block_map[i] then
+						kept_map[#kept] = block_map[i]
+					end
+				end
+			end
+			block, block_map, has = {}, {}, false
+		end
+		for row, l in ipairs(out) do
+			if l:match("^[%w_%.%$]+:%s*$") then
+				flush()
+			end
+			table.insert(block, l)
+			if map[row] then
+				block_map[#block] = map[row]
+				has = true
+			end
+		end
+		flush()
+		if #kept > 0 then
+			return kept, kept_map
 		end
 	end
 	return out, map

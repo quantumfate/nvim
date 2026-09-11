@@ -57,6 +57,20 @@ local function has_file(root, name)
 	return vim.uv.fs_stat(vim.fs.joinpath(root, name)) ~= nil
 end
 
+--- Files the scaffold itself writes. Counting them made a fresh go project come back from
+--- :ProjectDoctor as "go, markdown, nix, shell, yaml" with configs "missing" for each.
+---@type table<string, true>
+local SCAFFOLD_OWNED = {
+	["CHANGELOG.md"] = true,
+	["flake.nix"] = true,
+	["setup.sh"] = true,
+	["provision.yml"] = true,
+	[".pre-commit-config.yaml"] = true,
+	["ci.yml"] = true,
+	["bug_report.yml"] = true,
+	["feature_request.yml"] = true,
+}
+
 --- True if any file with one of `exts` exists under `root` (early-exit scan).
 ---@param root string Absolute project root
 ---@param exts string[] Extensions without the leading dot
@@ -68,7 +82,7 @@ local function has_ext(root, exts)
 	end
 	local hits = vim.fs.find(function(name)
 		local ext = name:match("%.([%w]+)$")
-		return ext ~= nil and set[ext] == true
+		return ext ~= nil and set[ext] == true and not SCAFFOLD_OWNED[name]
 	end, { path = root, type = "file", limit = 1 })
 	return #hits > 0
 end

@@ -56,11 +56,15 @@ M.views = {
 		close = "Trouble diagnostics close",
 	},
 	-- Every file, not just this one. Servers that can report on files you have not
-	-- opened (workspace/diagnostic) are asked to first; the rest only know open buffers.
+	-- opened (workspace/diagnostic) are asked to; for Lua and C, whose servers cannot,
+	-- a batch check runs in the background and its findings join the list as they land.
 	project = {
 		title = "Project Diagnostics",
 		ft = "trouble",
 		open = function()
+			local project_check = require("features.workspace.project_check")
+			project_check.setup()
+			project_check.run(vim.api.nvim_get_current_buf())
 			for _, client in ipairs(vim.lsp.get_clients()) do
 				if client:supports_method("workspace/diagnostic") then
 					pcall(vim.lsp.buf.workspace_diagnostics, { client_id = client.id })

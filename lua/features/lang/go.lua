@@ -20,6 +20,8 @@ M.titles = {
 local output = require("features.lang.output")
 local root = require("lib.root")
 
+local compile_cmd
+
 --- Module root (go.work or go.mod), or the buffer's root outside a module.
 ---@param buf integer
 ---@return string
@@ -39,6 +41,18 @@ end
 ---@return string
 local function real(path)
 	return vim.uv.fs_realpath(path) or path
+end
+
+--- The command that compiles `file`'s package with `flag`. `go build` skips test
+--- files, so a `_test.go` goes through `go test -c`, which compiles them.
+---@param file string
+---@param flag string
+---@return string[]
+function compile_cmd(file, flag)
+	if file:match("_test%.go$") then
+		return { "go", "test", "-c", flag, "-o", "/dev/null", "." }
+	end
+	return { "go", "build", flag, "-o", "/dev/null", "." }
 end
 
 ---@param buf integer
@@ -162,7 +176,11 @@ function M.asm_lines(file)
 			if header then
 				pending, keeping = header, false
 			else
-				local path, lnum, rest = line:match("^%s+0x%x+ %d+ %((.-):(%d+)%)%s+(.*)$")
+				-- cgo positions carry the generated file too: `(cg.go:6[cg.cgo1.go:9])`.
+				local path, lnum, rest = line:match("^%s+0x%x+ %d+ %((.-):(%d+)%[.-%]%)%s+(.*)$")
+				if not path then
+					path, lnum, rest = line:match("^%s+0x%x+ %d+ %((.-):(%d+)%)%s+(.*)$")
+				end
 				if not rest then
 					rest = line:match("^%s+0x%x+ %d+ %(<unknown line number>%)%s+(.*)$")
 				end
@@ -197,7 +215,7 @@ function M.assembly(buf)
 	output.run({
 		-- `-o /dev/null` so nothing lands in the tree; the build cache replays the
 		-- compiler's output, so a second press is instant.
-		cmd = { "go", "build", "-gcflags=-S", "-o", "/dev/null", "." },
+		cmd = compile_cmd(file, "-gcflags=-S"),
 		title = M.titles.assembly,
 		filetype = "asm",
 		cwd = package(buf),
@@ -231,7 +249,7 @@ end
 ---@param buf integer
 function M.ir(buf)
 	output.run({
-		cmd = { "go", "build", "-gcflags=-m", "-o", "/dev/null", "." },
+		cmd = compile_cmd(vim.api.nvim_buf_get_name(buf), "-gcflags=-m"),
 		title = M.titles.ir,
 		cwd = package(buf),
 		stderr = true,

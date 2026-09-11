@@ -81,7 +81,9 @@ return {
 			return { vim.api.nvim_buf_get_name(bufnr):sub(-4) == ".zon" and "zonfmt" or "zigfmt" }
 		end
 		by_ft["_"] = { "trim_whitespace" } -- filetypes with no formatter of their own
-		by_ft["*"] = { "codespell" } -- every buffer, on top of whatever else ran
+		-- No codespell on save. As a formatter it rewrites text in place — identifiers
+		-- included — and running it from BufWritePre crashed nvim inside buf_write once a
+		-- second buffer of the filetype was loaded. It is `:Codespell`, on request.
 
 		return {
 			formatters_by_ft = by_ft,
@@ -89,6 +91,11 @@ return {
 			format_on_save = function(bufnr)
 				local ignore_filetypes = { "sql" }
 				if vim.tbl_contains(ignore_filetypes, vim.bo[bufnr].filetype) then
+					return
+				end
+				-- Bytes, not text: trim_whitespace ate the `\r` before every `\n` in a
+				-- binary written back from the hex view, and crashed nvim in buf_write.
+				if vim.bo[bufnr].binary or vim.b[bufnr].sys_hex then
 					return
 				end
 				-- vim.g/vim.b.disable_autoformat: toggles set by the Format* user commands below.
@@ -145,6 +152,14 @@ return {
 	end,
 	--- Register :FormatDisable/:FormatEnable/:FormatToggle to control format-on-save.
 	init = function()
+		vim.api.nvim_create_user_command("Codespell", function()
+			if vim.fn.executable("codespell") == 0 then
+				Snacks.notify.warn("codespell not installed")
+				return
+			end
+			require("conform").format({ formatters = { "codespell" }, timeout_ms = 5000 })
+		end, { desc = "Fix common misspellings in this buffer (review the diff)" })
+
 		vim.api.nvim_create_user_command("AnsibleFix", function()
 			if vim.fn.executable("ansible-lint") == 0 then
 				Snacks.notify.warn("ansible-lint not installed")

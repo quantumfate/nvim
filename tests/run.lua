@@ -3,6 +3,11 @@
 ---     nvim --headless -c "luafile tests/run.lua"
 local t = require("tests.harness")
 
+-- Tests write files and never want them reformatted. Formatting inside BufWritePre also
+-- segfaults nvim in buf_write after some earlier test state (stylua via conform; not
+-- reproducible outside a long headless run), which took the whole suite down with it.
+vim.g.disable_autoformat = true
+
 for _, path in ipairs(vim.fn.glob("tests/*_spec.lua", false, true)) do
 	local ok, err = pcall(dofile, path)
 	if not ok then

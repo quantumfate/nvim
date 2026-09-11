@@ -26,7 +26,7 @@ local SIGNALS = { [4] = "SIGILL", [6] = "SIGABRT", [7] = "SIGBUS", [8] = "SIGFPE
 ---@param buf integer
 function M.run(buf)
 	local root = require("lib.root").get({ buf = buf })
-	require("features.lang.binary").select(root, {}, function(bin)
+	require("features.sys.util").binary(buf, function(bin)
 		local env = vim.tbl_extend("force", vim.fn.environ(), M.ENV)
 		require("features.sys.util").chain(M.title, {
 			-- `exec` so the signal is the program's, not the shell's.

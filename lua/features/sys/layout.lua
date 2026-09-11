@@ -51,9 +51,18 @@ end
 ---@param name string
 ---@param lines string[]
 local function show(buf, name, lines)
-	if #lines == 0 or (#lines == 1 and lines[1] == "") then
+	local empty = #lines == 0 or (#lines == 1 and (lines[1] == "" or lines[1]:match("not found")))
+	if empty then
+		local why = {
+			go = "Go's linker keeps DWARF only for types the runtime needs, so most structs are not there for pahole.",
+			rust = "Build with debug info (the dev profile) and check the type is used.",
+			zig = "Build in Debug mode and check the type is used.",
+		}
 		Snacks.notify.warn(
-			("No debug info for `%s`. Is it defined (not just declared) in this translation unit?"):format(name),
+			("No layout for `%s`. %s"):format(
+				name,
+				why[vim.bo[buf].filetype] or "Is it defined (not just declared) in this translation unit?"
+			),
 			{ title = "Layout" }
 		)
 		return
@@ -109,8 +118,7 @@ function M.show(buf)
 		return
 	end
 
-	local root = require("lib.root").get({ buf = buf })
-	require("features.lang.binary").select(root, {}, function(bin)
+	require("features.sys.util").binary(buf, function(bin)
 		util.chain(M.title, { { cmd = { "pahole", "-C", name, bin } } }, function(results)
 			show(buf, name, util.lines(results[#results]))
 		end)

@@ -107,6 +107,9 @@ a row-to-line map, then dropped from the display. Move in the source and the out
 follows, with every instruction that line produced highlighted; move in the output and
 the source follows.
 
+`<CR>` crosses between the two, in either direction, while the view is on screen; once
+it closes, `<CR>` in the source is ordinary again.
+
 Only these two views have a mapping to follow — a preprocessed file or an AST dump has
 no line correspondence to the original.
 

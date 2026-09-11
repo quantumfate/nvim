@@ -49,6 +49,15 @@ local DIALECTS = {
 		if not fn then
 			fn, file, l = line:match("^%s*#%d+ 0x%x+ in (.-) (%S+):(%d+)$")
 		end
+		-- gdb frames #10 and up look like this too ("#10 0x… in f (x=1) at file:N").
+		if fn and fn:match("%sat$") then
+			fn = fn:gsub("%s*%b()%s*at$", ""):gsub("%s+at$", "")
+		end
+		return file, l, c, fn
+	end,
+	-- TSan: "    #0 main /src/race.c:10:9 (race+0x11cada) (BuildId: 58f2…)"
+	function(line)
+		local fn, file, l, c = line:match("^%s*#%d+ (%S+) (%S+):(%d+):(%d+) %(")
 		return file, l, c, fn
 	end,
 	-- gdb: "#1  0x0000555 in main (argc=1) at s.c:16"
@@ -84,12 +93,16 @@ local DIALECTS = {
 	-- Go: "\t/home/u/p/main.go:12 +0x1d"
 	function(line)
 		local file, l = line:match("^%s+(%S+%.go):(%d+)")
+		if not file then
+			-- Runtime assembly: "\t/usr/lib/go/src/runtime/asm_amd64.s:1264 +0x1"
+			file, l = line:match("^%s+(/%S+%.s):(%d+)")
+		end
 		return file, l, nil, file and ""
 	end,
-	-- Python: '  File "/p/x.py", line 3, in f'
+	-- Python: '  File "/p/x.py", line 3, in f', and without ", in" for a SyntaxError
 	function(line)
-		local file, l, fn = line:match('^%s*File "(.-)", line (%d+), in (.*)$')
-		return file, l, nil, fn
+		local file, l, rest = line:match('^%s*File "(.-)", line (%d+)(.*)$')
+		return file, l, nil, file and (rest:match(", in (.*)$") or "")
 	end,
 	-- Zig: "/p/main.zig:3:5: 0x1034 in main (main)"
 	function(line)
@@ -114,20 +127,26 @@ local function resolve(file, opts)
 		end
 	end
 	if opts.root then
-		local found = vim.fs.find(vim.fs.basename(file), { path = opts.root, type = "file", limit = 1 })[1]
-		if found then
-			return found
+		-- Only an unambiguous basename: with two `main.rs` in the tree, a guess opens
+		-- the wrong one, which is worse than an entry that does not open.
+		local found = vim.fs.find(vim.fs.basename(file), { path = opts.root, type = "file", limit = 2 })
+		if #found == 1 then
+			return found[1]
 		end
 	end
 	return file
 end
+
+M.resolve = resolve
 
 --- True for frames in the project, as opposed to libc, the Rust std or the Go runtime.
 ---@param file string
 ---@param root? string
 ---@return boolean
 local function is_own(file, root)
-	if not root or file:sub(1, #root) ~= root then
+	-- With the separator: `/p/proj2` is not inside `/p/proj`.
+	local prefix = root and (root:sub(-1) == "/" and root or root .. "/")
+	if not prefix or file:sub(1, #prefix) ~= prefix then
 		return false
 	end
 	return not (file:find("/.cargo/registry/", 1, true) or file:find("/site-packages/", 1, true))
@@ -140,23 +159,34 @@ end
 function M.parse(lines, opts)
 	opts = opts or {}
 	local items = {}
+	local previous = ""
 	for _, line in ipairs(lines) do
 		local matched = false
 		for _, dialect in ipairs(DIALECTS) do
 			local file, l, c, label = dialect(line)
 			if file and l then
+				matched = true
+				if file:match("^<.*>$") then
+					-- `<frozen runpy>`, `<string>`: a real frame with no file to open.
+					table.insert(items, { text = vim.trim(line), valid = 0 })
+					break
+				end
+				if not label or label == "" then
+					-- Rust and Go print the function on the line above its location.
+					label = vim.trim(previous):gsub("^%d+:%s*", ""):gsub("%(.*%)%s*$", "")
+				end
 				local path = resolve(file, opts)
 				table.insert(items, {
 					filename = path,
 					lnum = tonumber(l),
 					col = tonumber(c) or 1,
-					text = label or "",
+					text = label,
 					own = is_own(path, opts.root),
 				})
-				matched = true
 				break
 			end
 		end
+		previous = line
 		if not matched then
 			for _, header in ipairs(HEADERS) do
 				if line:find(header) then

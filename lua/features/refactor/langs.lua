@@ -99,14 +99,41 @@ local function lua_annotation(ctx, decl)
 	}
 end
 
+--- 1 when a Rust function's first parameter is `self`, `&self` or `&mut self`.
+---@param node TSNode
+---@return integer
+local function self_parameter(node)
+	local params = node:field("parameters")[1]
+	local first = params and params:named_child(0)
+	return first and first:type() == "self_parameter" and 1 or 0
+end
+
 ---@type table<string, SigLang>
 local M = {
 	lua = {
+		-- `:` passes the receiver implicitly on either side. A negative count means the
+		-- written list has one entry fewer than the logical one.
 		decls = {
-			{ node = "function_declaration", list = "parameters" },
+			{
+				node = "function_declaration",
+				list = "parameters",
+				implicit = function(node)
+					local name = node:field("name")[1]
+					return name and name:type() == "method_index_expression" and -1 or 0
+				end,
+			},
 			{ node = "function_definition", list = "parameters" },
 		},
-		calls = { { node = "function_call", list = "arguments" } },
+		calls = {
+			{
+				node = "function_call",
+				list = "arguments",
+				implicit = function(call)
+					local name = call:field("name")[1]
+					return name and name:type() == "method_index_expression" and -1 or 0
+				end,
+			},
+		},
 		defaults = false,
 		render_param = function(spec)
 			return spec.name
@@ -117,15 +144,9 @@ local M = {
 
 	rust = {
 		decls = {
-			{
-				node = "function_item",
-				list = "parameters",
-				implicit = function(node)
-					local params = node:field("parameters")[1]
-					local first = params and params:named_child(0)
-					return first and first:type() == "self_parameter" and 1 or 0
-				end,
-			},
+			{ node = "function_item", list = "parameters", implicit = self_parameter },
+			-- A trait's declaration: `fn area(&self, x: i32);`
+			{ node = "function_signature_item", list = "parameters", implicit = self_parameter },
 		},
 		calls = {
 			{
@@ -145,8 +166,36 @@ local M = {
 	},
 
 	zig = {
-		decls = { { node = "function_declaration", list = "parameters" } },
-		calls = { { node = "call_expression", list = "arguments" } },
+		decls = {
+			{
+				node = "function_declaration",
+				list = "parameters",
+				-- `self: *Self` / `self: @This()`: filled by `obj.method()`, spelled out by
+				-- `Type.method(&obj)`.
+				implicit = function(node, _, bufnr)
+					local params = node:field("parameters")[1]
+					local first = params and params:named_child(0)
+					local text = first and vim.treesitter.get_node_text(first, bufnr or 0) or ""
+					return (text:find("Self") or text:find("@This")) and 1 or 0
+				end,
+			},
+		},
+		calls = {
+			{
+				node = "call_expression",
+				list = "arguments",
+				implicit = function(call, ctx, bufnr)
+					if not (ctx and ctx.decl_implicit > 0) then
+						return 0
+					end
+					local fn = call:field("function")[1] or call:named_child(0)
+					local object = fn and (fn:field("object")[1] or (fn:named_child_count() > 1 and fn:named_child(0)))
+					local text = object and vim.treesitter.get_node_text(object, bufnr or 0) or ""
+					-- A type name, by Zig convention capitalised: `Counter.add(&c, 1)`.
+					return text:match("^%u") and 1 or 0
+				end,
+			},
+		},
 		defaults = false,
 		render_param = annotated,
 		render_arg = value,
@@ -223,8 +272,14 @@ for _, ft in ipairs({ "javascript", "typescript", "typescriptreact", "javascript
 			{ node = "function_expression", list = "formal_parameters" },
 			{ node = "arrow_function", list = "formal_parameters" },
 			{ node = "method_definition", list = "formal_parameters" },
+			-- Overload signatures, updated together with the implementation.
+			{ node = "function_signature", list = "formal_parameters" },
+			{ node = "method_signature", list = "formal_parameters" },
 		},
-		calls = { { node = "call_expression", list = "arguments" } },
+		calls = {
+			{ node = "call_expression", list = "arguments" },
+			{ node = "new_expression", list = "arguments" },
+		},
 		defaults = true,
 		render_param = typed,
 		render_arg = value,

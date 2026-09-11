@@ -74,6 +74,22 @@ t.describe("sys elf", function()
 		t.ok(not elf.names("summary", "sum"), "a prefix is not a match")
 	end)
 
+	t.it("picks the obvious symbol instead of asking", function()
+		-- Zig exports one function under two names; Rust's std has its own `report`.
+		local zig = elf.best_matches({
+			{ addr = 0x10, size = 9, kind = "t", name = "area" },
+			{ addr = 0x10, size = 9, kind = "t", name = "main.area" },
+		}, "area")
+		t.eq(1, #zig, "aliases at one address were offered twice")
+		local rust = elf.best_matches({
+			{ addr = 0x20, size = 9, kind = "t", name = "playground::report" },
+			{ addr = 0x30, size = 3, kind = "t", name = "<() as std::process::Termination>::report" },
+		}, "report")
+		t.eq({ "playground::report" }, vim.tbl_map(function(s)
+			return s.name
+		end, rust))
+	end)
+
 	t.it("maps objdump -l instructions to source lines", function()
 		local lines, map = elf.parse_objdump({
 			"objdump: DWARF error: mangled line number section (bad file number)",
@@ -143,6 +159,112 @@ t.describe("sys kernel", function()
 		local text = table.concat(cmd, " ")
 		t.ok(text:find("-s -S", 1, true), "not halted for gdb")
 		t.ok(text:find("nokaslr", 1, true), "KASLR left on; breakpoints would miss")
+	end)
+end)
+
+t.describe("sys perf and strace", function()
+	t.it("parses perf's per-line report and marks the source", function()
+		local profile = require("features.sys.profile")
+		local path = t.file("hot.c", { "int main(void)", "{", "  work();", "}" })
+		local hot = profile.parse({
+			"    76.45%  " .. path .. ":3",
+			"    23.43%  " .. path .. ":1",
+			"     0.60%  ??:0",
+		})
+		t.eq(2, #hot, "the unknown location was kept")
+		t.eq({ 76.45, 3 }, { hot[1].pct, hot[1].lnum })
+
+		t.reset()
+		vim.cmd.edit(path)
+		profile.apply(hot)
+		local ns = vim.api.nvim_create_namespace("sys_profile")
+		t.eq(2, #vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, {}), "hot lines were not marked")
+		t.ok(profile.active())
+		profile.clear()
+		t.eq(0, #vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, {}), "clear left marks behind")
+	end)
+
+	t.it("parses strace -k and finds the program's own frame", function()
+		local trace = require("features.sys.trace")
+		local calls = trace.parse({
+			'2062449 15:28:10.337713 openat(AT_FDCWD, "/nonexistent/file", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000011>',
+			" > /usr/lib/libc.so.6(__open64+0x127) [0x13c317]",
+			" > /src/io(main+0x2c) [0x11bc]",
+			" > /usr/lib/libc.so.6() [0x27c8e]",
+			'2062449 15:28:10.337763 write(1, "hi\\n", 3) = 3 <0.000007>',
+			"2062449 15:28:10.337842 +++ exited with 1 +++",
+		})
+		t.eq(3, #calls)
+		t.eq({ "openat", "ENOENT" }, { calls[1].syscall, calls[1].error })
+		t.eq(nil, calls[2].error)
+		t.eq("11bc", trace.own_frame(calls[1], "/src/io").addr, "libc's frame was taken for the program's")
+		t.eq(nil, trace.own_frame(calls[1], "/src/other"))
+	end)
+end)
+
+t.describe("sys hex", function()
+	--- Opens `bytes` as a file, toggles hex twice, writes, and returns what is on disk.
+	---@param name string
+	---@param bytes string
+	---@return string
+	local function roundtrip(name, bytes)
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+		local path = dir .. "/" .. name
+		local f = assert(io.open(path, "wb"))
+		f:write(bytes)
+		f:close()
+		t.reset()
+		vim.cmd.edit(path)
+		local buf = vim.api.nvim_get_current_buf()
+		local sys = require("features.sys")
+		sys.hex(buf)
+		t.eq("xxd", vim.bo[buf].filetype)
+		sys.hex(buf)
+		vim.cmd("silent write")
+		local back = assert(io.open(path, "rb"))
+		local content = back:read("*a")
+		back:close()
+		vim.cmd("bwipe!")
+		return content
+	end
+
+	t.it("round-trips a binary with NULs and newline bytes unchanged", function()
+		if vim.fn.executable("xxd") == 0 then
+			return
+		end
+		local bytes = "\127ELF\2\1\1\0\0\0\n\n\0\255\r\n\0tail"
+		t.eq(bytes, roundtrip("blob.bin", bytes), "the binary changed")
+	end)
+
+	t.it("keeps CRLF and a missing final newline", function()
+		if vim.fn.executable("xxd") == 0 then
+			return
+		end
+		t.eq("a\r\nb", roundtrip("crlf.txt", "a\r\nb"), "line endings or the final newline changed")
+	end)
+end)
+
+t.describe("sys binary choice", function()
+	t.it("prefers the binary named after the current file over the remembered one", function()
+		-- Profiling `hot` then pressing strace in syscalls.c used to trace `hot` again.
+		if vim.fn.executable("cc") == 0 then
+			return
+		end
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+		vim.fn.mkdir(dir .. "/.git", "p")
+		for _, name in ipairs({ "hot", "syscalls" }) do
+			vim.fn.writefile({ "int main(void) { return 0; }" }, dir .. "/" .. name .. ".c")
+			vim.system({ "cc", "-o", dir .. "/" .. name, dir .. "/" .. name .. ".c" }):wait()
+		end
+		t.reset()
+		vim.cmd.edit(dir .. "/syscalls.c")
+		local picked
+		require("features.sys.util").binary(0, function(path)
+			picked = path
+		end)
+		t.eq("syscalls", picked and vim.fs.basename(picked))
 	end)
 end)
 

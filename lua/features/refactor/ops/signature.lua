@@ -71,24 +71,42 @@ end
 --- defaulted, or plain.
 ---@param node TSNode
 ---@param bufnr integer
----@return "variadic"|"default"|"plain"
+---@return "variadic"|"default"|"plain"|"separator"
 local function param_kind(node, bufnr)
 	local kind = node:type()
 	local text = syntax.text(node, bufnr)
+	-- Python's `/` ends the positional-only parameters and is not one itself.
+	if kind == "positional_separator" then
+		return "separator"
+	end
 	if
 		kind:find("splat")
 		or kind:find("rest")
 		or kind:find("variadic")
-		or kind:find("separator")
+		or kind == "keyword_separator"
 		or text:match("^%*")
 		or text:match("^%.%.%.")
 	then
 		return "variadic"
 	end
-	if kind:find("default") or kind == "assignment_pattern" or node:field("value")[1] or node:field("default_value")[1] then
+	if
+		kind:find("default")
+		or kind == "assignment_pattern"
+		or kind == "optional_parameter"
+		or node:field("value")[1]
+		or node:field("default_value")[1]
+	then
 		return "default"
 	end
 	return "plain"
+end
+
+--- True for list entries that are syntax, not parameters: Python's `/` and `*`.
+---@param node TSNode
+---@return boolean
+local function is_separator(node)
+	local kind = node:type()
+	return kind == "positional_separator" or kind == "keyword_separator"
 end
 
 --- Why a parameter order would not compile, or nil when it would.
@@ -97,7 +115,9 @@ end
 local function order_problem(kinds)
 	local seen_default, seen_variadic = false, false
 	for _, kind in ipairs(kinds) do
-		if seen_variadic then
+		if kind == "separator" then
+			-- Changes nothing about what may follow.
+		elseif seen_variadic then
 			return "a parameter after `*`/`...` is keyword-only or invalid; call sites cannot be updated by position"
 		elseif kind == "variadic" then
 			seen_variadic = true
@@ -191,8 +211,45 @@ local function enclosing(node, shapes)
 		if node:type() == "arrow_function" and node:field("parameter")[1] then
 			return nil
 		end
+		-- Rust closures have no name to find call sites by; the same reasoning.
+		if node:type() == "closure_expression" then
+			return nil
+		end
 		node = node:parent()
 	end
+end
+
+--- The node references should be asked at: the last segment of the declaration's name
+--- (`area` in `M.area`, `method` in `Calc::method`), or of the name it is bound to.
+---@param decl TSNode
+---@param ft string
+---@return TSNode?
+local function name_node(decl, ft)
+	local name = decl:field("name")[1] or (C_FAMILY[ft] and declarator_name(decl)) or binding_name(decl)
+	while name and name:named_child_count() > 0 do
+		local last = name:named_child(name:named_child_count() - 1)
+		if not last or last:type() ~= "identifier" and last:named_child_count() == 0 then
+			break
+		end
+		name = last
+	end
+	return name
+end
+
+--- A C declarator that declares a variable holding a function pointer, not a function:
+--- `int (*fp)(int) = twice;`.
+---@param decl TSNode
+---@return boolean
+local function is_function_pointer(decl)
+	local node = decl:field("declarator")[1]
+	while node do
+		if node:type() == "function_declarator" then
+			local inner = node:field("declarator")[1]
+			return inner ~= nil and inner:type() == "parenthesized_declarator"
+		end
+		node = node:field("declarator")[1]
+	end
+	return false
 end
 
 --- Splits `name:type=default` into its parts; a leading `!` keeps the text verbatim.
@@ -358,6 +415,9 @@ end
 ---@field decl? TSNode The declaration being changed
 ---@field decl_text? string Rendered new parameter, for other declarations of it
 ---@field void? TSNode C's `void` standing in for an empty list
+---@field separators integer[] 0-based list positions of `/` and `*`, which no argument fills
+---@field variadic boolean The last parameter takes any number of arguments
+---@field trait? boolean A Rust trait method: other impls share the signature
 
 --- Locates the declaration under the cursor and gathers everything both the
 --- declaration edit and the call-site walk need.
@@ -387,10 +447,43 @@ local function context()
 		return nil
 	end
 
+	if C_FAMILY[ft] then
+		if is_function_pointer(decl) then
+			Snacks.notify.warn("That declares a function pointer variable, not a function", { title = "Refactor" })
+			return nil
+		end
+		for child in decl:iter_children() do
+			if child:type() == "declaration" then
+				Snacks.notify.warn("K&R-style definitions are not supported; convert to a prototype first", {
+					title = "Refactor",
+				})
+				return nil
+			end
+		end
+	end
+
 	local list = list_of(decl, shape)
 	ctx.decl = decl
 	ctx.params = elements(list)
 	ctx.index = cursor_index(list)
+	ctx.separators = {}
+	for i, param in ipairs(ctx.params) do
+		if is_separator(param) then
+			table.insert(ctx.separators, i - 1)
+		end
+	end
+	local last = ctx.params[#ctx.params]
+	ctx.variadic = last ~= nil and not is_separator(last) and param_kind(last, bufnr) == "variadic"
+
+	local scope = decl:parent()
+	while scope do
+		local kind = scope:type()
+		if kind == "trait_item" or (kind == "impl_item" and scope:field("trait")[1]) then
+			ctx.trait = true
+			break
+		end
+		scope = scope:parent()
+	end
 	-- C's `(void)` is an empty list spelled with a word in it.
 	if #ctx.params == 1 and syntax.text(ctx.params[1], bufnr) == "void" then
 		ctx.void, ctx.params, ctx.index = ctx.params[1], {}, 0
@@ -424,15 +517,8 @@ local function context()
 	-- And at the *last* segment of that name. `function M.area()` has a name field of
 	-- `M.area`, whose start is `M` — asking there returns every use of the module
 	-- table and not one call of the function.
-	local name = decl:field("name")[1] or (C_FAMILY[ft] and declarator_name(decl)) or binding_name(decl)
+	local name = name_node(decl, ft)
 	if name then
-		while name:named_child_count() > 0 do
-			local last = name:named_child(name:named_child_count() - 1)
-			if not last or last:type() ~= "identifier" and last:named_child_count() == 0 then
-				break
-			end
-			name = last
-		end
 		local nrow, ncol = name:start()
 		ctx.name_pos = { nrow, ncol }
 	else
@@ -474,6 +560,111 @@ local function declaration_site(plan, bufnr, list, ctx)
 	plan:edit(bufnr, syntax.replace(b, syntax.text(a, bufnr)))
 end
 
+--- The arguments of a call written inside a Rust macro: `println!("{}", plain(1, 2))`.
+---
+--- Macro arguments are an unparsed token tree, so there is no argument list node; the
+--- `(…)` tree after the name is split on its top-level commas instead.
+---@param args_tree TSNode
+---@return { first: TSNode, last: TSNode }[]
+function M.macro_args(args_tree)
+	local args, current = {}, nil
+	for i = 1, args_tree:child_count() - 2 do
+		local child = args_tree:child(i)
+		if child:type() == "," then
+			if current then
+				table.insert(args, current)
+			end
+			current = nil
+		else
+			current = current or { first = child }
+			current.last = child
+		end
+	end
+	if current then
+		table.insert(args, current)
+	end
+	return args
+end
+
+---@param row integer
+---@param col integer
+---@return lsp.Position
+local function lsp_pos(row, col)
+	return { line = row, character = col }
+end
+
+--- Rewrites a call inside a Rust macro.
+---@param plan refactor.Plan
+---@param bufnr integer
+---@param node TSNode The referenced name
+---@param ctx SigCtx
+---@param lang SigLang
+---@param note fun(text: string)
+local function macro_call_site(plan, bufnr, node, ctx, lang, note)
+	local args_tree = node:next_sibling()
+	if not args_tree or args_tree:type() ~= "token_tree" or syntax.text(args_tree, bufnr):sub(1, 1) ~= "(" then
+		return note("reference inside a macro is not a call")
+	end
+	-- `Type::method(&obj, …)` spells out the receiver; `obj.method(…)` does not.
+	local prev = node:prev_sibling()
+	local receiver = (ctx.decl_implicit > 0 and prev and syntax.text(prev, bufnr) == "::") and 1 or 0
+	local args = M.macro_args(args_tree)
+	local index = ctx.index - ctx.decl_implicit + receiver
+	if #args - receiver + ctx.decl_implicit > #ctx.params then
+		return note("argument count does not match the declaration")
+	end
+
+	if ctx.mode == "add" then
+		if index > #args then
+			return note("earlier arguments are absent")
+		end
+		local text = lang.render_arg(ctx.spec)
+		local row, col, new
+		if #args == 0 then
+			row, col = args_tree:child(args_tree:child_count() - 1):start()
+			new = text
+		elseif index >= #args then
+			row, col = args[#args].last:end_()
+			new = ", " .. text
+		else
+			row, col = args[index + 1].first:start()
+			new = text .. ", "
+		end
+		return plan:edit(bufnr, { range = { start = lsp_pos(row, col), ["end"] = lsp_pos(row, col) }, newText = new })
+	end
+
+	if ctx.mode == "remove" then
+		local target = args[index + 1]
+		if not target then
+			return note("argument is already absent")
+		end
+		local srow, scol = target.first:start()
+		local erow, ecol = target.last:end_()
+		if args[index + 2] then
+			erow, ecol = args[index + 2].first:start()
+		elseif args[index] then
+			srow, scol = args[index].last:end_()
+		end
+		return plan:edit(bufnr, { range = { start = lsp_pos(srow, scol), ["end"] = lsp_pos(erow, ecol) }, newText = "" })
+	end
+
+	local to = ctx.to - ctx.decl_implicit + receiver
+	local a, b = args[index + 1], args[to + 1]
+	if not a or not b then
+		return note("argument positions are not both present")
+	end
+	local function span(arg)
+		local srow, scol = arg.first:start()
+		local erow, ecol = arg.last:end_()
+		local text = table.concat(vim.api.nvim_buf_get_text(bufnr, srow, scol, erow, ecol, {}), "\n")
+		return text, { start = lsp_pos(srow, scol), ["end"] = lsp_pos(erow, ecol) }
+	end
+	local text_a, range_a = span(a)
+	local text_b, range_b = span(b)
+	plan:edit(bufnr, { range = range_a, newText = text_b })
+	plan:edit(bufnr, { range = range_b, newText = text_a })
+end
+
 --- Rewrites one call site, or explains why it was left alone.
 ---@param plan refactor.Plan
 ---@param usage refactor.Usage
@@ -497,18 +688,22 @@ local function call_site(plan, usage, encoding, ctx)
 
 	local node = vim.treesitter.get_node({ bufnr = bufnr, pos = { row, col } })
 
-	if C_FAMILY[ft] then
-		local other, other_shape = enclosing(node, lang.decls)
-		local named = other and declarator_name(other)
-		if named then
-			local nrow, ncol = named:start()
-			if nrow == row and ncol == col then
-				if bufnr == ctx.bufnr and other:equal(ctx.decl) then
-					return
-				end
-				return declaration_site(plan, bufnr, list_of(other, other_shape), ctx)
+	-- Another declaration of the same function — a C prototype, a TS overload signature,
+	-- a trait's signature — takes the same edit as the one under the cursor.
+	local other, other_shape = enclosing(node, lang.decls)
+	local named = other and name_node(other, ft)
+	if named then
+		local nrow, ncol = named:start()
+		if nrow == row and ncol == col then
+			if bufnr == ctx.bufnr and other:equal(ctx.decl) then
+				return
 			end
+			return declaration_site(plan, bufnr, list_of(other, other_shape), ctx)
 		end
+	end
+
+	if ft == "rust" and node and node:parent() and node:parent():type() == "token_tree" then
+		return macro_call_site(plan, bufnr, node, ctx, lang, note)
 	end
 
 	local call, shape = (lang.find_call or function(n)
@@ -523,17 +718,51 @@ local function call_site(plan, usage, encoding, ctx)
 		return note("call does not parse cleanly")
 	end
 
-	-- Inside the argument list, the function is passed as a value, not called.
-	local lrow, lcol = list:start()
-	if row > lrow or (row == lrow and col >= lcol) then
-		return note("reference is an argument, not the callee")
+	-- The reference must be what is called, not something else inside the call: in
+	-- `new Pt(1, 2).sum()` the nearest call is `.sum()`, whose arguments are not Pt's.
+	local callee = call:field("function")[1]
+		or call:field("constructor")[1]
+		or call:field("method")[1]
+		or call:field("name")[1]
+	if callee then
+		local srow, scol, erow, ecol = callee:range()
+		local inside = (row > srow or (row == srow and col >= scol)) and (row < erow or (row == erow and col < ecol))
+		if not inside then
+			return note("reference is not the callee of this call")
+		end
+		local property = callee:field("property")[1]
+		if property and vim.tbl_contains({ "call", "apply", "bind" }, syntax.text(property, bufnr)) then
+			return note("called through ." .. syntax.text(property, bufnr) .. "; arguments are shifted")
+		end
+	else
+		-- Inside the argument list, the function is passed as a value, not called.
+		local lrow, lcol = list:start()
+		if row > lrow or (row == lrow and col >= lcol) then
+			return note("reference is an argument, not the callee")
+		end
 	end
 
 	local args = elements(list)
 	local receiver = implicit(shape, call, ctx, bufnr)
-	local index = ctx.index - ctx.decl_implicit + receiver
 
-	if #args > #ctx.params then
+	--- Separators before list position `i`, which no argument corresponds to.
+	---@param i integer
+	---@return integer
+	local function separators_before(i)
+		local n = 0
+		for _, sep in ipairs(ctx.separators) do
+			if sep < i then
+				n = n + 1
+			end
+		end
+		return n
+	end
+	local index = ctx.index - separators_before(ctx.index) - ctx.decl_implicit + receiver
+
+	-- Arguments counted as the declaration counts them: a receiver the call spells out
+	-- and the declaration does not (or the reverse, Lua's `:`) cancels out.
+	local declared = #ctx.params - #ctx.separators
+	if #args - receiver + ctx.decl_implicit > declared and not ctx.variadic then
 		return note("argument count does not match the declaration")
 	end
 
@@ -551,6 +780,13 @@ local function call_site(plan, usage, encoding, ctx)
 	if ctx.mode == "add" then
 		if index > positional then
 			return note("earlier optional arguments are absent, or later ones are passed by keyword")
+		end
+		-- `f(*xs)` / `f(**kw)`: which parameter each value fills is decided at run time.
+		for i, arg in ipairs(args) do
+			local kind = arg:type()
+			if kind:find("dictionary_splat") or ((kind:find("splat") or kind:find("spread")) and i - 1 <= index) then
+				return note("call unpacks arguments; where the new one belongs is decided at run time")
+			end
 		end
 		local text = lang.render_arg(ctx.spec)
 		if text == "" then
@@ -571,7 +807,7 @@ local function call_site(plan, usage, encoding, ctx)
 	end
 
 	-- reorder
-	local to = ctx.to - ctx.decl_implicit + receiver
+	local to = ctx.to - separators_before(ctx.to) - ctx.decl_implicit + receiver
 	local from_node, to_node = args[index + 1], args[to + 1]
 	if not from_node or not to_node then
 		return note("argument positions are not both present")
@@ -590,6 +826,93 @@ local function call_site(plan, usage, encoding, ctx)
 	plan:edit(bufnr, syntax.replace(to_node, syntax.text(from_node, bufnr)))
 end
 
+--- Where the trait declares the method in `impl Trait for T`, as a buffer and name
+--- position. References asked there include every impl; asked at one impl, only that
+--- impl and its own calls come back.
+---@param ctx SigCtx
+---@return integer? bufnr, integer[]? position, string? why
+local function trait_origin(ctx)
+	local impl = ctx.decl:parent()
+	while impl and impl:type() ~= "impl_item" do
+		impl = impl:parent()
+	end
+	local trait = impl and impl:field("trait")[1]
+	if not trait then
+		return nil, nil, "not inside a trait impl"
+	end
+	-- `fmt::Display` names the trait by its last segment.
+	while trait:named_child_count() > 0 do
+		trait = trait:named_child(trait:named_child_count() - 1)
+	end
+
+	local client = vim.lsp.get_clients({ bufnr = ctx.bufnr, method = "textDocument/definition" })[1]
+	if not client then
+		return nil, nil, "no language server to find the trait"
+	end
+	local trow, tcol = trait:start()
+	local line = vim.api.nvim_buf_get_lines(ctx.bufnr, trow, trow + 1, false)[1] or ""
+	local ok, character = pcall(vim.str_utfindex, line, client.offset_encoding, tcol, false)
+	local res = client:request_sync("textDocument/definition", {
+		textDocument = { uri = vim.uri_from_bufnr(ctx.bufnr) },
+		position = { line = trow, character = ok and character or tcol },
+	}, 5000, ctx.bufnr)
+	local result = res and res.result
+	local loc = result and (result[1] or result)
+	local uri = loc and (loc.uri or loc.targetUri)
+	if not uri then
+		return nil, nil, "the language server did not find the trait"
+	end
+
+	-- A trait from std or a dependency is not ours to rewrite.
+	local file = vim.uri_to_fname(uri)
+	if not vim.fs.relpath(require("lib.root").get({ buf = ctx.bufnr }), file) then
+		return nil, nil, "the trait is defined outside this workspace"
+	end
+
+	local range = loc.targetSelectionRange or loc.range
+	local tbuf = vim.uri_to_bufnr(uri)
+	vim.fn.bufload(tbuf)
+	local parser = syntax.parsed(tbuf)
+	if not parser then
+		return nil, nil, "cannot parse the trait's file"
+	end
+	local item = parser:parse()[1]:root():named_descendant_for_range(
+		range.start.line,
+		range.start.character,
+		range.start.line,
+		range.start.character
+	)
+	while item and item:type() ~= "trait_item" do
+		item = item:parent()
+	end
+	if not item then
+		return nil, nil, "cannot find the trait declaration"
+	end
+	local method = syntax.text(name_node(ctx.decl, "rust"), ctx.bufnr)
+	local function find(node)
+		for child in node:iter_children() do
+			local kind = child:type()
+			if kind == "function_signature_item" or kind == "function_item" then
+				local name = child:field("name")[1]
+				if name and syntax.text(name, tbuf) == method then
+					local row, col = name:start()
+					return { row, col }
+				end
+			elseif kind == "declaration_list" then
+				local found = find(child)
+				if found then
+					return found
+				end
+			end
+		end
+	end
+	local pos = find(item)
+	if not pos then
+		return nil, nil, "the trait does not declare " .. method
+	end
+	return tbuf, pos
+end
+
 --- Runs the call-site walk and hands the finished plan to `done`.
 ---@param ctx SigCtx
 ---@param decl_edits lsp.TextEdit[]
@@ -598,14 +921,70 @@ end
 local function build(ctx, decl_edits, title, done)
 	local plan = Plan.new(title)
 	plan:edits_for(ctx.bufnr, decl_edits)
+	local drow, dcol = ctx.decl:start()
 
-	-- C and C++ also need the other declarations (prototypes), which come back only
-	-- with the declaration included; call_site tells them apart.
-	usages.lsp(ctx.bufnr, { include_declaration = C_FAMILY[ctx.ft] or false, position = ctx.name_pos }, function(found, client, reason)
+	-- A trait method changes everywhere at once: the trait's declaration, every impl
+	-- and every call. All of them come back as references of the trait's declaration.
+	local origin_buf, origin_pos = ctx.bufnr, ctx.name_pos
+	if ctx.trait then
+		local in_trait = ctx.decl:parent()
+		while in_trait and in_trait:type() ~= "trait_item" do
+			in_trait = in_trait:parent()
+		end
+		if not in_trait then
+			local tbuf, tpos, why = trait_origin(ctx)
+			if tbuf then
+				origin_buf, origin_pos = tbuf, tpos
+				if tbuf ~= ctx.bufnr then
+					plan:adopt(tbuf)
+				end
+			else
+				plan:note("conflict", ctx.bufnr, drow, dcol, "trait method, but the trait and other impls cannot be updated: " .. why)
+			end
+		end
+	end
+
+	-- Other definitions of the same name under a different `#if` branch.
+	if C_FAMILY[ctx.ft] then
+		local root = syntax.parsed(ctx.bufnr):parse()[1]:root()
+		local want = ctx.name_pos and vim.treesitter.get_node_text(name_node(ctx.decl, ctx.ft), ctx.bufnr)
+		local function walk(node)
+			for child in node:iter_children() do
+				if child:type() == "function_definition" and not child:equal(ctx.decl) then
+					local other = name_node(child, ctx.ft)
+					if other and syntax.text(other, ctx.bufnr) == want then
+						local orow, ocol = child:start()
+						plan:note("skip", ctx.bufnr, orow, ocol, "another definition of this name (a different #if branch?) is not updated")
+					end
+				elseif child:named_child_count() > 0 then
+					walk(child)
+				end
+			end
+		end
+		walk(root)
+	end
+
+	-- Prototypes, overload signatures and in-class declarations come back only with the
+	-- declaration included; call_site tells them apart from calls.
+	local with_declarations = C_FAMILY[ctx.ft] or ctx.ft:find("script") ~= nil or ctx.ft == "rust"
+	usages.lsp(origin_buf, { include_declaration = with_declarations, position = origin_pos }, function(found, client, reason)
 		if not found then
 			plan:note("skip", ctx.bufnr, 0, 0, (reason or "no usages available") .. "; call sites untouched")
 			done(plan)
 			return
+		end
+		if C_FAMILY[ctx.ft] and ctx.name_pos then
+			-- clangd returns nothing for code in an inactive preprocessor branch, the
+			-- declaration included. Silence would read as "no callers".
+			local listed = false
+			for _, usage in ipairs(found) do
+				if usage.bufnr == ctx.bufnr and usage.range.start.line == ctx.name_pos[1] then
+					listed = true
+				end
+			end
+			if not listed then
+				plan:note("conflict", ctx.bufnr, drow, dcol, "the language server does not see this declaration (inactive #if branch?)")
+			end
 		end
 		for _, usage in ipairs(found) do
 			if usage.opened or Plan.owns(usage.bufnr) then
@@ -653,9 +1032,18 @@ function M.add_param(opts)
 		-- silently shadows. The language server cannot see the parameter yet, so the
 		-- locals model is the only thing that can catch it.
 		local shifts = ctx.index < #ctx.params
-		local optional = ctx.lang.defaults and spec.default and not shifts and not opts.force
+		-- Never the call-site-free shortcut in C-family code: a `.h` opens as cpp, yet is
+		-- usually included from C, where a default argument does not compile.
+		local optional = ctx.lang.defaults and spec.default and not shifts and not opts.force and not C_FAMILY[ctx.ft]
 
 		local finish = function(plan)
+			if C_FAMILY[ctx.ft] and spec.default then
+				local is_header = vim.api.nvim_buf_get_name(ctx.bufnr):match("%.h$") ~= nil
+				if ctx.ft == "c" or is_header then
+					local drow, dcol = decl:start()
+					plan:note("conflict", ctx.bufnr, drow, dcol, "C has no default arguments, and a .h is usually included from C")
+				end
+			end
 			local kinds = vim.tbl_map(function(param)
 				return param_kind(param, ctx.bufnr)
 			end, ctx.params)
@@ -724,13 +1112,42 @@ function M.remove_param(opts)
 	ctx.index = index
 	local target = ctx.params[index + 1]
 	local srow, scol = target:start()
+	if is_separator(target) then
+		Snacks.notify.warn("That is a separator, not a parameter", { title = "Refactor" })
+		Plan.done()
+		return
+	end
 
 	ctx.mode = "remove"
 	local name = syntax.text(target, ctx.bufnr)
 	local ident = syntax.param_name(target, ctx.bufnr)
 	local title = "Remove parameter " .. (ident or name)
 
-	build(ctx, { remove_edit(list, ctx.index) }, title, function(plan)
+	-- `def f(a, *, b)` without `b` is `def f(a, *)`, a SyntaxError: the bare `*` goes too.
+	local decl_edit = remove_edit(list, ctx.index)
+	local before = ctx.params[index]
+	if index == #ctx.params - 1 and before and before:type() == "keyword_separator" then
+		local brow, bcol = before:start()
+		local comma = before:prev_sibling()
+		if comma and not comma:named() and comma:type() == "," then
+			brow, bcol = comma:start()
+		end
+		local erow, ecol = target:end_()
+		decl_edit = {
+			range = { start = { line = brow, character = bcol }, ["end"] = { line = erow, character = ecol } },
+			newText = "",
+		}
+	end
+
+	build(ctx, { decl_edit }, title, function(plan)
+		-- TS parameter properties also declare a field; destructured parameters bind
+		-- names the still-used check below cannot see.
+		local text = syntax.text(target, ctx.bufnr)
+		if text:match("^%s*public%s") or text:match("^%s*private%s") or text:match("^%s*protected%s") or text:match("^%s*readonly%s") then
+			plan:note("conflict", ctx.bufnr, srow, scol, "parameter property: removing it also removes the field `this." .. (ident or "?") .. "`")
+		elseif text:match("^%s*[{%[]") then
+			plan:note("conflict", ctx.bufnr, srow, scol, "destructured parameter: the names it binds cannot be checked for uses")
+		end
 		-- Removing a parameter still referenced in the body leaves code that does not
 		-- compile, which is exactly what "safe" means in Safe Delete.
 		if not locals.available(ctx.bufnr) then
@@ -780,7 +1197,7 @@ function M.reorder_param(opts)
 
 	local to = opts.direction == "prev" and from - 1 or from + 1
 	local a, b = ctx.params[from + 1], ctx.params[to + 1]
-	if not a or not b then
+	if not a or not b or is_separator(a) or is_separator(b) then
 		Snacks.notify.warn("No neighbouring parameter to swap with", { title = "Refactor" })
 		Plan.done()
 		return

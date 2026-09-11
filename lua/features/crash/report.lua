@@ -18,35 +18,43 @@ local ns = vim.api.nvim_create_namespace("crash_report")
 
 --- Parses gdb's backtrace into jumpable frames.
 ---
---- Matches `#3  0x... in name (args) at file:line` and the leading-frame form that
---- omits the address.
+--- Matched on structure — `#N … at file:line` — not on the characters a name may use:
+--- Go's `main.get`, Zig's `main.main` and Rust's `poke<{closure_env#0}, !>` all broke a
+--- name pattern. gdb repeats frame #0 right after "Program terminated"; the repeat is
+--- dropped so the fault is marked once.
 ---@param lines string[]
 ---@return table<integer, crash.Frame> by display row
-local function parse_frames(lines)
-	local frames = {}
+function M.parse_frames(lines)
+	local frames, seen = {}, {}
 	for row, line in ipairs(lines) do
-		local index, func, file, lnum = line:match("^#(%d+)%s+.-in%s+([%w_:~<>]+)%s*%b()%s+at%s+([^:]+):(%d+)")
-		if not index then
-			index, func, file, lnum = line:match("^#(%d+)%s+([%w_:~<>]+)%s*%b()%s+at%s+([^:]+):(%d+)")
+		local index, rest = line:match("^#(%d+)%s+(.*)$")
+		local head, file, lnum
+		if rest then
+			head, file, lnum = rest:match("^(.-)%s+at%s+(%S+):(%d+)%s*$")
 		end
-		if index and file then
-			frames[row] = {
-				index = tonumber(index),
-				func = func,
-				file = file,
-				lnum = tonumber(lnum),
-			}
+		if head and not seen[line] then
+			seen[line] = true
+			local func = head:gsub("^0x%x+%s+in%s+", ""):gsub("%s*%b()%s*$", "")
+			frames[row] = { index = tonumber(index), func = func, file = file, lnum = tonumber(lnum) }
 		end
 	end
 	return frames
 end
 
+--- True for frames in the runtime or libc rather than the program.
+---@param path string
+---@return boolean
+local function is_system(path)
+	return path:match("^/usr/") ~= nil
+		or path:match("^/rustc/") ~= nil
+		or path:find("/library/std/", 1, true) ~= nil
+		or path:find("/library/core/", 1, true) ~= nil
+end
+
 --- Finds a source file named in a backtrace.
 ---
---- gdb records the path the binary was compiled with, which is often relative or
---- points at a build directory that no longer exists. So an exact path is tried first,
---- then the same name under the executable's directory, then a search from the project
---- root — which is what makes frames resolvable for a binary built somewhere else.
+--- gdb is asked for absolute paths, so this is mostly a check that the file still
+--- exists. Older reports and moved trees fall back to the executable's directory.
 ---@param file string
 ---@param exe_dir string
 ---@return string? path
@@ -54,24 +62,71 @@ local function resolve(file, exe_dir)
 	if vim.uv.fs_stat(file) then
 		return file
 	end
-
-	local candidates = {
-		vim.fs.joinpath(exe_dir, file),
-		vim.fs.joinpath(exe_dir, vim.fn.fnamemodify(file, ":t")),
-	}
-	for _, path in ipairs(candidates) do
+	for _, path in ipairs({ vim.fs.joinpath(exe_dir, file), vim.fs.joinpath(exe_dir, vim.fs.basename(file)) }) do
 		if vim.uv.fs_stat(path) then
 			return path
 		end
 	end
+	local found = vim.fs.find(vim.fs.basename(file), { path = exe_dir, type = "file", limit = 2 })
+	-- Two files with that name: guessing would open the wrong one.
+	return #found == 1 and found[1] or nil
+end
 
-	local found = vim.fs.find(vim.fn.fnamemodify(file, ":t"), {
-		path = exe_dir,
-		upward = false,
-		type = "file",
-		limit = 1,
-	})[1]
-	return found
+--- The row the report should open on: the first frame in the program's own code, else
+--- the first frame with a location. Frame 0 of an abort() is inside libc.
+---@param frames table<integer, crash.Frame>
+---@param exe_dir string
+---@return integer? row, integer? fault_row
+function M.landing(frames, exe_dir)
+	local rows = vim.tbl_keys(frames)
+	table.sort(rows)
+	local own, fault
+	for _, row in ipairs(rows) do
+		local frame = frames[row]
+		if not fault or frame.index < frames[fault].index then
+			fault = row
+		end
+		local path = resolve(frame.file, exe_dir)
+		if not own and path and not is_system(path) then
+			own = row
+		end
+	end
+	return own or rows[1], fault
+end
+
+--- The buffer called `name`, matched exactly. `vim.fn.bufnr()` treats the name as a
+--- pattern, so `crash://core` found `crash://core.1234`.
+---@param name string
+---@return integer?
+local function buffer_named(name)
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_get_name(buf) == name then
+			return buf
+		end
+	end
+	return nil
+end
+
+--- A window the source can open in: never the report, never a pinned view.
+---@param report_win integer
+---@return integer
+local function source_window(report_win)
+	local candidates = { vim.fn.win_getid(vim.fn.winnr("#")), require("features.workspace").current_editor() }
+	for _, win in ipairs(candidates) do
+		if
+			win
+			and win ~= 0
+			and win ~= report_win
+			and vim.api.nvim_win_is_valid(win)
+			and not vim.wo[win].winfixbuf
+			and vim.api.nvim_win_get_config(win).relative == ""
+		then
+			return win
+		end
+	end
+	local win = vim.api.nvim_open_win(vim.api.nvim_win_get_buf(report_win), false, { split = "above", win = report_win })
+	vim.wo[win].winfixbuf = false
+	return win
 end
 
 --- Opens the report in a split with frame navigation bound.
@@ -82,15 +137,10 @@ end
 local function show(title, lines, exe_dir, on_debug)
 	local name = "crash://" .. title
 
-	-- Reuse the buffer of the same name rather than naming a new one after it. Closing
-	-- a report window leaves the buffer alive, and `nvim_buf_set_name` on a second one
-	-- fails with `E95: Buffer with this name already exists` — so reopening a crash you
-	-- had already looked at was the one case guaranteed to break.
-	local buf
-	local existing = vim.fn.bufnr(name)
-	if existing ~= -1 and vim.api.nvim_buf_is_valid(existing) then
-		buf = existing
-	else
+	-- Reuse the buffer of the same name rather than naming a new one after it:
+	-- `nvim_buf_set_name` on a second one fails with E95.
+	local buf = buffer_named(name)
+	if not buf then
 		buf = vim.api.nvim_create_buf(false, true)
 		pcall(vim.api.nvim_buf_set_name, buf, name)
 	end
@@ -102,14 +152,20 @@ local function show(title, lines, exe_dir, on_debug)
 	vim.bo[buf].bufhidden = "hide"
 	vim.bo[buf].filetype = "crash"
 
-	-- nvim_open_win, not `:split`: the command form fires a layout pass that edgy runs
-	-- inside a textlock, and the buffer swap after it fails with E788.
-	local height = math.min(#lines + 2, math.floor(vim.o.lines * 0.45))
-	local win = vim.api.nvim_open_win(buf, true, {
-		split = "below",
-		win = 0,
-		height = height,
-	})
+	-- Already on screen: focus it. A second window on the same report is what made
+	-- `<CR>` land in the first one and fail on winfixbuf.
+	local win = vim.fn.win_findbuf(buf)[1]
+	if win then
+		vim.api.nvim_set_current_win(win)
+	else
+		-- nvim_open_win, not `:split`: the command form fires a layout pass that edgy runs
+		-- inside a textlock, and the buffer swap after it fails with E788.
+		win = vim.api.nvim_open_win(buf, true, {
+			split = "below",
+			win = 0,
+			height = math.min(#lines + 2, math.floor(vim.o.lines * 0.45)),
+		})
+	end
 	vim.wo[win].number = false
 	vim.wo[win].signcolumn = "no"
 	vim.wo[win].cursorline = true
@@ -118,12 +174,12 @@ local function show(title, lines, exe_dir, on_debug)
 		"Normal:LangOutput,NormalFloat:LangOutput,WinBar:LangOutputTitle,WinBarNC:LangOutputTitleNC"
 	vim.b[buf].lang_output = true
 
-	local frames = parse_frames(lines)
+	local frames = M.parse_frames(lines)
+	local landing, fault = M.landing(frames, exe_dir)
 	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
-	for row, frame in pairs(frames) do
-		-- Frame 0 is where it died; the rest are how it got there.
+	for row in pairs(frames) do
 		vim.api.nvim_buf_set_extmark(buf, ns, row - 1, 0, {
-			line_hl_group = frame.index == 0 and "CrashFaultFrame" or "CrashFrame",
+			line_hl_group = row == fault and "CrashFaultFrame" or "CrashFrame",
 			virt_text = { { "  ⏎ jump", "Comment" } },
 			virt_text_pos = "eol",
 		})
@@ -141,8 +197,8 @@ local function show(title, lines, exe_dir, on_debug)
 			Snacks.notify.warn(("Cannot find %s on disk"):format(frame.file), { title = "Crash" })
 			return
 		end
-		vim.cmd.wincmd("p")
-		vim.cmd.edit(path)
+		vim.api.nvim_set_current_win(source_window(win))
+		vim.cmd.edit(vim.fn.fnameescape(path))
 		pcall(vim.api.nvim_win_set_cursor, 0, { frame.lnum, 0 })
 		vim.cmd("normal! zz")
 	end
@@ -150,27 +206,55 @@ local function show(title, lines, exe_dir, on_debug)
 	vim.keymap.set("n", "<CR>", jump, { buffer = buf, nowait = true, desc = "Jump to frame" })
 	vim.keymap.set("n", "gf", jump, { buffer = buf, nowait = true, desc = "Jump to frame" })
 	vim.keymap.set("n", "q", function()
-		if vim.api.nvim_win_is_valid(win) then
-			vim.api.nvim_win_close(win, true)
+		for _, w in ipairs(vim.fn.win_findbuf(buf)) do
+			pcall(vim.api.nvim_win_close, w, true)
 		end
 	end, { buffer = buf, nowait = true, desc = "Close" })
 	if on_debug then
 		vim.keymap.set("n", "D", on_debug, { buffer = buf, nowait = true, desc = "Open in gdb" })
 	end
 
-	-- Land on the faulting frame rather than the header.
-	local first = math.huge
-	for row in pairs(frames) do
-		first = math.min(first, row)
-	end
-	if first ~= math.huge then
-		pcall(vim.api.nvim_win_set_cursor, 0, { first, 0 })
+	if landing then
+		pcall(vim.api.nvim_win_set_cursor, win, { landing, 0 })
 	end
 end
 
---- gdb's batch commands. `bt full` carries the locals, which is usually where the
---- answer is; the registers matter when the trace itself is corrupt.
-local GDB_ARGS = "-batch -ex 'bt full' -ex 'info registers rip rsp rbp' -ex 'info threads'"
+--- gdb's batch commands.
+---
+--- Absolute file names, because a relative `null.c` resolves against nothing useful.
+--- `bt full` carries the locals, which is usually where the answer is — but only the
+--- innermost frames and the outermost few: a runaway recursion is 75,000 frames and
+--- seven seconds of gdb otherwise.
+---@type string[]
+local GDB_COMMANDS = {
+	"set filename-display absolute",
+	"bt full 48",
+	"bt -12",
+	"info registers rip rsp rbp",
+	"info threads",
+}
+
+---@return string
+local function gdb_arguments()
+	local parts = { "-batch" }
+	for _, command in ipairs(GDB_COMMANDS) do
+		table.insert(parts, ("-ex '%s'"):format(command))
+	end
+	return table.concat(parts, " ")
+end
+
+--- A banner when gdb says the binary is not the one that crashed. Its frames then
+--- point at plausible but wrong lines, which is worse than no lines.
+---@param lines string[]
+---@return string[]
+local function mismatch_banner(lines)
+	for _, line in ipairs(lines) do
+		if line:find("build%-id") or line:find("No such file") or line:find("Can't open") then
+			return { "⚠ The executable changed or is missing since the crash; locations may be wrong.", "" }
+		end
+	end
+	return {}
+end
 
 --- Opens the report for a systemd-captured dump.
 ---@param entry crash.Entry
@@ -195,7 +279,7 @@ function M.open(entry)
 		-- Without gdb the frames have no file:line, so nothing is jumpable, but the
 		-- symbol names are still worth reading.
 		local res = vim.system({ "coredumpctl", "info", tostring(entry.pid) }, { text = true }):wait()
-		local lines = vim.list_extend(header, vim.split(res.stdout or "", "\n", { plain = true }))
+		local lines = vim.list_extend(vim.deepcopy(header), vim.split(res.stdout or "", "\n", { plain = true }))
 		table.insert(lines, 2, "gdb is not installed; frames have no source locations")
 		show(title, lines, exe_dir)
 		return
@@ -206,16 +290,21 @@ function M.open(entry)
 		"debug",
 		tostring(entry.pid),
 		"--debugger=gdb",
-		"--debugger-arguments=" .. GDB_ARGS,
+		"--debugger-arguments=" .. gdb_arguments(),
 	}, { text = true }, function(res)
 		vim.schedule(function()
-			local lines = vim.list_extend(header, M.clean(vim.split(res.stdout or "", "\n", { plain = true })))
-			if res.code ~= 0 and #lines <= #header then
-				lines = vim.list_extend(lines, vim.split(res.stderr or "", "\n", { plain = true }))
+			local out = M.clean(vim.split(res.stdout or "", "\n", { plain = true }))
+			local err = M.clean(vim.split(res.stderr or "", "\n", { plain = true }))
+			local lines = vim.list_extend(vim.deepcopy(header), mismatch_banner(vim.list_extend(vim.deepcopy(out), err)))
+			vim.list_extend(lines, out)
+			if #vim.tbl_filter(function(l)
+				return vim.trim(l) ~= ""
+			end, err) > 0 then
+				vim.list_extend(lines, { "", "── stderr ──" })
+				vim.list_extend(lines, err)
 			end
 			show(title, lines, exe_dir, function()
-				-- Interactive gdb, for when reading is not enough. Same framing as every
-				-- other output window, so it is visibly not the editor.
+				-- Interactive gdb, for when reading is not enough.
 				require("features.lang.output").terminal({
 					"coredumpctl",
 					"debug",
@@ -227,6 +316,23 @@ function M.open(entry)
 	end)
 end
 
+--- The executable a core file was produced by, from the core itself.
+---@param core string
+---@return string?
+function M.core_executable(core)
+	if vim.fn.executable("eu-unstrip") == 0 then
+		return nil
+	end
+	local res = vim.system({ "eu-unstrip", "-n", "--core=" .. core }, { text = true }):wait()
+	for _, line in ipairs(vim.split(res.stdout or "", "\n", { trimempty = true })) do
+		local path = line:match("%s(/%S+)$")
+		if path and vim.uv.fs_stat(path) then
+			return path
+		end
+	end
+	return nil
+end
+
 --- Inspects a core file directly, for dumps systemd did not capture.
 ---@param core string
 ---@param exe? string Defaults to the path recorded inside the core
@@ -236,28 +342,35 @@ function M.open_file(core, exe)
 		Snacks.notify.error("No such core file: " .. core, { title = "Crash" })
 		return
 	end
-	if not vim.fn.executable("gdb") == 1 then
+	if vim.fn.executable("gdb") == 0 then
 		Snacks.notify.error("gdb is required to read a core file", { title = "Crash" })
 		return
 	end
 
-	-- gdb can read a core without the executable, but then it has no symbols at all.
-	local cmd = { "gdb", "-batch", "-ex", "bt full", "-ex", "info registers rip rsp rbp" }
+	exe = exe and vim.fn.expand(exe) or M.core_executable(core)
+	local cmd = { "gdb", "-batch" }
+	for _, command in ipairs(GDB_COMMANDS) do
+		vim.list_extend(cmd, { "-ex", command })
+	end
 	if exe then
-		table.insert(cmd, vim.fn.expand(exe))
+		table.insert(cmd, exe)
 	end
 	table.insert(cmd, "--core=" .. core)
 
-	local exe_dir = exe and vim.fn.fnamemodify(vim.fn.expand(exe), ":h") or vim.fn.getcwd()
+	local exe_dir = exe and vim.fn.fnamemodify(exe, ":h") or vim.fn.getcwd()
 	vim.system(cmd, { text = true }, function(res)
 		vim.schedule(function()
 			local lines = M.clean(vim.split((res.stdout or "") .. "\n" .. (res.stderr or ""), "\n", { plain = true }))
-			show(vim.fn.fnamemodify(core, ":t"), lines, exe_dir)
+			if not exe then
+				table.insert(lines, 1, "No executable found for this core; frames have no symbols. :CrashOpen <core> <exe>")
+			end
+			show(vim.fn.fnamemodify(core, ":t"), vim.list_extend(mismatch_banner(lines), lines), exe_dir)
 		end)
 	end)
 end
 
 --- Drops gdb's startup chatter, which is a third of the output and none of the answer.
+--- Warnings that say the symbols are wrong are kept.
 ---@param lines string[]
 ---@return string[]
 function M.clean(lines)
@@ -270,16 +383,13 @@ function M.clean(lines)
 		"^%[Thread debugging using",
 		"^Using host libthread_db",
 		"^%[New LWP",
-		"^warning: ",
 	}
 	local out = {}
 	for _, line in ipairs(lines) do
-		local drop = false
+		local drop = line:match("^warning: ")
+			and not (line:find("build%-id") or line:find("No such file") or line:find("Can't open"))
 		for _, pattern in ipairs(noise) do
-			if line:match(pattern) then
-				drop = true
-				break
-			end
+			drop = drop or line:match(pattern) ~= nil
 		end
 		if not drop then
 			table.insert(out, line)

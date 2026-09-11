@@ -42,6 +42,41 @@ function M.names(symbol, name)
 	return symbol == name or symbol:match("[%.:%)]" .. vim.pesc(name) .. "$") ~= nil
 end
 
+--- Narrows symbol matches to the ones worth asking about.
+---
+--- Aliases at one address are one function (Zig exports `area` and `main.area`). An
+--- exact name beats a qualified one, and a plain path beats a trait impl: `report` in
+--- a Rust crate should not ask whether you meant `<() as Termination>::report`.
+---@param matches sys.Symbol[]
+---@param name string
+---@return sys.Symbol[]
+function M.best_matches(matches, name)
+	local by_addr, unique = {}, {}
+	for _, s in ipairs(matches) do
+		if not by_addr[s.addr] then
+			by_addr[s.addr] = true
+			table.insert(unique, s)
+		end
+	end
+	local function rank(s)
+		local plain = s.name:gsub("::h%x+$", "")
+		if plain == name then
+			return 3
+		end
+		return plain:sub(1, 1) == "<" and 1 or 2
+	end
+	local best, out = 0, {}
+	for _, s in ipairs(unique) do
+		best = math.max(best, rank(s))
+	end
+	for _, s in ipairs(unique) do
+		if rank(s) == best then
+			table.insert(out, s)
+		end
+	end
+	return out
+end
+
 --- Turns `objdump -d -l` output into instructions plus a row -> source line map for
 --- `file`. The file:line markers are consumed, like `.loc` in the assembly view.
 ---@param lines string[]
@@ -138,8 +173,7 @@ end
 --- disassembles.
 ---@param buf integer
 function M.symbols(buf)
-	local root = require("lib.root").get({ buf = buf })
-	require("features.lang.binary").select(root, {}, function(bin)
+	require("features.sys.util").binary(buf, function(bin)
 		symbols(bin, function(list)
 			-- Sanitizer runtimes add megabytes of their own tables; they would bury the
 			-- program's symbols at the top of a size-sorted list.
@@ -184,15 +218,19 @@ function M.function_at_cursor(buf)
 		Snacks.notify.warn("Cursor is not in a function", { title = "ELF" })
 		return
 	end
-	local root = require("lib.root").get({ buf = buf })
-	require("features.lang.binary").select(root, {}, function(bin)
+	require("features.sys.util").binary(buf, function(bin)
 		symbols(bin, function(list)
-			local matches = vim.tbl_filter(function(s)
-				return s.size > 0 and (s.kind == "T" or s.kind == "t" or s.kind == "W" or s.kind == "w") and M.names(s.name, name)
-			end, list)
+			local matches = M.best_matches(
+				vim.tbl_filter(function(s)
+					return s.size > 0 and (s.kind == "T" or s.kind == "t" or s.kind == "W" or s.kind == "w") and M.names(s.name, name)
+				end, list),
+				name
+			)
 			if #matches == 0 then
+				local hint = vim.bo[buf].filetype == "go" and "\nGo inlines small functions; build with -gcflags=all=-l to keep them"
+					or ""
 				Snacks.notify.warn(
-					("`%s` is not in %s: inlined away, or the binary is stale (rebuild)"):format(name, vim.fs.basename(bin)),
+					("`%s` is not in %s: inlined away, or the binary is stale (rebuild)%s"):format(name, vim.fs.basename(bin), hint),
 					{ title = "ELF" }
 				)
 			elseif #matches == 1 then

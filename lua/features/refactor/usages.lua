@@ -80,6 +80,13 @@ function M.lsp(bufnr, opts, on_done)
 				-- may write it. Read before bufload, which makes it true either way.
 				local was_loaded = vim.api.nvim_buf_is_loaded(target)
 				vim.fn.bufload(target)
+				if not was_loaded then
+					-- A server attaches on the tick after load. Without waiting, verification
+					-- later sees no client on this file and silently skips it.
+					vim.wait(1500, function()
+						return #vim.lsp.get_clients({ bufnr = target }) > 0
+					end, 20)
+				end
 				table.insert(out, { bufnr = target, range = range, kind = "code", opened = not was_loaded })
 			end
 		end

@@ -362,6 +362,7 @@ local IGNORE = {
 	rust = "# Rust\n/target/\n",
 	go = "# Go\n/bin/\nvendor/\n",
 	c = "# C / C++\n*.o\n*.obj\n*.a\n*.so\n/build/\n",
+	zig = "# Zig\nzig-out/\n.zig-cache/\n",
 	nix = "# Nix\nresult\nresult-*\n",
 	ansible = "# Ansible\n*.retry\n.vault_pass\ncollections/\n*.vault\n.ansible\n",
 }
@@ -372,7 +373,7 @@ local IGNORE = {
 function M.gitignore(detection)
 	local parts = { IGNORE.os }
 	-- Deterministic ordering keeps generated files diff-stable across runs.
-	local order = { "lua", "python", "node", "rust", "go", "c", "nix", "ansible" }
+	local order = { "lua", "python", "node", "rust", "go", "c", "zig", "nix", "ansible" }
 	for _, eco in ipairs(order) do
 		if detection.ecosystems[eco] and IGNORE[eco] then
 			table.insert(parts, IGNORE[eco])

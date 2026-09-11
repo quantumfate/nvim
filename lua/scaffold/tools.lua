@@ -87,8 +87,18 @@ M.eco = {
 		fmt_check = { "git ls-files '*.c' '*.h' '*.cpp' '*.hpp' '*.cc' | xargs -r clang-format --dry-run --Werror" },
 		-- clang-tidy reads compile_commands.json, so `just compile-db` has to have run.
 		lint = { "git ls-files '*.c' '*.cpp' '*.cc' | xargs -r clang-tidy --quiet" },
-		build = { "make -j$(nproc)" },
-		test = { "ctest --test-dir build --output-on-failure || make test" },
+		-- By build system, the way compile-db decides: `make` in a cmake project fails
+		-- with "no makefile found".
+		build = {
+			"@if [ -f CMakeLists.txt ]; then cmake -S . -B build && cmake --build build -j$(nproc); \\",
+			"\telif [ -f meson.build ]; then [ -d build ] || meson setup build; meson compile -C build; \\",
+			"\telse make -j$(nproc); fi",
+		},
+		test = {
+			"@if [ -f CMakeLists.txt ]; then ctest --test-dir build --output-on-failure; \\",
+			"\telif [ -f meson.build ]; then meson test -C build; \\",
+			"\telse make test; fi",
+		},
 		nix = { "clang-tools", "cmake", "bear", "gdb" },
 		sys = { "clang", "cmake", "bear", "gdb" },
 		-- The editor reads compile_commands.json to preprocess and disassemble with the
@@ -97,8 +107,8 @@ M.eco = {
 		extra = {
 			["compile-db"] = {
 				"@if [ -f CMakeLists.txt ]; then cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && ln -sf build/compile_commands.json .; \\",
-				"\telif [ -f meson.build ]; then meson setup build && ln -sf build/compile_commands.json .; \\",
-				"\telse bear -- $(MAKE) -B; fi",
+				"\telif [ -f meson.build ]; then { [ -d build ] && meson setup --reconfigure build || meson setup build; } && ln -sf build/compile_commands.json .; \\",
+				"\telse bear -- make -B; fi",
 			},
 		},
 	},

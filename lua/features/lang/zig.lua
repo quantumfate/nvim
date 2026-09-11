@@ -19,6 +19,8 @@ M.titles = {
 local output = require("features.lang.output")
 local root = require("lib.root")
 
+local standalone
+
 --- Nearest directory containing build.zig, or nil for a standalone file. The pattern
 --- detector stops at the first match rather than falling back to cwd, which is what
 --- makes "is this a workspace?" answerable.
@@ -89,25 +91,68 @@ function M.build_file(buf)
 	vim.cmd.edit(vim.fs.joinpath(dir, "build.zig"))
 end
 
+--- Modules this file imports by name (`@import("mylib")`), which only build.zig wires up.
+---@param buf integer
+---@return string[]
+function M.module_imports(buf)
+	local out = {}
+	for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+		for name in line:gmatch('@import%("([^"]+)"%)') do
+			local builtin = name == "std" or name == "builtin" or name == "root"
+			if not builtin and not name:match("%.zig$") and not name:match("%.zon$") and not vim.tbl_contains(out, name) then
+				table.insert(out, name)
+			end
+		end
+	end
+	return out
+end
+
+--- False, with a notification, when the file cannot compile on its own. The views run
+--- `zig build-obj` on the single file, which knows nothing of build.zig's modules and
+--- fails with "no module named".
+---@param buf integer
+---@return boolean
+function standalone(buf)
+	local modules = M.module_imports(buf)
+	if #modules == 0 then
+		return true
+	end
+	Snacks.notify.warn(
+		("This file imports build.zig module(s): %s.\nThe views compile the file alone and cannot resolve them."):format(
+			table.concat(modules, ", ")
+		),
+		{ title = "Zig" }
+	)
+	return false
+end
+
 --- Assembly for the current file.
 ---
 --- ReleaseFast, and `-fno-emit-bin` so nothing is written next to the source: the
 --- question is what the optimiser produced, not to produce an artefact.
 ---@param buf integer
 function M.assembly(buf)
+	if not standalone(buf) then
+		return
+	end
 	local path = vim.api.nvim_buf_get_name(buf)
 	output.run({
 		cmd = { "zig", "build-obj", "-O", "ReleaseFast", "-fno-emit-bin", "-femit-asm=/dev/stdout", path },
 		title = M.titles.assembly,
 		filetype = "asm",
 		cwd = cwd(buf),
-		on_lines = output.strip_asm,
+		on_lines = function(lines)
+			return output.strip_asm(lines, path)
+		end,
 	})
 end
 
 --- LLVM IR, the level above the assembly.
 ---@param buf integer
 function M.ir(buf)
+	if not standalone(buf) then
+		return
+	end
 	local path = vim.api.nvim_buf_get_name(buf)
 	output.run({
 		cmd = { "zig", "build-obj", "-O", "ReleaseFast", "-fno-emit-bin", "-femit-llvm-ir=/dev/stdout", path },
@@ -131,6 +176,9 @@ end
 --- the compiler, which is how every distro ships it.
 ---@param buf integer
 function M.expand(buf)
+	if not standalone(buf) then
+		return
+	end
 	local path = vim.api.nvim_buf_get_name(buf)
 	local ir = output.tempfile(".ll")
 	-- The module prefix Zig gives this file's symbols, e.g. `main.` for main.zig.

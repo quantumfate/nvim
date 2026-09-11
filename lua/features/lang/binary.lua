@@ -80,9 +80,13 @@ local function is_executable_elf(path)
 	if not fd then
 		return false
 	end
-	local header = vim.uv.fs_read(fd, 4, 0)
+	local header = vim.uv.fs_read(fd, 18, 0)
 	vim.uv.fs_close(fd)
-	return header == "\127ELF"
+	if not header or header:sub(1, 4) ~= "\127ELF" then
+		return false
+	end
+	-- e_type, little-endian at offset 16: 1 is a relocatable object, never runnable.
+	return header:byte(17) ~= 1
 end
 
 --- Executables under `root`, depth-limited so a large tree stays fast.
@@ -111,7 +115,12 @@ function M.candidates(root)
 				if not SKIP[name] then
 					walk(path, depth + 1)
 				end
-			elseif not NOT_BINARY[name:match("%.([%w]+)$") or ""] and is_executable_elf(path) then
+			elseif
+				not NOT_BINARY[name:match("%.([%w]+)$") or ""]
+				-- `libfoo.so.1.2.3`: the extension check only sees the last suffix.
+				and not name:match("%.so[%.%d]*$")
+				and is_executable_elf(path)
+			then
 				table.insert(found, path)
 			end
 		end

@@ -62,7 +62,15 @@ end
 function M.test(buf)
 	local py = M.interpreter(buf)
 	local has_pytest = vim.system({ py, "-c", "import pytest" }):wait().code == 0
-	local cmd = has_pytest and { py, "-m", "pytest" } or { py, "-m", "unittest", "discover" }
+	local dir = M.project(buf)
+	local cmd = { py, "-m", "pytest" }
+	if not has_pytest then
+		-- Bare `discover` finds nothing in a src/ layout with a tests/ directory.
+		local src = vim.uv.fs_stat(vim.fs.joinpath(dir, "src")) and "src" or "."
+		cmd = vim.uv.fs_stat(vim.fs.joinpath(dir, "tests"))
+				and { "env", "PYTHONPATH=" .. src, py, "-m", "unittest", "discover", "-s", "tests", "-t", "." }
+			or { py, "-m", "unittest", "discover" }
+	end
 	output.terminal(cmd, M.project(buf), { title = has_pytest and "pytest" or "unittest" })
 end
 
@@ -82,7 +90,13 @@ end
 ---@param buf integer
 function M.build(buf)
 	output.run({
-		cmd = { M.interpreter(buf), "-m", "py_compile", vim.api.nvim_buf_get_name(buf) },
+		-- Parsed, not byte-compiled: py_compile leaves __pycache__ in the tree.
+		cmd = {
+			M.interpreter(buf),
+			"-c",
+			"import ast, sys; ast.parse(open(sys.argv[1], 'rb').read(), sys.argv[1])",
+			vim.api.nvim_buf_get_name(buf),
+		},
 		title = M.titles.build,
 		cwd = M.project(buf),
 		on_lines = function(lines)
