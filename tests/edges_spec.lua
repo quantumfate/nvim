@@ -203,6 +203,53 @@ t.describe("edges lang", function()
 		t.eq(dir .. "/build/compile_commands.json", require("features.lang.c").database(0))
 	end)
 
+	t.it("caches parsed compile_commands.json and strips dependency flags", function()
+		local c = require("features.lang.c")
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir .. "/drivers/net", "p")
+		local driver = dir .. "/drivers/net/e1000.c"
+		vim.fn.writefile({ "int x = 1;" }, driver)
+		local db_content = vim.json.encode({
+			{
+				directory = dir,
+				file = "drivers/net/e1000.c",
+				arguments = {
+					"gcc",
+					"-Wp,-MMD,drivers/net/.e1000.o.d",
+					"-nostdinc",
+					"-I./include",
+					"-D__KERNEL__",
+					"-c",
+					"-o",
+					"drivers/net/e1000.o",
+					"drivers/net/e1000.c",
+				},
+			},
+		})
+		vim.fn.writefile({ db_content }, dir .. "/compile_commands.json")
+		t.reset()
+		vim.cmd.edit(driver)
+		local buf = vim.api.nvim_get_current_buf()
+
+		local cmd, workdir, from_db = c.invocation(buf, { "-S", "-masm=intel" })
+		t.eq(true, from_db, "flags were not extracted from compile_commands.json")
+		t.eq(dir, workdir)
+		t.ok(vim.tbl_contains(cmd, "-D__KERNEL__"), "kernel define missing from command")
+		t.ok(vim.tbl_contains(cmd, "-I./include"), "kernel include missing from command")
+		t.ok(not vim.tbl_contains(cmd, "-o"), "-o was not stripped")
+		t.ok(not vim.tbl_contains(cmd, "drivers/net/e1000.o"), "object target was not stripped")
+		for _, arg in ipairs(cmd) do
+			t.ok(not arg:match("^%-Wp,%-MMD"), "-Wp,-MMD was not stripped: " .. arg)
+		end
+
+		-- Verify cache was populated
+		local cached = c.db_cache[dir .. "/compile_commands.json"]
+		t.ok(cached ~= nil, "compile_commands cache was not populated")
+
+		pcall(vim.api.nvim_buf_delete, buf, { force = true })
+		pcall(vim.fn.delete, dir, "rf")
+	end)
+
 	t.it("links assembly rows only to the open file's lines", function()
 		local output = require("features.lang.output")
 		local _, map = output.strip_asm({

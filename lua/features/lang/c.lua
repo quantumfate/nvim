@@ -32,6 +32,43 @@ local function project(buf)
 		or root.get({ buf = buf })
 end
 
+--- In-memory cache for parsed compilation databases: db_path -> { mtime: integer, entries: table<string, table> }
+M.db_cache = {}
+
+--- Loads the compilation database at `db_path`, caching the parsed entries indexed by normalized path.
+---@param db_path string
+---@return table<string, table>? entries, string dir
+local function load_database(db_path)
+	local dir = vim.fs.dirname(db_path)
+	local stat = vim.uv.fs_stat(db_path)
+	local mtime = stat and stat.mtime and stat.mtime.sec or 0
+	local cached = M.db_cache[db_path]
+	if cached and cached.mtime == mtime then
+		return cached.entries, dir
+	end
+
+	local ok, content = pcall(vim.fn.readfile, db_path)
+	if not ok then
+		return nil, dir
+	end
+	local decoded, db = pcall(vim.json.decode, table.concat(content, "\n"))
+	if not decoded or type(db) ~= "table" then
+		return nil, dir
+	end
+
+	local entries = {}
+	for _, entry in ipairs(db) do
+		local file = entry.file or ""
+		if file:sub(1, 1) ~= "/" then
+			file = vim.fs.joinpath(entry.directory or dir, file)
+		end
+		local norm = vim.fs.normalize(vim.uv.fs_realpath(file) or file)
+		entries[norm] = entry
+	end
+	M.db_cache[db_path] = { mtime = mtime, entries = entries }
+	return entries, dir
+end
+
 --- The compile command recorded for a file, split into argv.
 ---
 --- Without this, preprocessing anything from a real project fails on the first
@@ -44,30 +81,25 @@ local function compile_command(buf)
 	if not db_path then
 		return nil
 	end
-	local dir = vim.fs.dirname(db_path)
-	local ok, content = pcall(vim.fn.readfile, db_path)
-	if not ok then
-		return nil
-	end
-	local decoded, db = pcall(vim.json.decode, table.concat(content, "\n"))
-	if not decoded or type(db) ~= "table" then
+	local entries, dir = load_database(db_path)
+	if not entries then
 		return nil
 	end
 
 	local target = vim.fs.normalize(vim.api.nvim_buf_get_name(buf))
-	for _, entry in ipairs(db) do
-		-- meson writes `"file": "../src/main.c"`, relative to the entry's directory.
-		local file = entry.file or ""
-		if file:sub(1, 1) ~= "/" then
-			file = vim.fs.joinpath(entry.directory or dir, file)
+	---@type table?
+	local entry = entries[target]
+	if not entry then
+		local real = vim.uv.fs_realpath(target)
+		entry = real and entries[vim.fs.normalize(real)] or nil
+	end
+
+	if entry then
+		local argv = entry.arguments
+		if not argv and entry.command then
+			argv = M.shell_split(entry.command)
 		end
-		if vim.fs.normalize(vim.uv.fs_realpath(file) or file) == target then
-			local argv = entry.arguments
-			if not argv and entry.command then
-				argv = M.shell_split(entry.command)
-			end
-			return argv, entry.directory or dir
-		end
+		return argv, entry.directory or dir
 	end
 	return nil
 end
@@ -177,7 +209,7 @@ local function invocation(buf, extra)
 			-- Drop the flag and its operand: writing to the recorded object path would
 			-- overwrite a real build artefact.
 			skip_next = true
-		elseif arg == "-c" or arg == "-S" or arg == "-E" or arg:match("^%-M") then
+		elseif arg == "-c" or arg == "-S" or arg == "-E" or arg:match("^%-M") or arg:match("^%-Wp,%-MM[DP]") then
 			-- The mode is being replaced by `extra`.
 		elseif
 			vim.fs.normalize(arg:sub(1, 1) == "/" and arg or vim.fs.joinpath(dir or "", arg)) == normalized

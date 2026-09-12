@@ -214,7 +214,15 @@ local M = {
 	},
 
 	clangd = {
-		cmd = { "clangd", "--background-index", "--clang-tidy", "--header-insertion=iwyu" },
+		cmd = {
+			"clangd",
+			"--background-index",
+			"--background-index-priority=low",
+			"--limit-results=100",
+			"--header-insertion=never",
+			"--completion-style=bundled",
+			"--clang-tidy",
+		},
 		filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
 		root_markers = { ".clangd", "compile_commands.json", "compile_flags.txt", ".git" },
 	},
