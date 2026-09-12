@@ -250,6 +250,28 @@ t.describe("edges lang", function()
 		pcall(vim.fn.delete, dir, "rf")
 	end)
 
+	t.it("switches between C source and header without language server", function()
+		local c = require("features.lang.c")
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+		local src = dir .. "/test_shape.c"
+		local hdr = dir .. "/test_shape.h"
+		vim.fn.writefile({ '#include "test_shape.h"', "int foo(void) { return 1; }" }, src)
+		vim.fn.writefile({ "int foo(void);" }, hdr)
+		t.reset()
+		vim.cmd.edit(src)
+		local buf = vim.api.nvim_get_current_buf()
+
+		c.related(buf)
+		t.eq(hdr, vim.api.nvim_buf_get_name(0), "did not switch to header")
+
+		c.related(vim.api.nvim_get_current_buf())
+		t.eq(src, vim.api.nvim_buf_get_name(0), "did not switch back to source")
+
+		pcall(vim.api.nvim_buf_delete, 0, { force = true })
+		pcall(vim.fn.delete, dir, "rf")
+	end)
+
 	t.it("links assembly rows only to the open file's lines", function()
 		local output = require("features.lang.output")
 		local _, map = output.strip_asm({

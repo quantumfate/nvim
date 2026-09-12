@@ -392,23 +392,60 @@ function M.tree(buf)
 	output.run({ cmd = cmd, title = M.titles.tree, cwd = dir })
 end
 
---- Header to source and back, which clangd computes from the compilation database.
+--- Header to source and back, which clangd computes from the compilation database,
+--- falling back to same-stem search in the directory/project.
 ---@param buf integer
 function M.related(buf)
+	local path = vim.api.nvim_buf_get_name(buf)
 	local client = vim.lsp.get_clients({ bufnr = buf, name = "clangd" })[1]
-	if not client then
-		Snacks.notify.warn("clangd is not attached", { title = "C" })
+	if client then
+		local cl = client --[[@as any]]
+		cl:request("textDocument/switchSourceHeader", vim.lsp.util.make_text_document_params(buf), function(err, uri)
+			if not err and uri and uri ~= "" then
+				vim.cmd.edit(vim.uri_to_fname(uri))
+				return
+			end
+			M.fallback_related(buf, path)
+		end, buf)
 		return
 	end
-	-- A clangd extension, so not one of the LSP methods the annotation enumerates.
-	---@diagnostic disable-next-line: param-type-mismatch
-	client:request("textDocument/switchSourceHeader", vim.lsp.util.make_text_document_params(buf), function(err, uri)
-		if err or not uri then
-			Snacks.notify.warn("No matching header or source", { title = "C" })
-			return
+	M.fallback_related(buf, path)
+end
+
+--- Fallback file pairing by extension when clangd is not attached or has no answer.
+---@param buf integer
+---@param path string
+---@return string?
+function M.fallback_related(buf, path)
+	if path == "" then
+		return nil
+	end
+	local dir = vim.fs.dirname(path)
+	local stem = vim.fn.fnamemodify(path, ":t:r")
+	local header = is_header(buf)
+	local target_exts = header and { "c", "cpp", "cc", "cxx" } or { "h", "hpp", "hh", "hxx" }
+
+	-- 1. Sibling in the same directory
+	for _, ext in ipairs(target_exts) do
+		local candidate = vim.fs.joinpath(dir, stem .. "." .. ext)
+		if vim.uv.fs_stat(candidate) then
+			vim.cmd.edit(candidate)
+			return candidate
 		end
-		vim.cmd.edit(vim.uri_to_fname(uri))
-	end, buf)
+	end
+
+	-- 2. In include/ or src/ within the project
+	local proj = project(buf)
+	for _, ext in ipairs(target_exts) do
+		local found = vim.fs.find(stem .. "." .. ext, { path = proj, type = "file", limit = 1 })[1]
+		if found and vim.uv.fs_stat(found) then
+			vim.cmd.edit(found)
+			return found
+		end
+	end
+
+	Snacks.notify.warn("No matching header or source", { title = "C" })
+	return nil
 end
 
 return M

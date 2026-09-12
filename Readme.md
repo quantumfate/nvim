@@ -45,10 +45,11 @@ Arrows point at what a layer is allowed to require.
   `<leader>v` inspects in Rust, C, Zig, Go, Python and Lua alike — see
   [`lua/features/lang/`](./lua/features/lang/README.md).
 - The binary is a source of truth too: `<leader>x` shows struct holes, the linked
-  machine code, sanitizer frames and the kernel-tree workflow — see
-  [`lua/features/sys/`](./lua/features/sys/README.md).
-- Crashes open like files: `<leader>dc` picks a core dump and `<CR>` jumps to the
-  faulting line — see [`lua/features/crash/`](./lua/features/crash/README.md).
+  machine code, sanitizer frames, rr record/replay, and the kernel-tree workflow (b4,
+  checkpatch, Kconfig, QEMU) — see [`lua/features/sys/`](./lua/features/sys/README.md).
+- Crashes open like files: `<leader>dc` picks a core dump, `:CrashDecode` resolves
+  vmlinux and module `.ko` frames, and `<CR>` jumps to the faulting line — see
+  [`lua/features/crash/`](./lua/features/crash/README.md).
 - Windows have names, and transient views borrow a pane instead of opening their own —
   see [`lua/features/workspace/`](./lua/features/workspace/README.md).
 

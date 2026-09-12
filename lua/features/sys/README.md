@@ -5,7 +5,7 @@ already knows: pahole, nm, objdump, addr2line, checkpatch.pl, QEMU, gdb. `:SysIn
 lists the keys and what each one is missing.
 
 | Key          | Does                                                                      |
-| ------------ | ------------------------------------------------------------------------- | --------- |
+| ------------ | ------------------------------------------------------------------------- |
 | `<leader>xl` | struct layout under the cursor: offsets, holes, cache lines (pahole)      |
 | `<leader>xe` | ELF symbols by size; `<CR>` jumps to source, `d` disassembles             |
 | `<leader>xd` | the function under the cursor, disassembled **from the linked binary**    |
@@ -24,7 +24,7 @@ lists the keys and what each one is missing.
 | `<leader>xQ` | boot the tree's `bzImage` in QEMU, halted, gdbstub on :1234, `nokaslr`    |
 | `<leader>xa` | attach gdb (DAP) to that QEMU with `vmlinux` symbols                      |
 | `<leader>xP` | patch series workflow with b4: prep, cover, trailers, check, dry-run send |
-| `<leader>xR` | record binary execution with rr (`:SysRr [record                          | replay]`) |
+| `<leader>xR` | record binary execution with rr (`:SysRr [record/replay]`)                |
 
 Toggles work like `<leader>v`: the same key closes the view.
 
