@@ -13,6 +13,9 @@ require("core.filetype")
 require("core.autocmds")
 require("core.keymaps")
 
+-- Root detection and :RootInfo command
+require("lib.root").setup()
+
 -- Both subsystems are large and neither is needed to edit a file, so they register
 -- their commands here and load their implementation on first use. See lua/toolchain/
 -- and lua/scaffold/.

@@ -427,6 +427,139 @@ t.describe("signature typescript", function()
 		if cl then
 			cl:stop()
 		end
+		pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+		pcall(vim.fn.delete, dir, "rf")
+	end)
+end)
+
+t.describe("signature trait across workspace crates", function()
+	t.it("updates trait definition in sibling crate and impls/calls in app crate", function()
+		if vim.fn.executable("rust-analyzer") == 0 or vim.fn.executable("cargo") == 0 or not has_parser("rust") then
+			return
+		end
+		t.reset()
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir .. "/crates/shared/src", "p")
+		vim.fn.mkdir(dir .. "/crates/app/src", "p")
+
+		vim.fn.writefile({
+			"[workspace]",
+			'members = ["crates/shared", "crates/app"]',
+			'resolver = "2"',
+		}, dir .. "/Cargo.toml")
+
+		vim.fn.writefile({
+			"[package]",
+			'name = "shared"',
+			'version = "0.1.0"',
+			'edition = "2021"',
+		}, dir .. "/crates/shared/Cargo.toml")
+
+		vim.fn.writefile({
+			"pub trait Shape {",
+			"    fn area(&self, factor: i32) -> i32;",
+			"}",
+		}, dir .. "/crates/shared/src/lib.rs")
+
+		vim.fn.writefile({
+			"[package]",
+			'name = "app"',
+			'version = "0.1.0"',
+			'edition = "2021"',
+			"",
+			"[dependencies]",
+			'shared = { path = "../shared" }',
+		}, dir .. "/crates/app/Cargo.toml")
+
+		vim.fn.writefile({
+			"use shared::Shape;",
+			"",
+			"struct Square;",
+			"",
+			"impl Shape for Square {",
+			"    fn area(&self, factor: i32) -> i32 {",
+			"        factor * 4",
+			"    }",
+			"}",
+			"",
+			"fn main() {",
+			"    let s = Square;",
+			"    let bias = 1;",
+			'    println!("{}", s.area(2));',
+			"}",
+		}, dir .. "/crates/app/src/main.rs")
+
+		vim.cmd.edit(dir .. "/crates/app/src/main.rs")
+		local bufnr = vim.api.nvim_get_current_buf()
+
+		local client_id = vim.lsp.start({
+			name = "rust_analyzer",
+			cmd = { "rust-analyzer" },
+			root_dir = dir,
+		})
+		assert(client_id, "failed to start rust-analyzer")
+
+		local ok = vim.wait(30000, function()
+			local c = vim.lsp.get_client_by_id(client_id)
+			return not not (c and c.initialized and vim.lsp.buf_is_attached(bufnr, client_id))
+		end, 200)
+		t.ok(ok, "rust-analyzer did not initialize in time")
+
+		-- Wait for indexing
+		vim.wait(3000, function()
+			return false
+		end)
+
+		-- Stand on factor: i32 in impl Shape for Square (line 8, col 23)
+		vim.api.nvim_win_set_cursor(0, { 8, 23 })
+
+		local plan_done = nil
+		local real_finish = Plan.finish
+		Plan.finish = function(plan, opts)
+			plan_done = plan
+			real_finish(plan, opts)
+		end
+
+		signature.add_param({ spec = "bias: i32", preview = false })
+		vim.wait(20000, function()
+			return plan_done ~= nil
+		end, 200)
+
+		t.ok(plan_done ~= nil, "no plan produced")
+		assert(plan_done)
+		t.eq(0, #plan_done.conflicts, "unexpected conflicts: " .. vim.inspect(plan_done.conflicts))
+
+		-- Both the app crate file and the shared crate file must be edited
+		local edited_files = {}
+		for b in pairs(plan_done.edits) do
+			if vim.api.nvim_buf_is_valid(b) then
+				table.insert(edited_files, vim.fs.basename(vim.api.nvim_buf_get_name(b)))
+				if vim.bo[b].modified then
+					vim.api.nvim_buf_call(b, function()
+						vim.cmd("write")
+					end)
+				end
+			end
+		end
+		table.sort(edited_files)
+		t.ok(vim.tbl_contains(edited_files, "lib.rs"), "shared trait lib.rs was not edited")
+		t.ok(vim.tbl_contains(edited_files, "main.rs"), "app main.rs was not edited")
+
+		Plan.finish = real_finish
+
+		-- Verify with cargo check across the workspace
+		local res = vim.system(
+			{ "cargo", "check", "--manifest-path", dir .. "/Cargo.toml" },
+			{ text = true, cwd = dir }
+		)
+			:wait(30000)
+		t.eq(0, res.code, "cargo check failed after multi-crate trait refactor:\n" .. (res.stderr or ""))
+
+		local cl = vim.lsp.get_client_by_id(client_id)
+		if cl then
+			cl:stop()
+		end
+		pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
 		pcall(vim.fn.delete, dir, "rf")
 	end)
 end)

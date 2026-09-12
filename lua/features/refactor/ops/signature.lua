@@ -954,13 +954,38 @@ local function trait_origin(ctx)
 
 	-- A trait from std or a dependency is not ours to rewrite.
 	local file = vim.uri_to_fname(uri)
-	if not vim.fs.relpath(require("lib.root").get({ buf = ctx.bufnr }), file) then
+	local function in_workspace(f)
+		local root = require("lib.root").get({ buf = ctx.bufnr })
+		if vim.fs.relpath(root, f) then
+			return true
+		end
+		local git_root = require("lib.root").git()
+		if git_root and vim.fs.relpath(git_root, f) then
+			return true
+		end
+		for _, c in ipairs(vim.lsp.get_clients({ bufnr = ctx.bufnr })) do
+			if c.config.root_dir and vim.fs.relpath(c.config.root_dir, f) then
+				return true
+			end
+			for _, ws in ipairs(c.config.workspace_folders or {}) do
+				if ws.name and vim.fs.relpath(ws.name, f) then
+					return true
+				end
+			end
+		end
+		return false
+	end
+
+	if not in_workspace(file) then
 		return nil, nil, "the trait is defined outside this workspace"
 	end
 
 	local range = loc.targetSelectionRange or loc.range
 	local tbuf = vim.uri_to_bufnr(uri)
 	vim.fn.bufload(tbuf)
+	if client and not vim.lsp.buf_is_attached(tbuf, client.id) then
+		vim.lsp.buf_attach_client(tbuf, client.id)
+	end
 	local parser = syntax.parsed(tbuf)
 	if not parser then
 		return nil, nil, "cannot parse the trait's file"

@@ -127,7 +127,20 @@ function M.wait_and_report(plan, baseline, bufnrs, opts)
 	local slow = false
 	for _, b in ipairs(bufnrs) do
 		for _, client in ipairs(vim.lsp.get_clients({ bufnr = b })) do
-			slow = slow or client.name == "rust_analyzer"
+			if client.name == "rust_analyzer" then
+				slow = true
+				-- rust-analyzer reports E0050 via cargo check (flycheck), which reads files
+				-- from disk. Save modified buffers and trigger runFlycheck.
+				if vim.bo[b].modified then
+					pcall(vim.api.nvim_buf_call, b, function()
+						pcall(vim.cmd --[[@as function]], "silent noautocmd write")
+					end)
+				end
+				pcall(function()
+					---@diagnostic disable-next-line: param-type-mismatch
+					client:notify("rust-analyzer/runFlycheck", {})
+				end)
+			end
 		end
 	end
 	local timeout = opts.timeout or (slow and 20000 or 10000)
