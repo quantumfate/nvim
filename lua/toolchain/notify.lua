@@ -11,6 +11,8 @@ local M = {}
 ---@field exit? integer
 ---@field detail? string
 ---@field source? string Defaults to "nvim"
+---@field timestamp? string Filled in by `M.event`
+---@field host? string Filled in by `M.event`
 
 ---@return string
 function M.log_path()
@@ -58,7 +60,7 @@ end
 ---@param event toolchain.Event
 function M.event(event)
 	event.source = event.source or "nvim"
-	event.timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+	event.timestamp = tostring(os.date("!%Y-%m-%dT%H:%M:%SZ"))
 	event.host = vim.uv.os_gethostname()
 	vim.schedule(function()
 		append(event)

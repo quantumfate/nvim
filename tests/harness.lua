@@ -106,7 +106,9 @@ function M.reset()
 			pcall(vim.api.nvim_buf_delete, buf, { force = true })
 		end
 	end
-	pcall(vim.cmd, "silent! only")
+	pcall(function()
+		vim.cmd("silent! only")
+	end)
 end
 
 --- Prints the report and returns the exit code.

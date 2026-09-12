@@ -144,6 +144,7 @@ local function binding_name(decl)
 	if not parent or parent:type() == "keyword_argument" then
 		return nil
 	end
+	---@type TSNode?
 	local target = parent:field("name")[1] or parent:field("left")[1] or parent:field("key")[1]
 	if not target and parent:type() == "assignment_statement" then
 		target = parent:named_child(0)
@@ -290,7 +291,11 @@ local function insert_pos(list, index)
 
 	if #items == 0 then
 		local closer = list:child(list:child_count() - 1)
-		local row, col = closer:start()
+		if closer then
+			local row, col = closer:start()
+			return row, col, "", ""
+		end
+		local row, col = list:end_()
 		return row, col, "", ""
 	end
 
@@ -398,6 +403,27 @@ local function cursor_on_index(list)
 	return nil
 end
 
+--- True when the cursor sits in a parameter list nested inside `list`: the parameters
+--- of a function-pointer or callback type, `int (*fp)(int, int)`. The declaration
+--- search climbs past those, so without this the outer parameter would be changed.
+---@param list TSNode?
+---@return boolean
+local function in_nested_list(list)
+	if not list then
+		return false
+	end
+	local node = vim.treesitter.get_node()
+	local nested = false
+	while node do
+		if node:equal(list) then
+			return nested
+		end
+		nested = nested or node:type() == list:type()
+		node = node:parent()
+	end
+	return false
+end
+
 --- Shared context for one signature change.
 ---@class SigCtx
 ---@field bufnr integer
@@ -412,6 +438,7 @@ end
 ---@field name_pos? integer[] Where references are asked for: the declaration's (or binding's) name
 ---@field self_receiver? boolean The first parameter is Python's `self`
 ---@field owner? string Enclosing class name, for `Class.method(obj, ...)` calls
+---@field owners? table<string, boolean>
 ---@field decl? TSNode The declaration being changed
 ---@field decl_text? string Rendered new parameter, for other declarations of it
 ---@field void? TSNode C's `void` standing in for an empty list
@@ -463,6 +490,18 @@ local function context()
 	end
 
 	local list = list_of(decl, shape)
+	if not list then
+		return nil
+	end
+	if in_nested_list(list) then
+		Snacks.notify.warn(
+			"Cursor is inside a nested parameter list (a function-pointer or callback type); only the outer function's parameters can be changed",
+			{
+				title = "Refactor",
+			}
+		)
+		return nil
+	end
 	ctx.decl = decl
 	ctx.params = elements(list)
 	ctx.index = cursor_index(list)
@@ -503,7 +542,9 @@ local function context()
 	-- Python's `Class.method(obj, ...)` passes the receiver explicitly; the call-site
 	-- shape needs the class name and whether the first parameter is `self` to see it.
 	local first = ctx.params[1]
-	ctx.self_receiver = ctx.decl_implicit > 0 and first ~= nil and syntax.text(first, bufnr):match("^self%f[^%w_]") ~= nil
+	ctx.self_receiver = ctx.decl_implicit > 0
+		and first ~= nil
+		and syntax.text(first, bufnr):match("^self%f[^%w_]") ~= nil
 	local class = decl:parent()
 	while class and class:type() ~= "class_definition" do
 		class = class:parent()
@@ -570,12 +611,12 @@ function M.macro_args(args_tree)
 	local args, current = {}, nil
 	for i = 1, args_tree:child_count() - 2 do
 		local child = args_tree:child(i)
-		if child:type() == "," then
+		if child and child:type() == "," then
 			if current then
 				table.insert(args, current)
 			end
 			current = nil
-		else
+		elseif child then
 			current = current or { first = child }
 			current.last = child
 		end
@@ -645,7 +686,10 @@ local function macro_call_site(plan, bufnr, node, ctx, lang, note)
 		elseif args[index] then
 			srow, scol = args[index].last:end_()
 		end
-		return plan:edit(bufnr, { range = { start = lsp_pos(srow, scol), ["end"] = lsp_pos(erow, ecol) }, newText = "" })
+		return plan:edit(
+			bufnr,
+			{ range = { start = lsp_pos(srow, scol), ["end"] = lsp_pos(erow, ecol) }, newText = "" }
+		)
 	end
 
 	local to = ctx.to - ctx.decl_implicit + receiver
@@ -663,6 +707,37 @@ local function macro_call_site(plan, bufnr, node, ctx, lang, note)
 	local text_b, range_b = span(b)
 	plan:edit(bufnr, { range = range_a, newText = text_b })
 	plan:edit(bufnr, { range = range_b, newText = text_a })
+end
+
+--- True when `node` is an argument of a function-like macro that defines a function:
+--- `DEFINE2(f, int, a) { … }`, `static SYSCALL_DEFINE1(f, int, a) { … }`. The real
+--- parameter list only exists after expansion, so there is nothing to edit.
+---@param node TSNode?
+---@return boolean
+local function in_defining_macro(node)
+	while node do
+		local kind = node:type()
+		-- With a storage class in front the grammar reads the macro as a type.
+		if kind == "macro_type_specifier" then
+			local def = node:parent()
+			return def ~= nil and def:type() == "function_definition" and def:field("body")[1] ~= nil
+		end
+		-- Without one it is a call missing its `;`, followed by a stray block.
+		if kind == "call_expression" then
+			local stmt = node:parent()
+			if stmt and stmt:type() == "expression_statement" then
+				local last = stmt:child(stmt:child_count() - 1)
+				local after = last and last:missing() and stmt:next_named_sibling() or nil
+				return after ~= nil and after:type() == "compound_statement"
+			end
+			return false
+		end
+		if kind == "function_definition" or kind == "compound_statement" then
+			return false
+		end
+		node = node:parent()
+	end
+	return false
 end
 
 --- Rewrites one call site, or explains why it was left alone.
@@ -692,14 +767,22 @@ local function call_site(plan, usage, encoding, ctx)
 	-- a trait's signature — takes the same edit as the one under the cursor.
 	local other, other_shape = enclosing(node, lang.decls)
 	local named = other and name_node(other, ft)
-	if named then
+	if named and other and other_shape then
 		local nrow, ncol = named:start()
 		if nrow == row and ncol == col then
-			if bufnr == ctx.bufnr and other:equal(ctx.decl) then
+			if bufnr == ctx.bufnr and ctx.decl and other:equal(ctx.decl) then
 				return
 			end
-			return declaration_site(plan, bufnr, list_of(other, other_shape), ctx)
+			local olist = list_of(other, other_shape)
+			if olist then
+				return declaration_site(plan, bufnr, olist, ctx)
+			end
+			return
 		end
+	end
+
+	if C_FAMILY[ft] and in_defining_macro(node) then
+		return plan:note("conflict", bufnr, row, col, "defined through a macro; its parameter list cannot be rewritten")
 	end
 
 	if ft == "rust" and node and node:parent() and node:parent():type() == "token_tree" then
@@ -832,6 +915,9 @@ end
 ---@param ctx SigCtx
 ---@return integer? bufnr, integer[]? position, string? why
 local function trait_origin(ctx)
+	if not ctx.decl then
+		return nil, nil, "no declaration"
+	end
 	local impl = ctx.decl:parent()
 	while impl and impl:type() ~= "impl_item" do
 		impl = impl:parent()
@@ -841,8 +927,11 @@ local function trait_origin(ctx)
 		return nil, nil, "not inside a trait impl"
 	end
 	-- `fmt::Display` names the trait by its last segment.
-	while trait:named_child_count() > 0 do
+	while trait and trait:named_child_count() > 0 do
 		trait = trait:named_child(trait:named_child_count() - 1)
+	end
+	if not trait then
+		return nil, nil, "cannot resolve trait name"
 	end
 
 	local client = vim.lsp.get_clients({ bufnr = ctx.bufnr, method = "textDocument/definition" })[1]
@@ -888,7 +977,11 @@ local function trait_origin(ctx)
 	if not item then
 		return nil, nil, "cannot find the trait declaration"
 	end
-	local method = syntax.text(name_node(ctx.decl, "rust"), ctx.bufnr)
+	local mnode = ctx.decl and name_node(ctx.decl, "rust")
+	if not mnode then
+		return nil, nil, "cannot find method name"
+	end
+	local method = syntax.text(mnode, ctx.bufnr)
 	local function find(node)
 		for child in node:iter_children() do
 			local kind = child:type()
@@ -911,6 +1004,426 @@ local function trait_origin(ctx)
 		return nil, nil, "the trait does not declare " .. method
 	end
 	return tbuf, pos
+end
+
+-- Constructors are exempt from override compatibility: a subclass's `__init__` may take
+-- anything, so changing one says nothing about the others.
+local PY_CONSTRUCTORS = { __init__ = true, __new__ = true, __init_subclass__ = true }
+
+---@class SigClassRef
+---@field bufnr integer
+---@field class TSNode class_definition
+---@field opened? boolean Loading it is what brought the buffer into the session
+
+---@class SigBase
+---@field ref? SigClassRef
+---@field external? boolean Defined outside the workspace
+---@field unresolved? string Base expression no definition was found for
+
+---@class SigHierarchy
+---@field supers fun(ref: SigClassRef): SigBase[]
+---@field subs fun(ref: SigClassRef): SigClassRef[]
+---@field partial? string Why classes in other files are not seen
+
+--- The class a method is written directly in, through a decorator.
+---@param decl TSNode
+---@return TSNode?
+local function owning_class(decl)
+	local node = decl:parent()
+	if node and node:type() == "decorated_definition" then
+		node = node:parent()
+	end
+	node = node and node:type() == "block" and node:parent() or nil
+	return node and node:type() == "class_definition" and node or nil
+end
+
+--- The method `name` defined in `class`; the last one wins, as it does at run time.
+---@param class TSNode
+---@param name string
+---@param bufnr integer
+---@return TSNode?
+local function method_of(class, name, bufnr)
+	local found
+	local body = class:field("body")[1]
+	for child in (body and body:iter_children() or function() end) do
+		local def = child:type() == "decorated_definition" and child:field("definition")[1] or child
+		local id = def:type() == "function_definition" and def:field("name")[1]
+		if id and syntax.text(id, bufnr) == name then
+			found = def
+		end
+	end
+	return found
+end
+
+--- The identifier naming each positional base: `Base`, `Base` in `mod.Base`, `Base` in
+--- `Base[T]`. Keyword arguments such as `metaclass=` are not bases.
+---@param class TSNode
+---@return TSNode[]
+local function base_names(class)
+	local out = {}
+	local args = class:field("superclasses")[1]
+	for _, arg in ipairs(args and elements(args) or {}) do
+		if arg:type() == "subscript" then
+			arg = arg:field("value")[1]
+		end
+		if arg and arg:type() == "attribute" then
+			arg = arg:field("attribute")[1]
+		end
+		if arg and arg:type() == "identifier" then
+			table.insert(out, arg)
+		end
+	end
+	return out
+end
+
+---@param ref SigClassRef
+---@return string
+local function class_name(ref)
+	return syntax.text(ref.class:field("name")[1], ref.bufnr)
+end
+
+---@param ref SigClassRef
+---@return string
+local function class_key(ref)
+	local row, col = ref.class:start()
+	return ("%d:%d:%d"):format(ref.bufnr, row, col)
+end
+
+--- Every class_definition in a buffer.
+---@param bufnr integer
+---@return TSNode[]
+local function classes_in(bufnr)
+	local parser = syntax.parsed(bufnr)
+	local out = {}
+	local function walk(node)
+		for child in node:iter_children() do
+			if child:type() == "class_definition" then
+				table.insert(out, child)
+			end
+			if child:named_child_count() > 0 then
+				walk(child)
+			end
+		end
+	end
+	if parser then
+		walk(parser:trees()[1]:root())
+	end
+	return out
+end
+
+--- The class hierarchy as one buffer's syntax sees it, matched by name. Used when no
+--- language server runs, where nothing outside the buffer is found anyway.
+---@param bufnr integer
+---@return SigHierarchy
+local function syntax_hierarchy(bufnr)
+	local by_name = {}
+	for _, class in ipairs(classes_in(bufnr)) do
+		by_name[syntax.text(class:field("name")[1], bufnr)] = class
+	end
+	return {
+		partial = "no language server; classes in other files are not seen",
+		supers = function(ref)
+			local out = {}
+			for _, base in ipairs(base_names(ref.class)) do
+				local class = by_name[syntax.text(base, bufnr)]
+				if class then
+					table.insert(out, { ref = { bufnr = bufnr, class = class } })
+				end
+			end
+			return out
+		end,
+		subs = function(ref)
+			local out, name = {}, class_name(ref)
+			for _, class in ipairs(classes_in(bufnr)) do
+				for _, base in ipairs(base_names(class)) do
+					if syntax.text(base, bufnr) == name then
+						table.insert(out, { bufnr = bufnr, class = class })
+						break
+					end
+				end
+			end
+			return out
+		end,
+	}
+end
+
+--- The class hierarchy as the language server resolves it: bases through definitions,
+--- subclasses through references to the class name that sit in a base list.
+---
+--- basedpyright has no `typeHierarchy` support, so references are the only index of
+--- subclasses there is.
+---@param client vim.lsp.Client
+---@param root string Workspace root
+---@return SigHierarchy
+local function lsp_hierarchy(client, root)
+	--- Named node at a location, loading its file.
+	---@return integer? bufnr, TSNode? node, boolean? opened
+	local function node_at(loc)
+		local uri = loc.uri or loc.targetUri
+		local range = loc.targetSelectionRange or loc.range
+		if not uri or not range then
+			return nil
+		end
+		local bufnr = vim.uri_to_bufnr(uri)
+		local opened = not vim.api.nvim_buf_is_loaded(bufnr)
+		vim.fn.bufload(bufnr)
+		local parser = syntax.parsed(bufnr)
+		if not parser then
+			return nil
+		end
+		local row, col = to_byte(bufnr, range.start, client.offset_encoding)
+		return bufnr, parser:trees()[1]:root():named_descendant_for_range(row, col, row, col), opened
+	end
+
+	---@return table[] locations
+	local function request(method, bufnr, node, context)
+		local row, col = node:start()
+		local line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1] or ""
+		local ok, character = pcall(vim.str_utfindex, line, client.offset_encoding, col, false)
+		local res = client:request_sync(method, {
+			textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+			position = { line = row, character = ok and character or col },
+			context = context,
+		}, 10000, bufnr)
+		local result = res and res.result
+		if not result then
+			return {}
+		end
+		return (result.uri or result.targetUri) and { result } or result
+	end
+
+	return {
+		supers = function(ref)
+			local out = {}
+			for _, base in ipairs(base_names(ref.class)) do
+				local bufnr, node, opened = node_at(request("textDocument/definition", ref.bufnr, base)[1] or {})
+				local class = node and syntax.ancestor(node, { "class_definition" })
+				if bufnr and class then
+					local file = vim.api.nvim_buf_get_name(bufnr)
+					table.insert(out, {
+						ref = { bufnr = bufnr, class = class, opened = opened },
+						external = not vim.fs.relpath(root, file),
+					})
+				else
+					table.insert(out, { unresolved = syntax.text(base, ref.bufnr) })
+				end
+			end
+			return out
+		end,
+		subs = function(ref)
+			local out = {}
+			local refs = request(
+				"textDocument/references",
+				ref.bufnr,
+				ref.class:field("name")[1],
+				{ includeDeclaration = false }
+			)
+			for _, loc in ipairs(refs) do
+				local bufnr, node, opened = node_at(loc)
+				-- Climb `mod.Base` and `Base[T]` to the base-list entry they are.
+				local parent = node and node:parent()
+				if node and parent and parent:type() == "attribute" and node:equal(parent:field("attribute")[1]) then
+					node, parent = parent, parent:parent()
+				end
+				if node and parent and parent:type() == "subscript" and node:equal(parent:field("value")[1]) then
+					node, parent = parent, parent:parent()
+				end
+				local class = parent and parent:type() == "argument_list" and parent:parent()
+				if
+					bufnr
+					and class
+					and class:type() == "class_definition"
+					and parent
+					and parent:equal(class:field("superclasses")[1])
+				then
+					table.insert(out, { bufnr = bufnr, class = class, opened = opened })
+				end
+			end
+			return out
+		end,
+	}
+end
+
+---@class SigOverride
+---@field bufnr integer
+---@field decl TSNode function_definition
+---@field label string `Class.method`
+---@field name_pos integer[]
+
+--- Every same-named method up and down the class hierarchy of a Python method: the ones
+--- it overrides, the ones overriding it, and their siblings below a shared declaration.
+---@param plan refactor.Plan
+---@param ctx SigCtx
+---@param hierarchy SigHierarchy
+---@return SigOverride[]
+local function python_overrides(plan, ctx, hierarchy)
+	local owner = owning_class(ctx.decl)
+	local method = syntax.text(ctx.decl:field("name")[1], ctx.bufnr)
+	if not owner or PY_CONSTRUCTORS[method] then
+		return {}
+	end
+	local drow, dcol = ctx.decl:start()
+	local start = { bufnr = ctx.bufnr, class = owner }
+	local seen = { [class_key(start)] = true }
+	local out = {}
+	ctx.owners = { [class_name(start)] = true }
+
+	local function add(ref)
+		ctx.owners[class_name(ref)] = true
+		local def = method_of(ref.class, method, ref.bufnr)
+		if not def then
+			return
+		end
+		if ref.opened or Plan.owns(ref.bufnr) then
+			plan:adopt(ref.bufnr)
+		end
+		local nrow, ncol = def:field("name")[1]:start()
+		table.insert(out, {
+			bufnr = ref.bufnr,
+			decl = def,
+			label = class_name(ref) .. "." .. method,
+			name_pos = { nrow, ncol },
+		})
+	end
+
+	-- Up first: descending from the topmost declaration is what reaches siblings.
+	local roots, queue = { start }, { start }
+	while #queue > 0 do
+		for _, base in ipairs(hierarchy.supers(table.remove(queue, 1))) do
+			if base.unresolved then
+				plan:note(
+					"skip",
+					ctx.bufnr,
+					drow,
+					dcol,
+					("base `%s` could not be resolved; overrides there are not checked"):format(base.unresolved)
+				)
+			elseif not seen[class_key(base.ref)] then
+				seen[class_key(base.ref)] = true
+				if base.external then
+					if method_of(base.ref.class, method, base.ref.bufnr) then
+						plan:note(
+							"conflict",
+							ctx.bufnr,
+							drow,
+							dcol,
+							("overrides `%s.%s`, defined outside the workspace"):format(class_name(base.ref), method)
+						)
+					end
+				else
+					add(base.ref)
+					if method_of(base.ref.class, method, base.ref.bufnr) then
+						table.insert(roots, base.ref)
+					end
+					table.insert(queue, base.ref)
+				end
+			end
+		end
+	end
+
+	queue = roots
+	while #queue > 0 do
+		for _, sub in ipairs(hierarchy.subs(table.remove(queue, 1))) do
+			if not seen[class_key(sub)] then
+				seen[class_key(sub)] = true
+				add(sub)
+				table.insert(queue, sub)
+			end
+		end
+	end
+
+	if hierarchy.partial then
+		plan:skipped_check("overrides in other files", hierarchy.partial)
+	end
+	return out
+end
+
+--- Applies the declaration edit to an override, or records why it cannot take it.
+---@param plan refactor.Plan
+---@param override SigOverride
+---@param ctx SigCtx
+local function override_site(plan, override, ctx)
+	local bufnr, def = override.bufnr, override.decl
+	local shape = shape_for(ctx.lang.decls, def)
+	local list = shape and list_of(def, shape)
+	local row, col = def:start()
+	if not shape or not list then
+		return plan:note(
+			"conflict",
+			bufnr,
+			row,
+			col,
+			("override `%s` cannot be parsed; update it by hand"):format(override.label)
+		)
+	end
+	local items = elements(list)
+	if implicit(shape, def, nil, bufnr) ~= ctx.decl_implicit then
+		return plan:note(
+			"conflict",
+			bufnr,
+			row,
+			col,
+			("override `%s` differs in taking self/cls; update it by hand"):format(override.label)
+		)
+	end
+	if #items ~= #ctx.params then
+		return plan:note(
+			"conflict",
+			bufnr,
+			row,
+			col,
+			("override `%s` has a different parameter list; update it by hand"):format(override.label)
+		)
+	end
+	declaration_site(plan, bufnr, list, ctx)
+
+	if not locals.available(bufnr) then
+		return
+	end
+	if ctx.mode == "remove" then
+		local ident = syntax.param_name(items[ctx.index + 1], bufnr)
+		local refs = ident and locals.references(bufnr, ident, def) or {}
+		if #refs > 1 then
+			local rrow, rcol = refs[2]:start()
+			plan:note(
+				"conflict",
+				bufnr,
+				rrow,
+				rcol,
+				("`%s` is still used in override `%s`"):format(ident, override.label)
+			)
+		end
+	elseif ctx.mode == "add" and ctx.spec.name ~= "" then
+		if locals.collides(bufnr, ctx.spec.name, row, col) then
+			plan:note(
+				"conflict",
+				bufnr,
+				row,
+				col,
+				("`%s` is already in scope in override `%s`"):format(ctx.spec.name, override.label)
+			)
+		end
+	end
+end
+
+--- Gives every override of a Python method the same declaration edit. An override
+--- shares the signature with the method it overrides, and a call through either may
+--- reach both.
+---@param plan refactor.Plan
+---@param ctx SigCtx
+---@return SigOverride[]
+local function cover_overrides(plan, ctx)
+	if ctx.ft ~= "python" then
+		return {}
+	end
+	local client = vim.lsp.get_clients({ bufnr = ctx.bufnr, method = "textDocument/references" })[1]
+	local hierarchy = client and lsp_hierarchy(client, require("lib.root").get({ buf = ctx.bufnr }))
+		or syntax_hierarchy(ctx.bufnr)
+	local overrides = python_overrides(plan, ctx, hierarchy)
+	for _, override in ipairs(overrides) do
+		override_site(plan, override, ctx)
+	end
+	return overrides
 end
 
 --- Runs the call-site walk and hands the finished plan to `done`.
@@ -939,22 +1452,35 @@ local function build(ctx, decl_edits, title, done)
 					plan:adopt(tbuf)
 				end
 			else
-				plan:note("conflict", ctx.bufnr, drow, dcol, "trait method, but the trait and other impls cannot be updated: " .. why)
+				plan:note(
+					"conflict",
+					ctx.bufnr,
+					drow,
+					dcol,
+					"trait method, but the trait and other impls cannot be updated: " .. why
+				)
 			end
 		end
 	end
 
 	-- Other definitions of the same name under a different `#if` branch.
-	if C_FAMILY[ctx.ft] then
+	if C_FAMILY[ctx.ft] and ctx.decl then
 		local root = syntax.parsed(ctx.bufnr):parse()[1]:root()
-		local want = ctx.name_pos and vim.treesitter.get_node_text(name_node(ctx.decl, ctx.ft), ctx.bufnr)
+		local dname = name_node(ctx.decl, ctx.ft)
+		local want = ctx.name_pos and dname and vim.treesitter.get_node_text(dname, ctx.bufnr)
 		local function walk(node)
 			for child in node:iter_children() do
 				if child:type() == "function_definition" and not child:equal(ctx.decl) then
 					local other = name_node(child, ctx.ft)
 					if other and syntax.text(other, ctx.bufnr) == want then
 						local orow, ocol = child:start()
-						plan:note("skip", ctx.bufnr, orow, ocol, "another definition of this name (a different #if branch?) is not updated")
+						plan:note(
+							"skip",
+							ctx.bufnr,
+							orow,
+							ocol,
+							"another definition of this name (a different #if branch?) is not updated"
+						)
 					end
 				elseif child:named_child_count() > 0 then
 					walk(child)
@@ -967,7 +1493,57 @@ local function build(ctx, decl_edits, title, done)
 	-- Prototypes, overload signatures and in-class declarations come back only with the
 	-- declaration included; call_site tells them apart from calls.
 	local with_declarations = C_FAMILY[ctx.ft] or ctx.ft:find("script") ~= nil or ctx.ft == "rust"
-	usages.lsp(origin_buf, { include_declaration = with_declarations, position = origin_pos }, function(found, client, reason)
+
+	-- Each override's own references are asked for too.
+	local origins = { { origin_buf, origin_pos } }
+	local handled = {}
+	for _, override in ipairs(cover_overrides(plan, ctx)) do
+		handled[("%d:%d:%d"):format(override.bufnr, override.name_pos[1], override.name_pos[2])] = true
+		table.insert(origins, { override.bufnr, override.name_pos, override.label })
+	end
+
+	-- References from every origin, each position once: an edit listed twice would be
+	-- applied twice.
+	local gathered, seen = {}, {}
+	local function collect(i, on_done)
+		local origin = origins[i]
+		if not origin then
+			return on_done(gathered)
+		end
+		usages.lsp(
+			origin[1],
+			{ include_declaration = with_declarations, position = origin[2] },
+			function(list, client, reason)
+				if not list then
+					if i == 1 then
+						return on_done(nil, client, reason)
+					end
+					plan:note(
+						"conflict",
+						origin[1],
+						origin[2][1],
+						origin[2][2],
+						("calls of override `%s` cannot be found: %s"):format(origin[3], reason or "no usages")
+					)
+				end
+				for _, usage in ipairs(list or {}) do
+					local row, col =
+						to_byte(usage.bufnr, usage.range.start, client and client.offset_encoding or "utf-8")
+					local key = ("%d:%d:%d"):format(usage.bufnr, row, col)
+					if not seen[key] and not handled[key] then
+						seen[key] = true
+						if client then
+							usage.encoding = client.offset_encoding
+						end
+						table.insert(gathered, usage)
+					end
+				end
+				collect(i + 1, on_done)
+			end
+		)
+	end
+
+	collect(1, function(found, client, reason)
 		if not found then
 			plan:note("skip", ctx.bufnr, 0, 0, (reason or "no usages available") .. "; call sites untouched")
 			done(plan)
@@ -983,14 +1559,20 @@ local function build(ctx, decl_edits, title, done)
 				end
 			end
 			if not listed then
-				plan:note("conflict", ctx.bufnr, drow, dcol, "the language server does not see this declaration (inactive #if branch?)")
+				plan:note(
+					"conflict",
+					ctx.bufnr,
+					drow,
+					dcol,
+					"the language server does not see this declaration (inactive #if branch?)"
+				)
 			end
 		end
 		for _, usage in ipairs(found) do
 			if usage.opened or Plan.owns(usage.bufnr) then
 				plan:adopt(usage.bufnr)
 			end
-			call_site(plan, usage, client.offset_encoding, ctx)
+			call_site(plan, usage, usage.encoding, ctx)
 		end
 		done(plan)
 	end)
@@ -1004,7 +1586,7 @@ function M.add_param(opts)
 		return
 	end
 	local ctx, decl, shape = context()
-	if not ctx then
+	if not ctx or not decl or not shape then
 		Plan.done()
 		return
 	end
@@ -1019,6 +1601,10 @@ function M.add_param(opts)
 		ctx.mode, ctx.spec = "add", spec
 
 		local list = list_of(decl, shape)
+		if not list then
+			Plan.done()
+			return
+		end
 		local text = spec.verbatim or ctx.lang.render_param(spec)
 		ctx.decl_text = text
 		local decl_edits = { ctx.void and syntax.replace(ctx.void, text) or edit_for(list, ctx.index, text, ctx.lang) }
@@ -1041,7 +1627,13 @@ function M.add_param(opts)
 				local is_header = vim.api.nvim_buf_get_name(ctx.bufnr):match("%.h$") ~= nil
 				if ctx.ft == "c" or is_header then
 					local drow, dcol = decl:start()
-					plan:note("conflict", ctx.bufnr, drow, dcol, "C has no default arguments, and a .h is usually included from C")
+					plan:note(
+						"conflict",
+						ctx.bufnr,
+						drow,
+						dcol,
+						"C has no default arguments, and a .h is usually included from C"
+					)
 				end
 			end
 			local kinds = vim.tbl_map(function(param)
@@ -1076,6 +1668,8 @@ function M.add_param(opts)
 			-- Nothing downstream breaks, so the call sites are left alone entirely.
 			local plan = Plan.new(title .. " (optional)")
 			plan:edits_for(ctx.bufnr, decl_edits)
+			-- Calls stay valid, but an override without the parameter would not be.
+			cover_overrides(plan, ctx)
 			finish(plan)
 			return
 		end
@@ -1097,12 +1691,16 @@ function M.remove_param(opts)
 		return
 	end
 	local ctx, decl, shape = context()
-	if not ctx then
+	if not ctx or not decl or not shape then
 		Plan.done()
 		return
 	end
 
 	local list = list_of(decl, shape)
+	if not list then
+		Plan.done()
+		return
+	end
 	local index = not ctx.void and cursor_on_index(list) or nil
 	if not index then
 		Snacks.notify.warn("Cursor is not on a parameter", { title = "Refactor" })
@@ -1143,10 +1741,27 @@ function M.remove_param(opts)
 		-- TS parameter properties also declare a field; destructured parameters bind
 		-- names the still-used check below cannot see.
 		local text = syntax.text(target, ctx.bufnr)
-		if text:match("^%s*public%s") or text:match("^%s*private%s") or text:match("^%s*protected%s") or text:match("^%s*readonly%s") then
-			plan:note("conflict", ctx.bufnr, srow, scol, "parameter property: removing it also removes the field `this." .. (ident or "?") .. "`")
+		if
+			text:match("^%s*public%s")
+			or text:match("^%s*private%s")
+			or text:match("^%s*protected%s")
+			or text:match("^%s*readonly%s")
+		then
+			plan:note(
+				"conflict",
+				ctx.bufnr,
+				srow,
+				scol,
+				"parameter property: removing it also removes the field `this." .. (ident or "?") .. "`"
+			)
 		elseif text:match("^%s*[{%[]") then
-			plan:note("conflict", ctx.bufnr, srow, scol, "destructured parameter: the names it binds cannot be checked for uses")
+			plan:note(
+				"conflict",
+				ctx.bufnr,
+				srow,
+				scol,
+				"destructured parameter: the names it binds cannot be checked for uses"
+			)
 		end
 		-- Removing a parameter still referenced in the body leaves code that does not
 		-- compile, which is exactly what "safe" means in Safe Delete.
@@ -1182,12 +1797,17 @@ function M.reorder_param(opts)
 		return
 	end
 	local ctx, decl, shape = context()
-	if not ctx then
+	if not ctx or not decl or not shape then
 		Plan.done()
 		return
 	end
 
-	local from = cursor_on_index(list_of(decl, shape))
+	local list = list_of(decl, shape)
+	if not list then
+		Plan.done()
+		return
+	end
+	local from = cursor_on_index(list)
 	if not from then
 		Snacks.notify.warn("Cursor is not on a parameter", { title = "Refactor" })
 		Plan.done()

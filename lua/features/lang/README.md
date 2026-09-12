@@ -26,14 +26,14 @@ what works here.
 
 ## Coverage
 
-|                            | rust                     | c / cpp                      | zig              | lua                        | go                       | python                   |
-| -------------------------- | ------------------------ | ---------------------------- | ---------------- | -------------------------- | ------------------------ | ------------------------ |
-| build / run / test / check | cargo                    | make · cmake · ninja · meson | zig build        | luajit · busted · luacheck | go build · run · test · vet | py_compile · pytest · ruff |
-| expand                     | `expandMacro`            | `-E -P`                      | —                | —                          | —                        | —                        |
-| assembly                   | `cargo rustc --emit asm` | `-S -masm=intel`             | `-femit-asm`     | luajit `-bl` bytecode      | `-gcflags=-S`            | `dis` bytecode           |
-| IR                         | `view_ir` (MIR/HIR)      | `-emit-llvm`                 | `-femit-llvm-ir` | —                          | `-gcflags=-m` inlining & escapes | —                |
-| tree                       | `syntaxTree`             | clang `-ast-dump`            | —                | `:InspectTree`             | `:InspectTree`           | `python -m ast`          |
-| related                    | parent module            | clangd header ↔ source       | —                | —                          | `x.go` ↔ `x_test.go`     | `x.py` ↔ `test_x.py`     |
+|                            | rust                     | c / cpp                      | zig              | lua                        | go                               | python                     |
+| -------------------------- | ------------------------ | ---------------------------- | ---------------- | -------------------------- | -------------------------------- | -------------------------- |
+| build / run / test / check | cargo                    | make · cmake · ninja · meson | zig build        | luajit · busted · luacheck | go build · run · test · vet      | py_compile · pytest · ruff |
+| expand                     | `expandMacro`            | `-E -P`                      | —                | —                          | —                                | —                          |
+| assembly                   | `cargo rustc --emit asm` | `-S -masm=intel`             | `-femit-asm`     | luajit `-bl` bytecode      | `-gcflags=-S`                    | `dis` bytecode             |
+| IR                         | `view_ir` (MIR/HIR)      | `-emit-llvm`                 | `-femit-llvm-ir` | —                          | `-gcflags=-m` inlining & escapes | —                          |
+| tree                       | `syntaxTree`             | clang `-ast-dump`            | —                | `:InspectTree`             | `:InspectTree`                   | `python -m ast`            |
+| related                    | parent module            | clangd header ↔ source       | —                | —                          | `x.go` ↔ `x_test.go`             | `x.py` ↔ `test_x.py`       |
 
 Python runs under the project's interpreter: `$VIRTUAL_ENV`, then `.venv`, then conda,
 then PATH. neotest and the debugger use the same resolution.
@@ -73,8 +73,21 @@ where that is visible before the optimiser rewrites it; `vi` shows ReleaseFast, 
 what the optimiser did with it. Two different questions.
 
 `--verbose-air` would be the ideal answer and prints nothing on a release build of the
-compiler, which is how every distro ships it. The Debug IR is filtered to this module —
-unfiltered it is a third of a million lines, because it contains all of std.
+compiler, which is how every distro ships it. Both IR views are filtered to this
+module, plus the debug metadata the kept instructions reference — unfiltered a
+`build-obj` emit is a third of a million lines, because it contains all of std.
+
+### Module flags
+
+`@import("mylib")` only resolves with the arguments build.zig assembles, so a one-off
+`zig build-obj` of a file in a module project fails on the import. The build runner's
+`--verbose` prints every compile command before running it, cached or not, which is the
+build graph already resolved — including options build.zig computes, which no parse of
+build.zig could follow. The views read the `-M<name>=<src>` segments out of it, move the
+segment owning this file to the front so its own functions are what gets emitted, and
+drop the flags that belong to the build rather than to an emit: the output name and
+binary, the optimise mode the view chooses, and `--listen=-`, which makes the compiler
+wait on stdin forever.
 
 ## Output panes
 
@@ -117,6 +130,12 @@ Assembler directives are stripped; symbol boundaries are kept, and the `.debug_*
 sections that come with `-g` are dropped wholesale — DWARF string tables are hundreds
 of lines and the `.loc` markers are the only part worth having. Zig emits one `.file` per
 standard-library module, which is hundreds of lines before the first instruction.
+
+Rust and zig compile a whole crate or module graph, so the assembly is then narrowed to
+the blocks that contain an instruction carrying one of _this file's_ `.loc`s. That is
+what drops the per-crate apparatus a label-only block is made of — exception tables,
+personality references, string tables — along with every function the rest of the graph
+contributed. A single-file compile has nothing to filter and keeps everything.
 
 ### Background jobs
 

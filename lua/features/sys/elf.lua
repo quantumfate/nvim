@@ -96,7 +96,10 @@ function M.parse_objdump(lines, file)
 			table.insert(out, line)
 			local same = want
 				and current_file
-				and ((vim.uv.fs_realpath(current_file) or current_file) == want or vim.fs.basename(current_file) == vim.fs.basename(want))
+				and (
+					(vim.uv.fs_realpath(current_file) or current_file) == want
+					or vim.fs.basename(current_file) == vim.fs.basename(want)
+				)
 			if same and current then
 				map[#out] = current
 			end
@@ -178,7 +181,10 @@ function M.symbols(buf)
 			-- Sanitizer runtimes add megabytes of their own tables; they would bury the
 			-- program's symbols at the top of a size-sorted list.
 			list = vim.tbl_filter(function(s)
-				return s.size > 0 and not s.name:match("^__[almtu]?san") and not s.name:match("^__sanitizer") and not s.name:match("^__interception")
+				return s.size > 0
+					and not s.name:match("^__[almtu]?san")
+					and not s.name:match("^__sanitizer")
+					and not s.name:match("^__interception")
 			end, list)
 			table.sort(list, function(a, b)
 				return a.size > b.size
@@ -222,15 +228,22 @@ function M.function_at_cursor(buf)
 		symbols(bin, function(list)
 			local matches = M.best_matches(
 				vim.tbl_filter(function(s)
-					return s.size > 0 and (s.kind == "T" or s.kind == "t" or s.kind == "W" or s.kind == "w") and M.names(s.name, name)
+					return s.size > 0
+						and (s.kind == "T" or s.kind == "t" or s.kind == "W" or s.kind == "w")
+						and M.names(s.name, name)
 				end, list),
 				name
 			)
 			if #matches == 0 then
-				local hint = vim.bo[buf].filetype == "go" and "\nGo inlines small functions; build with -gcflags=all=-l to keep them"
+				local hint = vim.bo[buf].filetype == "go"
+						and "\nGo inlines small functions; build with -gcflags=all=-l to keep them"
 					or ""
 				Snacks.notify.warn(
-					("`%s` is not in %s: inlined away, or the binary is stale (rebuild)%s"):format(name, vim.fs.basename(bin), hint),
+					("`%s` is not in %s: inlined away, or the binary is stale (rebuild)%s"):format(
+						name,
+						vim.fs.basename(bin),
+						hint
+					),
 					{ title = "ELF" }
 				)
 			elseif #matches == 1 then

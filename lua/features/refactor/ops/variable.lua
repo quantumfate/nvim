@@ -75,7 +75,14 @@ function binding_value(statement, ft)
 	while #queue > 0 do
 		local node = table.remove(queue, 1)
 		local left = node:field("left")[1] or node:field("pattern")[1]
-		if left and (left:type():find("tuple") or left:type():find("pattern_list") or (left:type():find("list") and left:named_child_count() > 1)) then
+		if
+			left
+			and (
+				left:type():find("tuple")
+				or left:type():find("pattern_list")
+				or (left:type():find("list") and left:named_child_count() > 1)
+			)
+		then
 			return nil, "binds several names at once"
 		end
 		local values = #node:field("value") > 0 and node:field("value") or node:field("right")
@@ -199,7 +206,7 @@ function M.extract(opts)
 	opts = opts or {}
 	local bufnr = vim.api.nvim_get_current_buf()
 	local srow, scol, erow, ecol = selection()
-	if not srow then
+	if not (srow and scol and erow and ecol) then
 		Snacks.notify.warn("Select the expression to extract first", { title = "Refactor" })
 		return
 	end
@@ -333,7 +340,15 @@ function M.inline(opts)
 		return
 	end
 	local atomic = value:match("^[%w_%.]+$") ~= nil
-		or (value_node ~= nil and (value_node:type():find("literal") or value_node:type():find("call") or value_node:type():find("parenthesized")) ~= nil)
+		or (
+			value_node ~= nil
+			and (
+					value_node:type():find("literal")
+					or value_node:type():find("call")
+					or value_node:type():find("parenthesized")
+				)
+				~= nil
+		)
 
 	local plan = Plan.new("Inline " .. name)
 	local dsrow, _, derow = statement:range()
@@ -357,7 +372,13 @@ function M.inline(opts)
 	for _, ref in ipairs(refs) do
 		local rrow, rcol = ref:start()
 		if is_written(ref, bufnr) then
-			plan:note("conflict", bufnr, rrow, rcol, ("`%s` is assigned or borrowed here; inlining would change what is written"):format(name))
+			plan:note(
+				"conflict",
+				bufnr,
+				rrow,
+				rcol,
+				("`%s` is assigned or borrowed here; inlining would change what is written"):format(name)
+			)
 		end
 		plan:edit(bufnr, syntax.replace(ref, (atomic or not needs_parens(ref)) and value or ("(" .. value .. ")")))
 	end

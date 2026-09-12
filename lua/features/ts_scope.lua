@@ -20,7 +20,7 @@ function M.enclosing(capture)
 	end)
 	local query = vim.treesitter.query.get(parser:lang(), "textobjects")
 	local tree = query and parser:parse()[1]
-	if not tree then
+	if not query or not tree then
 		return nil
 	end
 

@@ -35,6 +35,7 @@ local function changed_lines(before, after)
 		result_type = "indices",
 		algorithm = "histogram",
 	})
+	---@cast hunks integer[][]?
 	for _, hunk in ipairs(hunks or {}) do
 		-- { start_a, count_a, start_b, count_b }; b is the "after" side.
 		local start, count = hunk[3], hunk[4]

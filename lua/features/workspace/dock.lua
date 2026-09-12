@@ -119,7 +119,9 @@ function M.is_open(name)
 	if not view then
 		return false
 	end
-	local fts = type(view.ft) == "table" and view.ft or { view.ft }
+	local ft_val = view.ft
+	local fts = type(ft_val) == "table" and ft_val or { ft_val }
+	---@cast fts string[]
 	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		if vim.api.nvim_win_is_valid(win) then
 			local ft = vim.bo[vim.api.nvim_win_get_buf(win)].filetype
@@ -166,7 +168,7 @@ function M.open(name)
 	-- edgy re-lays the bottom edge after the window appears; equalising once it has
 	-- settled keeps the editor panes the size they were.
 	vim.defer_fn(function()
-		pcall(vim.cmd, "wincmd =")
+		pcall(vim.cmd --[[@as function]], "wincmd =")
 	end, 120)
 end
 

@@ -127,7 +127,9 @@ function M.select()
 	local mode = vim.fn.mode():sub(1, 1) == "v" and "x" or "n"
 	local names = {}
 	for name, op in pairs(M.ops) do
-		local modes = type(op.mode) == "table" and op.mode or { op.mode or "n" }
+		local m = op.mode
+		local modes = type(m) == "table" and m or { m or "n" }
+		---@cast modes string[]
 		if vim.tbl_contains(modes, mode) then
 			table.insert(names, name)
 		end

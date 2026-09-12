@@ -1,0 +1,52 @@
+# Regression tests on Codeberg's hosted Forgejo runners.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: codeberg-small
+    # Trixie rather than bookworm: `just` and `pahole` are packaged there under those names.
+    container:
+      image: node:22-trixie
+    env:
+      # The specs load the config the editor would; point it at the checkout.
+      XDG_CONFIG_HOME: /tmp/xdg-config
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: System packages
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git curl ca-certificates build-essential clang ripgrep xxd pahole just
+          # nvim-treesitter's main branch compiles grammars with the tree-sitter CLI.
+          npm install -g tree-sitter-cli
+
+      - name: Neovim nightly
+        run: |
+          curl -fsSL https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.tar.gz \
+            | tar -xz -C /opt
+          ln -s /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+          nvim --version | head -1
+          mkdir -p "$XDG_CONFIG_HOME"
+          ln -s "$PWD" "$XDG_CONFIG_HOME/nvim"
+
+      - name: Cache plugins and parsers
+        uses: https://code.forgejo.org/actions/cache@v4
+        with:
+          path: ~/.local/share/nvim
+          key: nvim-${{ hashFiles('lazy-lock.json', 'lua/plugins/editor/treesitter.lua') }}
+
+      # restore, not sync: CI must test the pinned plugin versions, not whatever is newest.
+      - name: Plugins
+        run: nvim --headless "+Lazy! restore" +qa
+
+      # The config's own install is async and loses its race with `+qa`.
+      - name: Treesitter parsers
+        run: nvim --headless "+TSSyncInstall" +qa
+
+      - name: Test
+        run: just test

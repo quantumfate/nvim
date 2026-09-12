@@ -72,7 +72,9 @@ t.describe("state", function()
 			width = 10,
 			height = 2,
 		})
-		t.ok(pcall(output.show, { title = "probe view", lines = { "x" }, source = source, mode = "split", link = false }))
+		t.ok(
+			pcall(output.show, { title = "probe view", lines = { "x" }, source = source, mode = "split", link = false })
+		)
 		t.eq(true, output.showing("probe view"))
 		output.close("probe view")
 	end)

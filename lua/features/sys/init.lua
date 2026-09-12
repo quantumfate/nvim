@@ -78,6 +78,25 @@ M.keys = {
 		end,
 	},
 	{
+		key = "f",
+		desc = "Annotate function from profile (perf)",
+		needs = { "perf", "addr2line" },
+		run = function(buf)
+			local profile = require("features.sys.profile")
+			require("features.sys.util").toggle(profile.annotate_title, function()
+				profile.annotate(buf)
+			end)
+		end,
+	},
+	{
+		key = "b",
+		desc = "bpftrace probes on the binary",
+		needs = { "bpftrace" },
+		run = function(buf)
+			require("features.sys.bpf").pick(buf)
+		end,
+	},
+	{
 		key = "h",
 		desc = "Hex view toggle",
 		needs = { "xxd" },
@@ -107,6 +126,22 @@ M.keys = {
 		needs = { "rg" },
 		run = function(buf)
 			require("features.sys.kernel").kconfig(buf)
+		end,
+	},
+	{
+		key = "S",
+		desc = "sparse on this file",
+		needs = { "sparse" },
+		run = function(buf)
+			require("features.sys.semantic").sparse(buf)
+		end,
+	},
+	{
+		key = "C",
+		desc = "coccinelle report on this file",
+		needs = { "spatch" },
+		run = function(buf)
+			require("features.sys.semantic").cocci(buf)
 		end,
 	},
 	{
@@ -209,9 +244,44 @@ function M.setup()
 		require("features.sys.stack").from_buffer(vim.api.nvim_get_current_buf())
 	end, { desc = "Stack frames in this buffer to quickfix" })
 
+	vim.api.nvim_create_user_command("SysFlame", function()
+		require("features.sys.profile").flame(vim.api.nvim_get_current_buf())
+	end, { desc = "Folded perf stacks of the binary, rendered to SVG when a renderer exists" })
+
+	vim.api.nvim_create_user_command("SysStrace", function(args)
+		local trace = require("features.sys.trace")
+		local buf = vim.api.nvim_get_current_buf()
+		local what = args.fargs[1]
+		if what == "summary" then
+			trace.summary(buf, { class = args.fargs[2] })
+		else
+			trace.run(buf, { class = what })
+		end
+	end, {
+		nargs = "*",
+		complete = function()
+			return vim.list_extend({ "summary" }, vim.deepcopy(require("features.sys.trace").classes))
+		end,
+		desc = "strace the binary: :SysStrace [class] or :SysStrace summary [class]",
+	})
+
 	vim.api.nvim_create_user_command("Qemu", function(args)
 		require("features.sys.kernel").qemu(vim.api.nvim_get_current_buf(), args.fargs[1])
 	end, { nargs = "?", complete = "file", desc = "Boot the tree's kernel under QEMU: :Qemu [initrd]" })
+
+	vim.api.nvim_create_user_command("Sparse", function()
+		require("features.sys.semantic").sparse(vim.api.nvim_get_current_buf())
+	end, { desc = "sparse on this file, findings to quickfix" })
+
+	vim.api.nvim_create_user_command("Coccicheck", function(args)
+		local semantic = require("features.sys.semantic")
+		local buf = vim.api.nvim_get_current_buf()
+		if args.fargs[1] then
+			semantic.run_script(buf, vim.fn.fnamemodify(args.fargs[1], ":p"))
+		else
+			semantic.cocci(buf)
+		end
+	end, { nargs = "?", complete = "file", desc = "coccinelle report mode: :Coccicheck [script.cocci]" })
 
 	vim.api.nvim_create_user_command("SysInfo", function()
 		local lines = {}
@@ -221,7 +291,11 @@ function M.setup()
 			end, spec.needs)
 			table.insert(
 				lines,
-				("<leader>x%s  %-40s %s"):format(spec.key, spec.desc, #missing == 0 and "ok" or ("missing: " .. table.concat(missing, ", ")))
+				("<leader>x%s  %-40s %s"):format(
+					spec.key,
+					spec.desc,
+					#missing == 0 and "ok" or ("missing: " .. table.concat(missing, ", "))
+				)
 			)
 		end
 		Snacks.notify.info(table.concat(lines, "\n"), { title = "Systems tools" })

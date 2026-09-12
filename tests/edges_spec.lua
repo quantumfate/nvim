@@ -105,10 +105,15 @@ t.describe("edges refactor", function()
 			signature.remove_param({ preview = false })
 		end)
 		t.ok(plan, "no plan")
+		assert(plan and plan.edits)
 		local _, edits = next(plan.edits)
+		assert(edits and edits[1])
 		local e = edits[1]
 		-- `, *, b` spans columns 12 up to the `)` at 18.
-		t.eq({ 0, 12, 0, 18 }, { e.range.start.line, e.range.start.character, e.range["end"].line, e.range["end"].character })
+		t.eq(
+			{ 0, 12, 0, 18 },
+			{ e.range.start.line, e.range.start.character, e.range["end"].line, e.range["end"].character }
+		)
 	end)
 
 	t.it("a separator is not a parameter to swap with", function()
@@ -129,7 +134,10 @@ t.describe("edges refactor", function()
 			return
 		end
 		t.reset()
-		t.buffer({ "function f({ a, b }: { a: number; b: number }, c: number) {", "  return a + b;", "}" }, "typescript")
+		t.buffer(
+			{ "function f({ a, b }: { a: number; b: number }, c: number) {", "  return a + b;", "}" },
+			"typescript"
+		)
 		vim.api.nvim_win_set_cursor(0, { 1, 12 })
 		local plan = planned(function()
 			signature.remove_param({ preview = false })
@@ -178,7 +186,7 @@ t.describe("edges lang", function()
 	t.it("splits compile commands like a shell", function()
 		local c = require("features.lang.c")
 		t.eq(
-			{ "cc", "-DGREETING=\"hello world\"", "-Iinclude dir", "-c", "a.c" },
+			{ "cc", '-DGREETING="hello world"', "-Iinclude dir", "-c", "a.c" },
 			c.shell_split([[cc "-DGREETING=\"hello world\"" '-Iinclude dir' -c a.c]])
 		)
 	end)
@@ -233,8 +241,11 @@ t.describe("edges lang", function()
 		local buf = t.buffer({ 'fn main() { println!("{}", plain(f(1, 2), 3)); }' }, "rust")
 		local root = vim.treesitter.get_parser(buf, "rust"):parse()[1]:root()
 		local node = root:named_descendant_for_range(0, 27, 0, 27) -- `plain`
+		assert(node)
 		t.eq("plain", vim.treesitter.get_node_text(node, buf))
-		local args = signature.macro_args(node:next_sibling())
+		local sibling = node:next_sibling()
+		assert(sibling)
+		local args = signature.macro_args(sibling)
 		t.eq(2, #args, "the nested call's comma split the outer arguments")
 		local sr, sc = args[1].first:start()
 		local er, ec = args[1].last:end_()
@@ -262,7 +273,10 @@ t.describe("edges lang", function()
 
 	t.it("names the build.zig modules a file imports", function()
 		t.reset()
-		t.buffer({ 'const std = @import("std");', 'const lib = @import("mylib");', 'const u = @import("util.zig");' }, "zig")
+		t.buffer(
+			{ 'const std = @import("std");', 'const lib = @import("mylib");', 'const u = @import("util.zig");' },
+			"zig"
+		)
 		t.eq({ "mylib" }, require("features.lang.zig").module_imports(0))
 	end)
 

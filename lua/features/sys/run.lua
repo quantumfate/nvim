@@ -37,11 +37,15 @@ function M.run(buf)
 			require("features.lang.output").show({ title = M.title, lines = lines, source = buf, link = false })
 
 			local stack = require("features.sys.stack")
-			local located = stack.to_quickfix(stack.parse(lines, { cwd = root, root = root }), "Run: " .. vim.fs.basename(bin))
+			local located =
+				stack.to_quickfix(stack.parse(lines, { cwd = root, root = root }), "Run: " .. vim.fs.basename(bin))
 			local status = res.signal and res.signal ~= 0 and (SIGNALS[res.signal] or ("signal " .. res.signal))
 				or ("exit " .. res.code)
 			if located > 0 then
-				Snacks.notify.warn(("%s — %d frame(s) in quickfix; ]q to walk"):format(status, located), { title = "Run" })
+				Snacks.notify.warn(
+					("%s — %d frame(s) in quickfix; ]q to walk"):format(status, located),
+					{ title = "Run" }
+				)
 			elseif res.code ~= 0 then
 				Snacks.notify.warn(status, { title = "Run" })
 			end

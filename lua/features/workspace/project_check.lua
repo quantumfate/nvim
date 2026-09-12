@@ -2,8 +2,9 @@
 ---
 --- lua_ls, clangd, rust-analyzer and ts_ls publish diagnostics for buffers you have
 --- open, so "project diagnostics" was really "diagnostics of what you happened to
---- open". For Lua and C the command-line tools answer for every file in a few seconds:
---- `lua-language-server --check` and `run-clang-tidy` over the compile database. Their
+--- open". The command-line tools answer for every file: `lua-language-server --check`,
+--- `run-clang-tidy` over the compile database, `cargo clippy`, `go vet` (or
+--- golangci-lint) and `tsc --noEmit`. Their
 --- findings land as ordinary diagnostics in their own namespaces, so Trouble shows them
 --- beside the servers' own, and saving a file clears its batch results — the live
 --- server takes over from there.
@@ -93,6 +94,165 @@ function M.parse_tidy(lines, dir)
 	return items
 end
 
+--- `path` as an absolute, normalized path.
+---@param path string
+---@param dir string
+---@return string
+local function absolute(path, dir)
+	if path:sub(1, 1) ~= "/" then
+		path = vim.fs.joinpath(dir, path)
+	end
+	return vim.fs.normalize(path)
+end
+
+--- Appends `item` unless an identical finding is already in `items`.
+---@param items workspace.CheckItem[]
+---@param seen table<string, true>
+---@param item workspace.CheckItem
+local function add(items, seen, item)
+	local key = table.concat({ item.filename, item.lnum, item.col, item.message }, ":")
+	if not seen[key] then
+		seen[key] = true
+		table.insert(items, item)
+	end
+end
+
+--- The first line of `text` matching `pattern`, trimmed.
+---@param text string?
+---@param pattern string
+---@return string?
+local function first_line(text, pattern)
+	for line in vim.gsplit(text or "", "\n", { plain = true }) do
+		if line:match(pattern) then
+			return vim.trim(line)
+		end
+	end
+end
+
+--- Parses `cargo clippy --message-format=json`. Span paths are relative to the
+--- workspace root. The bin and test targets compile the same files, so each finding
+--- arrives once per target and duplicates are dropped. A build that failed with no
+--- error of its own to show (a panicking build script, a broken manifest, clippy not
+--- installed) is a failure, not a clean project.
+---@param stdout string
+---@param stderr string
+---@param dir string Workspace root
+---@return workspace.CheckItem[] items
+---@return string? failure
+function M.parse_clippy(stdout, stderr, dir)
+	local items, seen = {}, {}
+	local success, errors = nil, 0
+	for line in vim.gsplit(stdout or "", "\n", { plain = true }) do
+		local ok, msg = pcall(vim.json.decode, line, { luanil = { object = true } })
+		if ok and type(msg) == "table" and msg.reason == "build-finished" then
+			success = msg.success
+		elseif ok and type(msg) == "table" and msg.reason == "compiler-message" then
+			local m = msg.message
+			local level = m.level or ""
+			if level:match("^error") then
+				errors = errors + 1
+			end
+			for _, span in ipairs(m.spans or {}) do
+				-- A finding inside a macro points into the macro's source (std, a
+				-- dependency); the call site is the line the user can change.
+				while
+					span.expansion
+					and (span.file_name:match("^<") or not vim.startswith(absolute(span.file_name, dir), dir))
+				do
+					span = span.expansion.span
+				end
+				if span.is_primary and (level:match("^error") or level == "warning") then
+					add(items, seen, {
+						filename = absolute(span.file_name, dir),
+						lnum = span.line_start,
+						col = span.column_start,
+						severity = level == "warning" and vim.diagnostic.severity.WARN or vim.diagnostic.severity.ERROR,
+						message = m.message,
+						code = m.code and m.code.code or nil,
+					})
+				end
+			end
+		end
+	end
+	if success == nil or (success == false and errors == 0) then
+		return {}, first_line(stderr, "^error") or "cargo clippy exited without a build result"
+	end
+	return items
+end
+
+--- Parses `go vet` stderr: `file:line:col: message`, paths relative to the module,
+--- type errors prefixed with `vet: `. `#` lines name the package being vetted.
+---@param lines string[]
+---@param dir string Module root
+---@return workspace.CheckItem[]
+function M.parse_govet(lines, dir)
+	local items, seen = {}, {}
+	for _, line in ipairs(lines) do
+		local file, lnum, col, message = line:gsub("^vet: ", ""):match("^(%S+%.go):(%d+):(%d+): (.*)$")
+		if file then
+			add(items, seen, {
+				filename = absolute(file, dir),
+				lnum = tonumber(lnum) or 1,
+				col = tonumber(col) or 1,
+				severity = vim.diagnostic.severity.WARN,
+				message = message,
+			})
+		end
+	end
+	return items
+end
+
+--- Parses `golangci-lint run --out-format json`: `{ Issues = [{ FromLinter, Text,
+--- Severity, Pos = { Filename, Line, Column } }] }`. Returns nil when the output is not
+--- that report, which means the linter did not run.
+---@param text string
+---@param dir string Module root
+---@return workspace.CheckItem[]?
+function M.parse_golangci(text, dir)
+	local json = (text or ""):match("{.*}")
+	local ok, decoded = pcall(vim.json.decode, json or "", { luanil = { object = true, array = true } })
+	if not ok or type(decoded) ~= "table" or decoded.Report == nil and decoded.Issues == nil then
+		return nil
+	end
+	local items, seen = {}, {}
+	for _, issue in ipairs(decoded.Issues or {}) do
+		add(items, seen, {
+			filename = absolute(issue.Pos.Filename, dir),
+			lnum = issue.Pos.Line,
+			-- Column 0 means "the whole line".
+			col = math.max(issue.Pos.Column or 1, 1),
+			severity = issue.Severity == "error" and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.WARN,
+			message = issue.Text,
+			code = issue.FromLinter,
+		})
+	end
+	return items
+end
+
+--- Parses `tsc --pretty false`: `file(line,col): error TS1234: message`. Errors with no
+--- location (`error TS18003: No inputs were found`) are not findings; the checker
+--- reports them as the failure they are.
+---@param lines string[]
+---@param dir string tsconfig directory
+---@return workspace.CheckItem[]
+function M.parse_tsc(lines, dir)
+	local items, seen = {}, {}
+	for _, line in ipairs(lines) do
+		local file, lnum, col, kind, code, message = line:match("^(.-)%((%d+),(%d+)%): (%a+) (TS%d+): (.*)$")
+		if file then
+			add(items, seen, {
+				filename = absolute(file, dir),
+				lnum = tonumber(lnum) or 1,
+				col = tonumber(col) or 1,
+				severity = kind == "error" and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.WARN,
+				message = message,
+				code = code,
+			})
+		end
+	end
+	return items
+end
+
 --- Replaces a checker's diagnostics with `items`, one batch per file.
 ---@param name string
 ---@param items workspace.CheckItem[]
@@ -155,8 +315,45 @@ end
 ---@field name string
 ---@field cmd string[]
 ---@field cwd string
----@field parse fun(res: vim.SystemCompleted): workspace.CheckItem[]
+---@field parse fun(res: vim.SystemCompleted): workspace.CheckItem[], string?
 ---@field cleanup? fun()
+
+--- The directory of the project marker `name` for `buf`: the nearest one between the
+--- buffer and `root` (the outermost with `outermost`), else one directly in `root`.
+---@param buf integer
+---@param root string
+---@param name string
+---@param outermost? boolean
+---@return string?
+local function marker_dir(buf, root, name, outermost)
+	local path = vim.api.nvim_buf_get_name(buf)
+	local found = {}
+	if path ~= "" and vim.startswith(vim.fs.normalize(path), root .. "/") then
+		found = vim.fs.find(name, {
+			path = vim.fs.dirname(path),
+			upward = true,
+			stop = vim.fs.dirname(root),
+			limit = math.huge,
+		})
+	end
+	local hit = outermost and found[#found] or found[1]
+	if hit then
+		return vim.fs.dirname(hit)
+	end
+	return vim.uv.fs_stat(vim.fs.joinpath(root, name)) and root or nil
+end
+
+--- A failure reason for a run that exited non-zero without a single finding: the tool
+--- did not get as far as checking.
+---@param res vim.SystemCompleted
+---@param items workspace.CheckItem[]
+---@return string?
+local function silent_failure(res, items)
+	if res.code ~= 0 and #items == 0 then
+		local text = (res.stderr or "") .. "\n" .. (res.stdout or "")
+		return first_line(text, "%S") or ("exit code " .. res.code)
+	end
+end
 
 --- The checkers that apply to the project around `buf`.
 ---@param buf integer
@@ -230,6 +427,67 @@ function M.checkers(buf)
 			end,
 		})
 	end
+
+	-- The outermost manifest is the workspace root, which span paths are relative to.
+	local cargo = marker_dir(buf, root, "Cargo.toml", true)
+	if cargo and vim.fn.executable("cargo") == 1 then
+		table.insert(out, {
+			name = "clippy",
+			cwd = cargo,
+			cmd = { "cargo", "clippy", "--workspace", "--all-targets", "--message-format=json" },
+			parse = function(res)
+				return M.parse_clippy(res.stdout, res.stderr, cargo)
+			end,
+		})
+	end
+
+	local gomod = marker_dir(buf, root, "go.mod")
+	if gomod and vim.fn.executable("golangci-lint") == 1 then
+		-- golangci-lint runs govet among its defaults; running go vet too would list
+		-- every vet finding twice.
+		table.insert(out, {
+			name = "golangci-lint",
+			cwd = gomod,
+			cmd = { "golangci-lint", "run", "--out-format", "json", "./..." },
+			parse = function(res)
+				local items = M.parse_golangci(res.stdout, gomod)
+				if not items then
+					return {}, first_line(res.stderr, "%S") or ("exit code " .. res.code)
+				end
+				return items
+			end,
+		})
+	elseif gomod and vim.fn.executable("go") == 1 then
+		table.insert(out, {
+			name = "go vet",
+			cwd = gomod,
+			cmd = { "go", "vet", "./..." },
+			parse = function(res)
+				local items = M.parse_govet(vim.split(res.stderr or "", "\n", { plain = true }), gomod)
+				return items, silent_failure(res, items)
+			end,
+		})
+	end
+
+	local tsconfig = marker_dir(buf, root, "tsconfig.json")
+	if tsconfig then
+		-- The project's own compiler first: its version is the one the code targets.
+		local tsc = vim.fs.find(function(name, dir)
+			return name == "node_modules" and vim.fn.executable(vim.fs.joinpath(dir, name, ".bin", "tsc")) == 1
+		end, { path = tsconfig, upward = true, type = "directory", limit = 1 })[1]
+		tsc = tsc and vim.fs.joinpath(tsc, ".bin", "tsc") or (vim.fn.executable("tsc") == 1 and "tsc" or nil)
+		if tsc then
+			table.insert(out, {
+				name = "tsc",
+				cwd = tsconfig,
+				cmd = { tsc, "--noEmit", "--pretty", "false", "-p", tsconfig },
+				parse = function(res)
+					local items = M.parse_tsc(vim.split(res.stdout or "", "\n", { plain = true }), tsconfig)
+					return items, silent_failure(res, items)
+				end,
+			})
+		end
+	end
 	return out
 end
 
@@ -253,7 +511,10 @@ function M.run(buf)
 						checker.cleanup()
 					end
 					if failure then
-						Snacks.notify.error(("%s did not run: %s"):format(checker.name, failure), { title = "Project check" })
+						Snacks.notify.error(
+							("%s did not run: %s"):format(checker.name, failure),
+							{ title = "Project check" }
+						)
 						return
 					end
 					local files = M.apply(checker.name, items)
@@ -265,7 +526,10 @@ function M.run(buf)
 			end)
 			if not ok then
 				finished()
-				Snacks.notify.error(("%s could not start: %s"):format(checker.name, tostring(err)), { title = "Project check" })
+				Snacks.notify.error(
+					("%s could not start: %s"):format(checker.name, tostring(err)),
+					{ title = "Project check" }
+				)
 			end
 		end
 	end

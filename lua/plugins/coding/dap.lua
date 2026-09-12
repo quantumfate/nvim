@@ -356,7 +356,13 @@ return {
 
 			dap.configurations.go = {
 				{ type = "delve", name = "Debug package", request = "launch", program = "${fileDirname}" },
-				{ type = "delve", name = "Debug tests (package)", request = "launch", mode = "test", program = "${fileDirname}" },
+				{
+					type = "delve",
+					name = "Debug tests (package)",
+					request = "launch",
+					mode = "test",
+					program = "${fileDirname}",
+				},
 				{
 					type = "delve",
 					name = "Attach to process",
@@ -433,7 +439,8 @@ return {
 					target = "localhost:1234",
 					program = function()
 						local vmlinux = vim.fs.joinpath(vim.fn.getcwd(), "vmlinux")
-						return vim.uv.fs_stat(vmlinux) and vmlinux or vim.fn.input("Symbols: ", vim.fn.getcwd() .. "/", "file")
+						return vim.uv.fs_stat(vmlinux) and vmlinux
+							or vim.fn.input("Symbols: ", vim.fn.getcwd() .. "/", "file")
 					end,
 					cwd = "${workspaceFolder}",
 				},

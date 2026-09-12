@@ -76,6 +76,7 @@ t.describe("workspace", function()
 		local left = wins[1]
 		vim.api.nvim_set_current_win(left)
 		local target = ws.lower(left)
+		assert(target)
 		t.ok(target ~= left, "lower returned the pane it was called from")
 		local left_col = vim.api.nvim_win_get_position(left)[2]
 		local target_col = vim.api.nvim_win_get_position(target)[2]

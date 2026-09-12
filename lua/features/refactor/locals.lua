@@ -55,6 +55,7 @@ function M.query(bufnr)
 	-- every capture twice; a parameter then counts as its own second reference.
 	local seen = {}
 	for id, node in query:iter_captures(tree:root(), bufnr, 0, -1) do
+		---@type string?
 		local capture = query.captures[id]
 		local key = capture .. ":" .. node:id()
 		if seen[key] then

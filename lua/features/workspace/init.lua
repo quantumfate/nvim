@@ -601,7 +601,7 @@ end
 --- Gives every window an even share, once the edges have finished moving.
 function M.equalize()
 	vim.schedule(function()
-		pcall(vim.cmd, "wincmd =")
+		pcall(vim.cmd --[[@as function]], "wincmd =")
 		local ok, editor = pcall(require, "edgy.editor")
 		if ok and editor.equalize then
 			pcall(editor.equalize)
@@ -621,7 +621,7 @@ function M.outline(state)
 	if state == true then
 		vim.cmd("Trouble symbols open focus=false")
 	elseif state == false then
-		pcall(vim.cmd, "Trouble symbols close")
+		pcall(vim.cmd --[[@as function]], "Trouble symbols close")
 	else
 		vim.cmd("Trouble symbols toggle focus=false")
 	end
@@ -713,6 +713,9 @@ function M.setup()
 			end)
 		end,
 	})
+
+	-- Registered here rather than in dock.lua's lazy setup: headless runs never open a dock.
+	require("features.workspace.headless").setup()
 
 	vim.api.nvim_create_user_command("WorkspaceInfo", function()
 		vim.notify(table.concat(M.report(), "\n"), vim.log.levels.INFO, { title = "Workspace" })

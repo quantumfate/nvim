@@ -82,7 +82,10 @@ t.describe("go", function()
 			-- Reorder with no neighbour: the op gets as far as reading the list and stops.
 			signature.reorder_param({ direction = "next", preview = false })
 		end)
-		t.ok(seen[1] and seen[1]:find("neighbouring"), "cursor on `factor` was not seen as a parameter: " .. vim.inspect(seen))
+		t.ok(
+			seen[1] and seen[1]:find("neighbouring"),
+			"cursor on `factor` was not seen as a parameter: " .. vim.inspect(seen)
+		)
 	end)
 end)
 
@@ -93,7 +96,7 @@ t.describe("python", function()
 			"",
 			"  4           LOAD_NAME                1 (print)",
 			"              PUSH_NULL",
-			"Disassembly of <code object add at 0x7f, file \"p.py\", line 1>:",
+			'Disassembly of <code object add at 0x7f, file "p.py", line 1>:',
 			"  2           LOAD_FAST                0 (a)",
 		})
 		t.eq(nil, map[1], "line 0 is the module prologue, not a source line")

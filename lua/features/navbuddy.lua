@@ -6,7 +6,6 @@ local M = {
 	--- Action that comments the focused node's line range using Neovim's built-in engine.
 	---@return table action_config { callback, description }
 	override_comment = function()
-
 		return {
 			-- Replicates the original action's window handling, swapping in native commenting.
 			callback = function(display)

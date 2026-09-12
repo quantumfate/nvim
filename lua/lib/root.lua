@@ -67,7 +67,7 @@ function M.detectors.lsp(buf)
 
 	return vim.tbl_filter(function(path)
 		path = M.norm(path)
-		return path and bufpath:find(path, 1, true) == 1
+		return path ~= nil and bufpath:find(path, 1, true) == 1
 	end, roots)
 end
 
@@ -77,11 +77,12 @@ end
 ---@param patterns string|string[]
 ---@return string[] roots
 function M.detectors.pattern(buf, patterns)
-	patterns = type(patterns) == "string" and { patterns } or patterns
+	local list = type(patterns) == "string" and { patterns } or patterns
+	---@cast list string[]
 	local path = M.bufpath(buf) or vim.uv.cwd()
 
 	local pattern = vim.fs.find(function(name)
-		for _, p in ipairs(patterns) do
+		for _, p in ipairs(list) do
 			if name == p then
 				return true
 			end
@@ -174,9 +175,9 @@ function M.detect(opts)
 	local ret = {} ---@type lib.Root[]
 
 	for _, spec in ipairs(opts.spec) do
-		local paths = M.resolve(spec)(opts.buf)
-		paths = paths or {}
-		paths = type(paths) == "table" and paths or { paths }
+		local resolved = M.resolve(spec)(opts.buf) or {}
+		---@type string[]
+		local paths = type(resolved) == "table" and resolved or { resolved }
 
 		local roots = {} ---@type string[]
 		for _, p in ipairs(paths) do
@@ -254,7 +255,7 @@ function M.info()
 			lines[#lines + 1] = ("- [%s] `%s` **(%s)**"):format(
 				first and "x" or " ",
 				path,
-				type(root.spec) == "table" and table.concat(root.spec, ", ") or root.spec
+				type(root.spec) == "table" and table.concat(root.spec --[[@as string[] ]], ", ") or root.spec
 			)
 			first = false
 		end

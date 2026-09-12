@@ -15,6 +15,7 @@ local syntax = require("features.refactor.syntax")
 ---@field range lsp.Range
 ---@field kind "code"|"comment"|"string"
 ---@field opened? boolean True when finding this usage is what loaded the buffer
+---@field encoding? string Offset encoding of the client that found this usage
 
 --- Asks the language server for references. Async: `on_done` receives the list, or
 --- nil when no server can answer.
@@ -33,6 +34,7 @@ function M.lsp(bufnr, opts, on_done)
 		return
 	end
 
+	---@type lsp.ReferenceParams
 	local params
 	if opts.position then
 		local row, col = opts.position[1], opts.position[2]
@@ -41,11 +43,16 @@ function M.lsp(bufnr, opts, on_done)
 		params = {
 			textDocument = { uri = vim.uri_from_bufnr(bufnr) },
 			position = { line = row, character = ok and character or col },
+			context = { includeDeclaration = opts.include_declaration ~= false },
 		}
 	else
-		params = vim.lsp.util.make_position_params(0, client.offset_encoding)
+		local base = vim.lsp.util.make_position_params(0, client.offset_encoding)
+		params = {
+			textDocument = base.textDocument,
+			position = base.position,
+			context = { includeDeclaration = opts.include_declaration ~= false },
+		}
 	end
-	params.context = { includeDeclaration = opts.include_declaration ~= false }
 
 	-- A cold server can take many seconds to answer, during which the editor looks
 	-- like it ignored the keypress. Only says anything if the wait is actually long.
@@ -153,7 +160,7 @@ function M.prose(bufnr, name, opts)
 			local index = 1
 			while true do
 				local from, to = text:find(word, index)
-				if not from then
+				if not from or not to then
 					break
 				end
 				if opts.loose or is_reference(text, from, to) then

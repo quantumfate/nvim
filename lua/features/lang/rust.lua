@@ -119,17 +119,17 @@ function M.assembly(buf)
 	local asm = output.tempfile(".s")
 	local cmd = vim.list_extend({ "cargo", "rustc" }, M.target_args(buf))
 	vim.list_extend(cmd, {
-			"--release",
-			"-q",
-			"--",
-			"--emit",
-			"asm=" .. asm,
-			"-C",
-			"llvm-args=-x86-asm-syntax=intel",
-			-- `.loc` markers for the cursor link; the profile already sets debug = true
-			-- in the playground, but a crate that does not still gets them here.
-			"-C",
-			"debuginfo=1",
+		"--release",
+		"-q",
+		"--",
+		"--emit",
+		"asm=" .. asm,
+		"-C",
+		"llvm-args=-x86-asm-syntax=intel",
+		-- `.loc` markers for the cursor link; the profile already sets debug = true
+		-- in the playground, but a crate that does not still gets them here.
+		"-C",
+		"debuginfo=1",
 	})
 	output.run({
 		cmd = cmd,

@@ -152,11 +152,30 @@ with winbar tabs: scopes, breakpoints, watches and threads are sections inside i
 ## Project diagnostics
 
 `<leader>iq` is this file; `<leader>iQ` is every file. Servers that can report on files
-you never opened are asked to. lua_ls and clangd cannot, so `iQ` also runs
-`lua-language-server --check` and `run-clang-tidy` (over `compile_commands.json`) in the
-background — spinner in the statusline — and their findings join the list as ordinary
-diagnostics. Saving a file clears its batch findings; the live server takes over. See
-[`project_check.lua`](./project_check.lua).
+you never opened are asked to. Most cannot, so `iQ` also runs the project's batch
+checker in the background — spinner in the statusline — and its findings join the list
+as ordinary diagnostics:
+
+| marker                  | checker                                         |
+| ----------------------- | ----------------------------------------------- |
+| `*.lua` / `.luarc.json` | `lua-language-server --check`                   |
+| `compile_commands.json` | `run-clang-tidy`                                |
+| `Cargo.toml`            | `cargo clippy --workspace --all-targets`        |
+| `go.mod`                | `golangci-lint run` if installed, else `go vet` |
+| `tsconfig.json`         | `tsc --noEmit` (`node_modules/.bin` first)      |
+
+Headless, for CI and for anything that wants the findings as data:
+
+```sh
+just check-project [DIR]   # one JSON object per line; exit 1 if any finding is an error
+```
+
+`{file, lnum, col, severity, source, message, code?}`; also `:ProjectCheckJson [dir]`. See
+[`headless.lua`](./headless.lua).
+
+A checker that did not get to check — missing toolchain, failing build script — reports
+an error instead of zero findings. Saving a file clears its batch findings; the live
+server takes over. See [`project_check.lua`](./project_check.lua).
 
 ## Keys
 

@@ -97,7 +97,7 @@ map({ "n", "x", "o" }, "g[", "g_", { remap = true, desc = "Goto start of" })
 -- Drag under the right hand's home row: d h t n sit where QWERTY puts h j k l,
 -- so the four directions stay in one place instead of scattering across rows.
 --   <A-d> left   <A-h> down   <A-t> up   <A-n> right
----@type table<string, string[]> lhs -> { rhs, desc }, per mode
+---@type table<string, table<string, [string, string]>> mode -> lhs -> { rhs, desc }
 local drags = {
 	n = {
 		["<A-h>"] = { "<cmd>m .+1<cr>==", "Move line down" },

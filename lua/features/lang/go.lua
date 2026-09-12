@@ -85,7 +85,8 @@ function M.run_other(buf)
 	local res = vim.system(
 		{ "go", "list", "-f", '{{if eq .Name "main"}}{{.Dir}}{{end}}', "./..." },
 		{ cwd = dir, text = true }
-	):wait()
+	)
+		:wait()
 	local mains = vim.tbl_filter(function(line)
 		return line ~= ""
 	end, vim.split(res.stdout or "", "\n", { plain = true }))

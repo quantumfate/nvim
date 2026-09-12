@@ -11,7 +11,7 @@ local store = require("toolchain.store")
 ---@return string
 local function expand(cmd)
 	-- stdpath("data") already ends in /nvim; the registry's paths add it themselves.
-	local home = vim.uv.os_homedir()
+	local home = vim.uv.os_homedir() or ""
 	local data_home = vim.env.XDG_DATA_HOME or (home .. "/.local/share")
 	return (cmd:gsub("%$XDG_DATA_HOME", data_home):gsub("%$HOME", home))
 end
@@ -20,7 +20,7 @@ end
 ---@param on_done fun(ok: boolean, detail: string)
 local function run_step(entry, on_done)
 	local started = vim.uv.now()
-	vim.system({ "sh", "-c", expand(entry.step.cmd) }, { text = true, stdin = false }, function(res)
+	vim.system({ "sh", "-c", expand(entry.step.cmd) }, { text = true }, function(res)
 		local ok = res.code == 0
 		local output = vim.trim((res.stderr or "") ~= "" and res.stderr or (res.stdout or ""))
 		local detail = vim.split(output, "\n", { plain = true })

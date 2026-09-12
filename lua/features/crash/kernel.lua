@@ -132,7 +132,13 @@ end
 ---@param text string
 ---@param group string
 local function annotate(buf, ns, row, text, group)
-	vim.api.nvim_buf_set_extmark(buf, ns, row - 1, 0, { virt_text = { { "  " .. text, group } }, virt_text_pos = "eol" })
+	vim.api.nvim_buf_set_extmark(
+		buf,
+		ns,
+		row - 1,
+		0,
+		{ virt_text = { { "  " .. text, group } }, virt_text_pos = "eol" }
+	)
 end
 
 --- Annotates the kernel trace in the current buffer with source locations.
@@ -158,7 +164,8 @@ function M.decode(opts)
 	end
 	if not has_debug_info(vmlinux) then
 		Snacks.notify.warn(
-			vmlinux .. " has no debug info, so no line can be resolved.\nBuild with CONFIG_DEBUG_INFO, or pass that vmlinux.",
+			vmlinux
+				.. " has no debug info, so no line can be resolved.\nBuild with CONFIG_DEBUG_INFO, or pass that vmlinux.",
 			{ title = "Kernel" }
 		)
 		return

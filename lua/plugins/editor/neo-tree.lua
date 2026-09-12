@@ -53,7 +53,7 @@ return {
 					if package.loaded["neo-tree"] then
 						return
 					end
-					local stats = vim.uv.fs_stat(vim.fn.argv(0))
+					local stats = vim.uv.fs_stat(vim.fn.argv(0) --[[@as string]])
 					if stats and stats.type == "directory" then
 						require("neo-tree")
 					end

@@ -382,17 +382,17 @@ function M.gitignore(detection)
 	return table.concat(parts, "\n")
 end
 
---- The justfile: wiring hub. Aggregates each ecosystem's fmt/lint/test/build commands
---- into recipes, chains them in `check`, and exposes setup/provision/dev as the one
---- interface to every provisioning path.
----@param detection scaffold.Detection
----@return string
 --- What the generated extra recipes are for, so the justfile explains itself.
 ---@type table<string, string>
 local EXTRA_COMMENTS = {
 	["compile-db"] = "Generate compile_commands.json (clangd, clang-tidy, and the editor's C actions read it)",
 }
 
+--- The justfile: wiring hub. Aggregates each ecosystem's fmt/lint/test/build commands
+--- into recipes, chains them in `check`, and exposes setup/provision/dev as the one
+--- interface to every provisioning path.
+---@param detection scaffold.Detection
+---@return string
 function M.justfile(detection)
 	local lines = {
 		"# Task runner. Run `just` to list recipes.",

@@ -124,7 +124,8 @@ local function source_window(report_win)
 			return win
 		end
 	end
-	local win = vim.api.nvim_open_win(vim.api.nvim_win_get_buf(report_win), false, { split = "above", win = report_win })
+	local win =
+		vim.api.nvim_open_win(vim.api.nvim_win_get_buf(report_win), false, { split = "above", win = report_win })
 	vim.wo[win].winfixbuf = false
 	return win
 end
@@ -295,7 +296,8 @@ function M.open(entry)
 		vim.schedule(function()
 			local out = M.clean(vim.split(res.stdout or "", "\n", { plain = true }))
 			local err = M.clean(vim.split(res.stderr or "", "\n", { plain = true }))
-			local lines = vim.list_extend(vim.deepcopy(header), mismatch_banner(vim.list_extend(vim.deepcopy(out), err)))
+			local lines =
+				vim.list_extend(vim.deepcopy(header), mismatch_banner(vim.list_extend(vim.deepcopy(out), err)))
 			vim.list_extend(lines, out)
 			if #vim.tbl_filter(function(l)
 				return vim.trim(l) ~= ""
@@ -362,7 +364,11 @@ function M.open_file(core, exe)
 		vim.schedule(function()
 			local lines = M.clean(vim.split((res.stdout or "") .. "\n" .. (res.stderr or ""), "\n", { plain = true }))
 			if not exe then
-				table.insert(lines, 1, "No executable found for this core; frames have no symbols. :CrashOpen <core> <exe>")
+				table.insert(
+					lines,
+					1,
+					"No executable found for this core; frames have no symbols. :CrashOpen <core> <exe>"
+				)
 			end
 			show(vim.fn.fnamemodify(core, ":t"), vim.list_extend(mismatch_banner(lines), lines), exe_dir)
 		end)

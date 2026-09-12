@@ -75,7 +75,9 @@ t.describe("findings", function()
 			require("features.refactor.ops.safe_delete").run({ preview = false })
 		end)
 		t.ok(plan, "no plan was produced")
+		assert(plan and plan.edits)
 		local _, edits = next(plan.edits)
+		assert(edits and edits[1])
 		t.eq(2, edits[1].range.start.line, "the decorator line was left behind")
 	end)
 
@@ -117,6 +119,7 @@ t.describe("findings", function()
 			require("features.refactor.ops.signature").add_param({ spec = "gamma", preview = false })
 		end)
 		t.ok(plan, "no plan was produced")
+		assert(plan and plan.conflicts)
 		local texts = vim.tbl_map(function(c)
 			return c.text
 		end, plan.conflicts)
@@ -137,6 +140,7 @@ t.describe("findings", function()
 			require("features.refactor.ops.move").run({ path = dir .. "/b.go", preview = false })
 		end)
 		t.ok(plan, "no plan was produced")
+		assert(plan and plan.edits)
 		local found = false
 		for buf, edits in pairs(plan.edits) do
 			if vim.api.nvim_buf_get_name(buf):match("b%.go$") then

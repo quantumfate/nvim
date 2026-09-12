@@ -51,6 +51,7 @@ local engine_opened = {}
 
 --- Set while a refactoring is mid-flight, so a second one cannot interleave its
 --- async callbacks into the first one's plan.
+---@type string|false The title of the refactoring in flight
 local running = false
 
 --- Claims the engine for one refactoring. Returns false when one is already running.
@@ -221,7 +222,7 @@ function Plan:apply(opts)
 	end
 
 	--- Puts every touched buffer back the way it was.
-	---@param written integer[] Buffers already written to disk, which must be rewritten
+	---@param written? integer[] Buffers already written to disk, which must be rewritten
 	local function rollback(written)
 		for bufnr, lines in pairs(before) do
 			if vim.api.nvim_buf_is_valid(bufnr) then
@@ -231,7 +232,7 @@ function Plan:apply(opts)
 		for _, bufnr in ipairs(written or {}) do
 			if vim.api.nvim_buf_is_valid(bufnr) then
 				vim.api.nvim_buf_call(bufnr, function()
-					pcall(vim.cmd, "silent noautocmd write")
+					pcall(vim.cmd --[[@as function]], "silent noautocmd write")
 				end)
 			end
 		end
@@ -277,7 +278,7 @@ function Plan:apply(opts)
 	for _, bufnr in ipairs(self.opened) do
 		if self.edits[bufnr] and vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].modified then
 			local ok, err = vim.api.nvim_buf_call(bufnr, function()
-				return pcall(vim.cmd, "silent noautocmd write")
+				return pcall(vim.cmd --[[@as function]], "silent noautocmd write")
 			end)
 			if not (ok and err ~= false) then
 				-- A failed write is still a transaction failure: undo the buffers and

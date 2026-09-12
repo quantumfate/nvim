@@ -15,7 +15,7 @@ local M = {}
 ---@field name string Name this config refers to the tool by (lspconfig server, conform/nvim-lint name)
 ---@field bin string Executable to look for on PATH
 ---@field path? string Absolute path to check instead of PATH, for tools that are not
----@field pkg? string Arch/AUR package providing it; defaults to `bin`. false when unpackaged
+---@field pkg? string|false Arch/AUR package providing it; defaults to `bin`. false when unpackaged
 ---@field version_args? string[]|false Argv that prints a version; defaults to
 ---@field optional? boolean Absence is not reported as missing
 ---@field alt? boolean This tool is an alternative to the others sharing its filetype,

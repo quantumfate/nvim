@@ -86,8 +86,13 @@ function M.run(opts)
 			return
 		end
 
-		local params = vim.lsp.util.make_position_params(0, client.offset_encoding)
-		params.newName = new
+		local base = vim.lsp.util.make_position_params(0, client.offset_encoding)
+		---@type lsp.RenameParams
+		local params = {
+			textDocument = base.textDocument,
+			position = base.position,
+			newName = new,
+		}
 		client:request("textDocument/rename", params, function(err, result)
 			if err or not result then
 				plan:note("conflict", bufnr, 0, 0, "rename failed: " .. (err and err.message or "no result"))

@@ -18,7 +18,10 @@ t.describe("sys stack", function()
 			"    #1 0x561ddf683de4 in main /src/s.c:13:12",
 		}, { root = "/src" })
 		t.eq("ERROR: AddressSanitizer", items[1].text:match("ERROR: AddressSanitizer"))
-		t.eq({ "/src/s.c", 10, 79, "sum", true }, { items[2].filename, items[2].lnum, items[2].col, items[2].text, items[2].own })
+		t.eq(
+			{ "/src/s.c", 10, 79, "sum", true },
+			{ items[2].filename, items[2].lnum, items[2].col, items[2].text, items[2].own }
+		)
 		t.eq(false, items[4].own, "libc is not the project")
 		t.eq(0, items[5].valid, "`allocated by` should be a section header")
 		t.eq(13, items[6].lnum)
@@ -66,7 +69,10 @@ end)
 
 t.describe("sys elf", function()
 	t.it("parses nm and matches names across languages", function()
-		local syms = elf.parse_nm({ "00000000001caef8 0000000000000063 t sum", "0000000000001000 0000000000000010 T main.(*Box).Scale" })
+		local syms = elf.parse_nm({
+			"00000000001caef8 0000000000000063 t sum",
+			"0000000000001000 0000000000000010 T main.(*Box).Scale",
+		})
 		t.eq({ addr = 0x1caef8, size = 0x63, kind = "t", name = "sum" }, syms[1])
 		t.ok(elf.names("main.(*Box).Scale", "Scale"))
 		t.ok(elf.names("playground::compute::h0123456789abcdef", "compute"))
@@ -85,9 +91,12 @@ t.describe("sys elf", function()
 			{ addr = 0x20, size = 9, kind = "t", name = "playground::report" },
 			{ addr = 0x30, size = 3, kind = "t", name = "<() as std::process::Termination>::report" },
 		}, "report")
-		t.eq({ "playground::report" }, vim.tbl_map(function(s)
-			return s.name
-		end, rust))
+		t.eq(
+			{ "playground::report" },
+			vim.tbl_map(function(s)
+				return s.name
+			end, rust)
+		)
 	end)
 
 	t.it("maps objdump -l instructions to source lines", function()

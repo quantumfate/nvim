@@ -168,9 +168,12 @@ function M.wait_and_report(plan, baseline, bufnrs, opts)
 		end
 		M.report(plan, baseline, checked)
 		if unchecked > 0 then
-			Snacks.notify.warn(("%d file(s) were not verified: their server did not answer in time"):format(unchecked), {
-				title = "Refactor",
-			})
+			Snacks.notify.warn(
+				("%d file(s) were not verified: their server did not answer in time"):format(unchecked),
+				{
+					title = "Refactor",
+				}
+			)
 		end
 	end
 

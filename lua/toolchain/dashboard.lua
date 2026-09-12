@@ -53,7 +53,8 @@ local function short_path(path)
 	if path:find("/usr/bin/", 1, true) == 1 then
 		return ""
 	end
-	return (path:gsub("^" .. vim.pesc(vim.uv.os_homedir()), "~"))
+	local home = vim.uv.os_homedir()
+	return home and (path:gsub("^" .. vim.pesc(home), "~")) or path
 end
 
 ---@param limit integer

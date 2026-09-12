@@ -582,6 +582,61 @@ local KEEP = {
 	[".intel_syntax"] = true,
 }
 
+--- Keeps only the symbols with an instruction from this file, symbol to symbol.
+---
+--- `cargo rustc --emit asm` covers the whole crate plus monomorphised std, and between
+--- the functions sit data symbols (`GCC_except_table4:`, `DW.ref.rust_eh_personality:`)
+--- whose directives were already stripped. Counting only instructions is what drops
+--- those: a label or a `.size` can inherit a line mapping, but it produced no code.
+--- A symbol's `.section`/`.type` header comes before its label, so the directives after
+--- a block's last instruction belong to the next block and move with it.
+---@param out string[]
+---@param map table<integer, integer>
+---@return string[] kept, table<integer, integer> map
+local function source_functions(out, map)
+	local kept, kept_map = {}, {}
+	local block, block_map, has = {}, {}, false
+
+	local function flush(carry_header)
+		local last = #block
+		if carry_header then
+			local function is_header(l)
+				return l:match("^%s*$") or (l:match("^%s+%.") and not l:match("^%s*%.size"))
+			end
+			while last > 0 and is_header(block[last]) do
+				last = last - 1
+			end
+		end
+		if has then
+			for i = 1, last do
+				table.insert(kept, block[i])
+				kept_map[#kept] = block_map[i]
+			end
+		end
+		local header, header_map = {}, {}
+		for i = last + 1, #block do
+			table.insert(header, block[i])
+			header_map[#header] = block_map[i]
+		end
+		block, block_map, has = header, header_map, false
+	end
+
+	for row, l in ipairs(out) do
+		-- A symbol starts a block; a local branch label (`.LBB0_1:`) is inside one.
+		if l:match("^[%w_%.%$]+:%s*$") and not l:match("^%.L") then
+			flush(true)
+		end
+		table.insert(block, l)
+		block_map[#block] = map[row]
+		-- Indented and not a directive: an instruction.
+		if map[row] and l:match("^%s+[^%.%s]") then
+			has = true
+		end
+	end
+	flush(false)
+	return kept, kept_map
+end
+
 --- Drops directive noise from assembly output, keeping instructions and symbols.
 ---
 --- `.loc` is consumed rather than kept: it is the line mapping the cursor link needs,
@@ -620,7 +675,16 @@ function M.strip_asm(lines, source, opts)
 				in_debug = rest:match("^%s*%.debug") ~= nil
 			end
 
-			if not in_debug and (not directive or KEEP[directive]) then
+			-- A new symbol has no line until its first `.loc`; the previous function's
+			-- last one would otherwise map the data symbols that follow it.
+			if not directive and line:match("^[%w_%$][%w_%.%$]*:%s*$") then
+				current = nil
+			end
+
+			-- `.LBB0_1:` reads as a directive but is a jump target: dropping it while
+			-- keeping the `je .LBB0_1` that needs it leaves the jump pointing nowhere.
+			local label = line:match("^%s*%.L[%w_%.%$]+:")
+			if not in_debug and (not directive or KEEP[directive] or label) then
 				table.insert(out, line)
 				if current and line:match("%S") then
 					map[#out] = current
@@ -629,33 +693,8 @@ function M.strip_asm(lines, source, opts)
 		end
 	end
 
-	-- `cargo rustc --emit asm` covers the whole crate plus monomorphised std. Only the
-	-- functions with at least one line from this file are kept, label to label.
 	if opts and opts.only_source_functions and want then
-		local kept, kept_map = {}, {}
-		local block, block_map, has = {}, {}, false
-		local function flush()
-			if has then
-				for i, l in ipairs(block) do
-					table.insert(kept, l)
-					if block_map[i] then
-						kept_map[#kept] = block_map[i]
-					end
-				end
-			end
-			block, block_map, has = {}, {}, false
-		end
-		for row, l in ipairs(out) do
-			if l:match("^[%w_%.%$]+:%s*$") then
-				flush()
-			end
-			table.insert(block, l)
-			if map[row] then
-				block_map[#block] = map[row]
-				has = true
-			end
-		end
-		flush()
+		local kept, kept_map = source_functions(out, map)
 		if #kept > 0 then
 			return kept, kept_map
 		end

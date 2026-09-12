@@ -4,13 +4,14 @@
 
 --- 1 when the first parameter is a receiver the call site does not write.
 ---@param names string[]
----@return fun(node: TSNode): integer
+---@return fun(node: TSNode, ctx?: table, bufnr?: integer): integer
 local function receiver(names)
-	return function(node)
+	return function(node, _, bufnr)
 		for child in node:iter_children() do
 			if child:type() == "parameters" or child:type() == "formal_parameters" then
 				local first = child:named_child(0)
-				local text = first and vim.treesitter.get_node_text(first, 0) or ""
+				-- An override may live in a buffer other than the current one.
+				local text = first and vim.treesitter.get_node_text(first, bufnr or 0) or ""
 				return vim.tbl_contains(names, vim.split(text, "[,:]")[1]) and 1 or 0
 			end
 		end
@@ -226,14 +227,19 @@ local M = {
 			{
 				node = "call",
 				list = "arguments",
-				-- `Shape.scale(s, 7)` passes `self` explicitly; `s.scale(7)` does not.
+				-- `Shape.scale(s, 7)` passes `self` explicitly; `s.scale(7)` does not. With
+				-- overrides in play `Base.scale(self, 7)` inside a subclass counts too.
 				implicit = function(call, ctx, bufnr)
 					if not (ctx and ctx.self_receiver and ctx.owner) then
 						return 0
 					end
 					local fn = call:field("function")[1]
 					local object = fn and fn:type() == "attribute" and fn:field("object")[1]
-					return object and vim.treesitter.get_node_text(object, bufnr or 0) == ctx.owner and 1 or 0
+					if not object then
+						return 0
+					end
+					local text = vim.treesitter.get_node_text(object, bufnr or 0)
+					return (text == ctx.owner or (ctx.owners and ctx.owners[text])) and 1 or 0
 				end,
 			},
 		},

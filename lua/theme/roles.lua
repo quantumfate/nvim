@@ -127,6 +127,7 @@ end
 ---@param roles theme.Roles
 ---@return table
 function M.to_hex(roles)
+	---@type table<string, any>
 	local out = { dark = roles.dark, ramp = {} }
 	for i, step in ipairs(roles.ramp) do
 		out.ramp[i] = color.hex(step)

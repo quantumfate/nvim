@@ -1,65 +1,69 @@
 # Tests
 
 ```sh
-just test          # or: nvim --headless -c 'luafile tests/run.lua'
+just test                 # every tests/*_spec.lua
+just test-one workspace   # one spec: name, name_spec, or path
+just check-project        # the project's own checkers, headless, as JSON lines
 ```
 
-Exits non-zero on failure, so `just check` and pre-commit can gate on it.
+Exits non-zero on any failure, so `just check` and CI can gate on it.
+
+## Isolation
+
+`run.lua` starts one `nvim --headless -n -i NONE` per spec, up to four at a time (half
+the cores, fewer if there are fewer). Each child loads the full config, runs its spec and
+streams one JSON line per test to a temp file. The parent merges the results and prints
+the report.
+
+Separate processes mean one spec's windows, loans or autocmds cannot fail another, and a
+crash takes out only its own spec. A child that segfaults or runs past 300s
+(`TEST_TIMEOUT=secs` to change) is reported as a failure naming the spec and the test
+it was in, followed by the tail of its output.
+
+Autoformat is off (`vim.g.disable_autoformat`): tests write files, and conform
+formatting in `BufWritePre` has segfaulted nvim in `buf_write` during test runs.
+
+Tests within one spec still share an editor, so call `t.reset()` in them.
 
 ## Why not busted
 
-These drive a real editor — windows, buffers, autocmds, `winfixbuf` — so they have to
+These drive a real editor (windows, buffers, autocmds, `winfixbuf`), so they have to
 run inside `nvim --headless` with this config loaded. A runner that wants to own the
 process is more trouble than the twenty lines in `harness.lua`.
 
-## What is covered
+## Writing a spec
 
-Every test is a bug that actually shipped. That is the entry criterion: a case earns a
-test by having been wrong once.
-
-| Spec             | Regression                                                                                                                                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workspace_spec` | panes multiplying; a rendering not counted against the two-pane limit; output landing left of the source; a borrow losing a file; `winfixbuf` blocking its own restore; a layout key that only went one way |
-| `refactor_spec`  | half-applied refactorings; undo discarding later edits; `mut x: i32` read as a parameter named `mut`; prose rename rewriting English                                                                        |
-| `lang_spec`      | `.loc` markers dropped before the cursor map was built; DWARF sections in the assembly; a capability with no title silently not toggling; import paths                                                      |
-
-## The keymap guards
-
-Three collisions shipped before these existed. `<leader>rn` hid the prose-aware rename
-behind inc-rename, `<leader>id` hid the database picker, `<leader>ie` hid "equalize
-windows". None of them error — the key simply does something else, and you find out
-weeks later.
-
-Runtime cannot see the second kind: two `vim.keymap.set` calls on one key leave one
-mapping, and the loser is invisible. So that check reads the source instead, skipping
-which-key `group =` labels — `<leader>w` is a group _and_ the prefix of a dozen real
-bindings.
-
-## Adding one
+Add `tests/<name>_spec.lua`; it is picked up automatically.
 
 ```lua
+local t = require("tests.harness")
+
 t.describe("group", function()
   t.it("says what should be true", function()
-    t.reset()                       -- one window, no scratch buffers
+    t.reset()                       -- one window, no scratch buffers, no engine state
     local buf = t.buffer({ "..." }) -- or t.file() when a path is needed
     t.eq(expected, actual, "what went wrong if this fails")
   end)
 end)
 ```
 
-`t.reset()` clears engine state — outstanding loans, remembered views — before it
-touches windows. A loan left behind by one spec made the _next_ one fail, in a file that
-had nothing to do with it.
+Every test is a bug that actually shipped: a case earns a test by having been wrong
+once. Before trusting a new test, reintroduce the bug and watch it go red.
 
-`t.reset()` at the top of anything that touches windows — otherwise one test's layout
-becomes the next one's starting state, and the failure appears in the wrong place.
+Return early when an external tool or parser is missing, so a clean machine skips
+instead of failing:
 
-## Checking a test can fail
-
-A green suite proves nothing until a test has been seen to go red. Reintroduce the bug,
-run, and confirm the count:
-
-```text
-21 passed, 1 failed, 22 total
-FAIL workspace › counts a rendering as a content pane
+```lua
+if vim.fn.executable("xxd") == 0 then return end
+if not pcall(vim.treesitter.language.inspect, "rust") then return end
 ```
+
+## The keymap guards
+
+Three collisions shipped before these existed: `<leader>rn` hid the prose-aware rename
+behind inc-rename, `<leader>id` hid the database picker, `<leader>ie` hid "equalize
+windows". None of them error; the key simply does something else.
+
+Runtime cannot see the second kind (two `vim.keymap.set` calls on one key leave one
+mapping, and the loser is invisible), so that check reads the source instead, skipping
+which-key `group =` labels.

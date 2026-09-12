@@ -124,6 +124,7 @@ t.describe("keymaps", function()
 		local lang = require("features.lang")
 		for _, ft in ipairs({ "c", "zig", "rust", "lua" }) do
 			local adapter = lang.adapter(ft)
+			assert(adapter)
 			for capability in pairs(adapter.titles or {}) do
 				t.ok(
 					adapter[capability],

@@ -63,6 +63,7 @@ return {
 	--- from the machine's package list.
 	opts = function()
 		local registry = require("toolchain.registry")
+		---@type table<string, any> conform's per-filetype formatter, which is a list, a function or a table
 		local by_ft = registry.by_ft("fmt")
 
 		-- conform runs every formatter in a list. Where the list is alternatives rather

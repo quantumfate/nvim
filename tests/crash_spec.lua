@@ -29,7 +29,10 @@ t.describe("crash kernel", function()
 	t.it("does not count ??:? as resolved", function()
 		t.eq(nil, kernel.parse_location("handle_stack_overflow at ??:?"))
 		t.eq(nil, kernel.parse_location("?? ??:0"))
-		t.eq("show_regs at arch/x86/kernel/dumpstack.c:489", kernel.parse_location("show_regs at arch/x86/kernel/dumpstack.c:489"))
+		t.eq(
+			"show_regs at arch/x86/kernel/dumpstack.c:489",
+			kernel.parse_location("show_regs at arch/x86/kernel/dumpstack.c:489")
+		)
 	end)
 end)
 
@@ -92,7 +95,10 @@ t.describe("crash stack parser", function()
 	end)
 
 	t.it("labels gdb frames #10 and up with the function, not its arguments", function()
-		local items = stack.parse({ "#10 0x0000000000475e79 in runtime.gopanic (e=...) at /usr/lib/go/src/runtime/panic.go:878" }, {})
+		local items = stack.parse(
+			{ "#10 0x0000000000475e79 in runtime.gopanic (e=...) at /usr/lib/go/src/runtime/panic.go:878" },
+			{}
+		)
 		t.eq("runtime.gopanic", items[1].text)
 		t.eq(878, items[1].lnum)
 	end)

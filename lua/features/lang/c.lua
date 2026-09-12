@@ -368,6 +368,8 @@ function M.related(buf)
 		Snacks.notify.warn("clangd is not attached", { title = "C" })
 		return
 	end
+	-- A clangd extension, so not one of the LSP methods the annotation enumerates.
+	---@diagnostic disable-next-line: param-type-mismatch
 	client:request("textDocument/switchSourceHeader", vim.lsp.util.make_text_document_params(buf), function(err, uri)
 		if err or not uri then
 			Snacks.notify.warn("No matching header or source", { title = "C" })

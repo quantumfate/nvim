@@ -3,9 +3,17 @@
     "version": "LuaJIT"
   },
   "diagnostics": {
-    "globals": ["vim", "Snacks", "icons", "LazyVim"]
+    "globals": ["vim", "Snacks", "icons", "LazyVim"],
+    "disable": ["duplicate-set-field"]
   },
   "workspace": {
-    "checkThirdParty": false
+    "checkThirdParty": false,
+    "library": [
+      "~/.local/share/nvim/lazy/snacks.nvim/lua",
+      "~/.local/share/nvim/lazy/noice.nvim/lua",
+      "~/.local/share/nvim/lazy/nvim-ufo/lua",
+      "~/.local/share/nvim/lazy/inc-rename.nvim/lua",
+      "~/.local/share/nvim/lazy/refactoring.nvim/lua"
+    ]
   }
 }

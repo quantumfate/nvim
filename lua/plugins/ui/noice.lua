@@ -4,8 +4,8 @@
 ---@class NoiceConfig
 ---@field views table<string, NoiceView> View configurations for different UI elements
 ---@field cmdline NoiceCmdlineConfig Command-line interface configuration
----@field notify NoiceNotifyConfig Notification system configuration
----@field lsp NoiceLspConfig LSP integration settings
+---@field notify table Notification system configuration
+---@field lsp table LSP integration settings
 ---@field routes NoiceRoute[] Message routing rules
 ---@field presets NoicePresets Pre-configured UI presets
 

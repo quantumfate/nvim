@@ -46,9 +46,6 @@ local function seed_cache()
 	end
 end
 
----@param path string
----@param args string[]
----@param on_done fun(version: string?)
 ---@param out string
 ---@return string?
 local function sanitize(out)
@@ -61,18 +58,19 @@ local function sanitize(out)
 	return #first > 72 and (first:sub(1, 69) .. "...") or first
 end
 
+---@param path string
+---@param args string[]
+---@param on_done fun(version: string?)
 local function probe_version(path, args, on_done)
 	vim.system({ path, unpack(args) }, { text = true, timeout = 5000 }, function(res)
 		on_done(sanitize((res.stdout or "") .. (res.stderr or "")))
 	end)
 end
 
----@param entry { eco: string, kind: toolchain.Kind, tool: toolchain.Tool }
----@return table state Serialisable tool state, version still unfilled
--- Installed package versions, for tools that cannot report their own.
+--- Installed package versions, for tools that cannot report their own.
 ---@param on_done fun(versions: table<string, string>)
 local function package_versions(on_done)
-	vim.system({ "pacman", "-Q" }, { text = true, stdin = false }, function(res)
+	vim.system({ "pacman", "-Q" }, { text = true }, function(res)
 		local out = {}
 		for _, line in ipairs(vim.split(res.stdout or "", "\n", { plain = true })) do
 			local name, version = line:match("^(%S+)%s+(%S+)$")
@@ -84,6 +82,8 @@ local function package_versions(on_done)
 	end)
 end
 
+---@param entry { eco: string, kind: toolchain.Kind, tool: toolchain.Tool }
+---@return table state Serialisable tool state, version still unfilled
 local function resolve(entry)
 	local tool = entry.tool
 	-- A pinned path is not on PATH at all — a node entry point, say.
