@@ -150,13 +150,28 @@ end
 --- makes breakpoints land. `-s -S`: gdbstub on :1234, CPU stopped before the first
 --- instruction.
 ---@param dir string
----@param opts? { initrd?: string, arch?: string }
+---@param opts? { initrd?: string, arch?: string, image?: string }
 ---@return string[]? cmd, string? missing
 function M.qemu_cmd(dir, opts)
 	opts = opts or {}
-	local image = vim.fs.joinpath(dir, "arch", "x86", "boot", "bzImage")
-	if not vim.uv.fs_stat(image) then
-		return nil, image
+	local candidates = {}
+	if opts.image then
+		table.insert(candidates, opts.image)
+	end
+	table.insert(candidates, vim.fs.joinpath(dir, "arch", "x86", "boot", "bzImage"))
+	table.insert(candidates, vim.fs.joinpath(dir, "arch", "x86_64", "boot", "bzImage"))
+	table.insert(candidates, vim.fs.joinpath(dir, "vmlinuz"))
+	table.insert(candidates, vim.fs.joinpath(dir, "bzImage"))
+
+	local image = nil
+	for _, c in ipairs(candidates) do
+		if vim.uv.fs_stat(c) then
+			image = c
+			break
+		end
+	end
+	if not image then
+		return nil, vim.fs.joinpath(dir, "arch", "x86", "boot", "bzImage")
 	end
 	local cmd = {
 		"qemu-system-x86_64",
@@ -202,11 +217,14 @@ end
 --- Attaches gdb (DAP) to QEMU's gdbstub with the tree's vmlinux for symbols.
 ---@param buf integer
 function M.attach(buf)
-	local dir = M.tree(buf) or vim.uv.cwd()
+	local dir = M.tree(buf) or vim.uv.cwd() or "."
 	local vmlinux = vim.fs.joinpath(dir, "vmlinux")
 	if not vim.uv.fs_stat(vmlinux) then
 		vmlinux = vim.fn.input("Symbols (vmlinux): ", dir .. "/", "file")
 	end
+	local has_gdb_script = vim.uv.fs_stat(vim.fs.joinpath(dir, "scripts", "gdb", "vmlinux-gdb.py")) ~= nil
+		or vim.uv.fs_stat(vim.fs.joinpath(dir, "vmlinux-gdb.py")) ~= nil
+
 	require("dap").run({
 		type = "gdb",
 		name = "QEMU gdbstub",
@@ -214,6 +232,7 @@ function M.attach(buf)
 		target = "localhost:1234",
 		program = vmlinux,
 		cwd = dir,
+		autorun = has_gdb_script and { "add-auto-load-safe-path " .. dir } or nil,
 	})
 end
 

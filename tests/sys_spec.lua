@@ -170,6 +170,18 @@ t.describe("sys kernel", function()
 		t.ok(text:find("nokaslr", 1, true), "KASLR left on; breakpoints would miss")
 	end)
 
+	t.it("detects vmlinuz or explicit image for QEMU command", function()
+		local dir = mini_tree()
+		vim.fn.writefile({}, dir .. "/vmlinuz")
+		local cmd = assert(kernel.qemu_cmd(dir))
+		t.ok(cmd[3]:find("vmlinuz"), "failed to find root vmlinuz: " .. vim.inspect(cmd))
+
+		local custom_img = dir .. "/my_kernel.bin"
+		vim.fn.writefile({}, custom_img)
+		local custom_cmd = assert(kernel.qemu_cmd(dir, { image = custom_img }))
+		t.eq(custom_img, custom_cmd[3])
+	end)
+
 	t.it("runs kernel helpers against a real kernel tree when present", function()
 		local real_tree = "/home/quantum/Projects/linux"
 		if not vim.uv.fs_stat(vim.fs.joinpath(real_tree, "MAINTAINERS")) or vim.fn.executable("rg") == 0 then

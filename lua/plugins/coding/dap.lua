@@ -443,6 +443,12 @@ return {
 							or vim.fn.input("Symbols: ", vim.fn.getcwd() .. "/", "file")
 					end,
 					cwd = "${workspaceFolder}",
+					autorun = function()
+						local cwd = vim.fn.getcwd()
+						local has_script = vim.uv.fs_stat(vim.fs.joinpath(cwd, "vmlinux-gdb.py"))
+							or vim.uv.fs_stat(vim.fs.joinpath(cwd, "scripts", "gdb", "vmlinux-gdb.py"))
+						return has_script and { "add-auto-load-safe-path " .. cwd } or nil
+					end,
 				},
 				{
 					name = "Attach to rr replay :1234",
