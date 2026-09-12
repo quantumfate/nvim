@@ -40,6 +40,95 @@ local function toolchain_status()
 	}
 end
 
+--- Reads git status natively without spawning terminal subprocesses that exit with banners.
+---@return snacks.dashboard.Item[]
+local function git_status()
+	local ok, root_dir = pcall(function()
+		return Snacks.git.get_root()
+	end)
+	if not ok or not root_dir then
+		return {}
+	end
+
+	local res = vim.system({ "git", "status", "--porcelain=v2", "--branch" }, { cwd = root_dir, text = true }):wait()
+	if res.code ~= 0 then
+		return {}
+	end
+
+	local branch = "HEAD"
+	local ahead, behind = 0, 0
+	local staged, modified, untracked = 0, 0, 0
+
+	for _, line in ipairs(vim.split(res.stdout or "", "\n", { trimempty = true })) do
+		if line:match("^# branch%.head ") then
+			branch = line:gsub("^# branch%.head ", "")
+		elseif line:match("^# branch%.ab ") then
+			local a, b = line:match("%+(%d+) %-(%d+)")
+			ahead = tonumber(a) or 0
+			behind = tonumber(b) or 0
+		elseif line:match("^%?") then
+			untracked = untracked + 1
+		elseif line:match("^[12] ") then
+			local xy = line:match("^[12]%s+(%S+)")
+			if xy then
+				if xy:sub(1, 1) ~= "." then
+					staged = staged + 1
+				end
+				if xy:sub(2, 2) ~= "." then
+					modified = modified + 1
+				end
+			end
+		end
+	end
+
+	local ab = {}
+	if ahead > 0 then
+		table.insert(ab, "󰶣 " .. ahead)
+	end
+	if behind > 0 then
+		table.insert(ab, "󰶡 " .. behind)
+	end
+	local ab_str = #ab > 0 and (" (" .. table.concat(ab, " ") .. ")") or ""
+
+	local items = {
+		{
+			icon = " ",
+			desc = branch .. ab_str,
+			key = "g",
+			action = ":lua Snacks.picker.git_status()",
+			hl = "Special",
+		},
+	}
+
+	local total = staged + modified + untracked
+	if total == 0 then
+		table.insert(items, {
+			icon = "✔ ",
+			desc = "Working tree clean",
+			hl = "DiagnosticOk",
+		})
+	else
+		local parts = {}
+		if staged > 0 then
+			table.insert(parts, staged .. " staged")
+		end
+		if modified > 0 then
+			table.insert(parts, modified .. " modified")
+		end
+		if untracked > 0 then
+			table.insert(parts, untracked .. " untracked")
+		end
+		table.insert(items, {
+			icon = "● ",
+			desc = table.concat(parts, " · "),
+			hl = modified > 0 and "DiagnosticWarn" or "DiagnosticInfo",
+			action = ":lua Snacks.picker.git_status()",
+		})
+	end
+
+	return items
+end
+
 return {
 	"folke/snacks.nvim",
 	opts = {
@@ -61,86 +150,47 @@ return {
 				end,
 			},
 			preset = {
-				header = [[
-           ( (
-            ) )
-         .-------.
-        |  ~ ☕ ~ |]
-         \_______/
-         /\_/\   /
-        ( ^.^ ) /
-       c(  "  )o
-        (__|__)
-]],
+				header = table.concat({
+					' _._     _,-\'""`-._    ',
+					"(,-.`._,'(       |\\`-/|",
+					"    `-.-' \\ )-`( , o o)",
+					"          `-    \\`_`\"'-",
+				}, "\n"),
 				---@type fun(cmd:string, opts:table)|nil Picker backend; nil auto-detects fzf-lua/telescope/mini.pick.
 				pick = nil,
 				---@type snacks.dashboard.Item[] Quick-action entries shown in the `keys` section.
 				keys = {
-					{ icon = " ", key = "f", desc = "Find File", action = ":lua Snacks.dashboard.pick('files')" },
-					{ icon = " ", key = "g", desc = "Find Text", action = ":lua Snacks.dashboard.pick('live_grep')" },
-					{ icon = " ", key = "r", desc = "Recent Files", action = ":lua Snacks.dashboard.pick('oldfiles')" },
-					{ icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
-					{ icon = " ", key = "s", desc = "Restore Session", section = "session" },
+					{ icon = " ", key = "f", desc = "Find File", action = ":lua Snacks.dashboard.pick('files')" },
 					{
-						icon = " ",
-						key = "c",
-						desc = "Config",
-						action = ":lua Snacks.dashboard.pick('files', {cwd = vim.fn.stdpath('config')})",
+						icon = " ",
+						key = "r",
+						desc = "Recent Files",
+						action = ":lua Snacks.dashboard.pick('oldfiles')",
 					},
-					{
-						icon = " ",
-						key = "C",
-						desc = "Chezmoi",
-						-- A string action, so features.chezmoi is not required at startup.
-						action = ":lua require('features.chezmoi').pick_chezmoi()",
-						-- The picker shells out to chezmoi; without it the entry is dead.
-						enabled = vim.fn.executable("chezmoi") == 1,
-					},
+					{ icon = "󰩺 ", key = "d", desc = "Project Doctor", action = ":ProjectDoctor" },
+					{ icon = "󰏘 ", key = "s", desc = "Project Scaffold", action = ":ProjectScaffold" },
+					{ icon = "🧹", key = "S", desc = "Project Sanitize", action = ":ProjectSanitize" },
 					{
 						icon = "󰸱 ",
 						key = "T",
-						desc = "Theme",
-						-- Leaves the cmdline open on `:Theme ` so <Tab> completes the installed
-						-- schemes, rather than running the bare command and only reporting.
+						desc = "Theme Picker",
 						action = function()
 							vim.api.nvim_feedkeys(":Theme ", "n", false)
 						end,
 					},
-					{ icon = "󰩺 ", key = "d", desc = "Project Doctor", action = ":ProjectDoctor" },
-					{
-						icon = "󰒲 ",
-						key = "L",
-						desc = "Lazy",
-						action = ":Lazy",
-						enabled = package.loaded.lazy ~= nil,
-					},
-					{ icon = " ", key = "q", desc = "Quit", action = ":qa" },
+					{ icon = "󰒲 ", key = "t", desc = "Toolchain Dashboard", action = ":ToolchainDashboard" },
+					{ icon = "💥", key = "c", desc = "Crash Dumps", action = ":Crashes" },
+					{ icon = " ", key = "x", desc = "Systems Tools", action = ":SysInfo" },
+					{ icon = "✉ ", key = "p", desc = "b4 Patch Workflow", action = ":SysPatch" },
 				},
 			},
 			sections = {
 				{ section = "header", padding = 1 },
 				{ section = "keys", gap = 1, padding = 1 },
-				-- Passed as a function, not called: snacks resolves it at render time, so a
-				-- launch that opens a file straight away never reads the store at all. The
-				-- store is written on idle, so this reflects the last refresh, not now.
-				{ icon = " ", title = "Toolchain", indent = 2, padding = 1, toolchain_status },
+				{ pane = 2, icon = " ", title = "Git Status", indent = 2, padding = 1, git_status },
+				{ pane = 2, icon = " ", title = "Toolchain", indent = 2, padding = 1, toolchain_status },
 				{ pane = 2, icon = " ", title = "Recent Files", section = "recent_files", indent = 2, padding = 1 },
 				{ pane = 2, icon = " ", title = "Projects", section = "projects", indent = 2, padding = 1 },
-				{
-					pane = 2,
-					icon = " ",
-					title = "Git Status",
-					section = "terminal",
-					-- External: Snacks global; only show git status inside a repo.
-					enabled = function()
-						return Snacks.git.get_root() ~= nil
-					end,
-					cmd = "git status --short --branch --renames",
-					height = 5,
-					padding = 1,
-					ttl = 5 * 60,
-					indent = 3,
-				},
 				{ section = "startup" },
 			},
 		},
