@@ -94,6 +94,12 @@ t.describe("crash kernel", function()
 		t.ok(text1:find("[mod_test]", 1, true) ~= nil, "module tag missing: " .. text1)
 		t.ok(text2:find("vmlinux_core.c:1", 1, true) ~= nil, "vmlinux frame did not resolve: " .. text2)
 
+		-- Also test via user command :CrashDecode <vmlinux> <modules_dir>
+		vim.api.nvim_buf_clear_namespace(oops_buf, ns, 0, -1)
+		vim.cmd(("CrashDecode %s %s"):format(vmlinux_bin, dir))
+		local marks_cmd = vim.api.nvim_buf_get_extmarks(oops_buf, ns, 0, -1, { details = true })
+		t.eq(2, #marks_cmd, "expected 2 annotated frames via :CrashDecode command")
+
 		pcall(vim.api.nvim_buf_delete, oops_buf, { force = true })
 		pcall(vim.fn.delete, dir, "rf")
 	end)

@@ -416,6 +416,11 @@ t.describe("sys b4 patch workflow", function()
 		t.ok(output.showing(patch.send_title), "dry-run output pane was not displayed")
 		output.close(patch.send_title)
 
+		-- 5. Verify :SysPatch command dispatch
+		vim.cmd("SysPatch dry-run")
+		t.ok(output.showing(patch.send_title), "SysPatch dry-run command did not open pane")
+		output.close(patch.send_title)
+
 		pcall(vim.api.nvim_buf_delete, buf, { force = true })
 		pcall(vim.fn.delete, dir, "rf")
 	end)
