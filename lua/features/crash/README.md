@@ -3,13 +3,13 @@
 A segfault is a stack trace pointing at your source, which is the kind of thing an
 editor should be able to open.
 
-|                           |                                                      |
-| ------------------------- | ---------------------------------------------------- |
-| `<leader>dc`              | pick a recent core dump from your own binaries       |
-| `<leader>dC`              | pick from every captured dump                        |
-| `:Crashes[!]`             | the same, `!` widens to all binaries                 |
-| `:CrashOpen <core> [exe]` | a core file by path, for one systemd did not capture |
-| `:CrashDecode [vmlinux]`  | symbolise a kernel oops in the current buffer        |
+|                                        |                                                      |
+| -------------------------------------- | ---------------------------------------------------- |
+| `<leader>dc`                           | pick a recent core dump from your own binaries       |
+| `<leader>dC`                           | pick from every captured dump                        |
+| `:Crashes[!]`                          | the same, `!` widens to all binaries                 |
+| `:CrashOpen <core> [exe]`              | a core file by path, for one systemd did not capture |
+| `:CrashDecode [vmlinux] [modules_dir]` | symbolise a kernel oops in the current buffer        |
 
 In a report: `<CR>` or `gf` jumps to the frame's source, `D` opens the same dump in an
 interactive gdb, `q` closes.

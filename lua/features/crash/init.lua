@@ -120,11 +120,11 @@ function M.setup()
 	})
 
 	vim.api.nvim_create_user_command("CrashDecode", function(args)
-		require("features.crash.kernel").decode({ vmlinux = args.fargs[1] })
+		require("features.crash.kernel").decode({ vmlinux = args.fargs[1], modules_dir = args.fargs[2] })
 	end, {
-		nargs = "?",
+		nargs = "*",
 		complete = "file",
-		desc = "Symbolise a kernel oops in this buffer: :CrashDecode [vmlinux]",
+		desc = "Symbolise a kernel oops in this buffer: :CrashDecode [vmlinux] [modules_dir]",
 	})
 
 	-- <leader>d is the debug group; a crash is a debug session that already happened.

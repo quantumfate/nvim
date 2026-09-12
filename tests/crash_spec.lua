@@ -34,6 +34,69 @@ t.describe("crash kernel", function()
 			kernel.parse_location("show_regs at arch/x86/kernel/dumpstack.c:489")
 		)
 	end)
+
+	t.it("finds module .ko via search directory or options", function()
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir .. "/extra", "p")
+		local ko_path = dir .. "/extra/sample_mod.ko"
+		vim.fn.writefile({ "fake-ko" }, ko_path)
+
+		-- Found via options.modules_dir
+		t.eq(ko_path, kernel.find_ko("sample_mod", { modules_dir = dir .. "/extra" }))
+
+		-- Found via options.modules table
+		t.eq(ko_path, kernel.find_ko("sample_mod", { modules = { sample_mod = ko_path } }))
+
+		-- Not found for nonexistent module
+		t.eq(nil, kernel.find_ko("nonexistent_mod", { modules_dir = dir .. "/extra" }))
+
+		pcall(vim.fn.delete, dir, "rf")
+	end)
+
+	t.it("decodes kernel oops with both vmlinux and module .ko frames", function()
+		if vim.fn.executable("clang") == 0 or vim.fn.executable("addr2line") == 0 then
+			return
+		end
+		t.reset()
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+
+		local vmlinux_c = dir .. "/vmlinux_core.c"
+		local mod_c = dir .. "/mod_test.c"
+		local vmlinux_bin = dir .. "/vmlinux"
+		local mod_bin = dir .. "/mod_test.ko"
+
+		vim.fn.writefile({ "void sys_do_call(void) {}" }, vmlinux_c)
+		vim.fn.writefile({ "void mod_handler(void) {}" }, mod_c)
+
+		vim.system({ "clang", "-gdwarf-4", "-c", vmlinux_c, "-o", vmlinux_bin }):wait()
+		vim.system({ "clang", "-gdwarf-4", "-c", mod_c, "-o", mod_bin }):wait()
+
+		local oops_buf = t.buffer({
+			"[   12.345678]  mod_handler+0x0/0x10 [mod_test]",
+			"[   12.345679]  sys_do_call+0x0/0x10",
+		})
+
+		kernel.decode({
+			vmlinux = vmlinux_bin,
+			modules_dir = dir,
+		})
+
+		-- Inspect extmarks added to oops_buf
+		local ns = vim.api.nvim_create_namespace("crash_kernel")
+		local marks = vim.api.nvim_buf_get_extmarks(oops_buf, ns, 0, -1, { details = true })
+		t.eq(2, #marks, "expected 2 annotated frames")
+
+		local text1 = marks[1][4].virt_text[1][1]
+		local text2 = marks[2][4].virt_text[1][1]
+
+		t.ok(text1:find("mod_test.c:1", 1, true) ~= nil, "module frame did not resolve: " .. text1)
+		t.ok(text1:find("[mod_test]", 1, true) ~= nil, "module tag missing: " .. text1)
+		t.ok(text2:find("vmlinux_core.c:1", 1, true) ~= nil, "vmlinux frame did not resolve: " .. text2)
+
+		pcall(vim.api.nvim_buf_delete, oops_buf, { force = true })
+		pcall(vim.fn.delete, dir, "rf")
+	end)
 end)
 
 t.describe("crash report", function()

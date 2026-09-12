@@ -141,8 +141,57 @@ local function annotate(buf, ns, row, text, group)
 	)
 end
 
+--- Finds a kernel module (.ko) by name.
+---@param mod_name string
+---@param opts? { modules_dir?: string, modules?: table<string, string> }
+---@return string?
+function M.find_ko(mod_name, opts)
+	opts = opts or {}
+	if opts.modules and opts.modules[mod_name] then
+		local path = vim.fs.normalize(opts.modules[mod_name])
+		if vim.uv.fs_stat(path) then
+			return path
+		end
+	end
+
+	local ko_name = mod_name .. ".ko"
+
+	-- 1. Check user-supplied modules_dir
+	if opts.modules_dir then
+		local mdir = vim.fn.expand(opts.modules_dir)
+		local direct = vim.fs.joinpath(mdir, ko_name)
+		if vim.uv.fs_stat(direct) then
+			return direct
+		end
+		local found = vim.fs.find(ko_name, { path = mdir, type = "file", limit = 1 })[1]
+		if found and vim.uv.fs_stat(found) then
+			return found
+		end
+	end
+
+	-- 2. Check current working directory / project tree
+	local cwd = vim.uv.cwd() or "."
+	local found_local = vim.fs.find(ko_name, { path = cwd, type = "file", limit = 1 })[1]
+	if found_local and vim.uv.fs_stat(found_local) then
+		return found_local
+	end
+
+	-- 3. Check /lib/modules/$(uname -r)/ or /usr/lib/modules/$(uname -r)/
+	local release = vim.trim(vim.fn.system({ "uname", "-r" }))
+	for _, base in ipairs({ "/usr/lib/modules/" .. release, "/lib/modules/" .. release }) do
+		if vim.uv.fs_stat(base) then
+			local found_sys = vim.fs.find(ko_name, { path = base, type = "file", limit = 1 })[1]
+			if found_sys and vim.uv.fs_stat(found_sys) then
+				return found_sys
+			end
+		end
+	end
+
+	return nil
+end
+
 --- Annotates the kernel trace in the current buffer with source locations.
----@param opts? { vmlinux?: string }
+---@param opts? { vmlinux?: string, modules_dir?: string, modules?: table<string, string> }
 function M.decode(opts)
 	opts = opts or {}
 	if not (vim.fn.executable("addr2line") == 1 and vim.fn.executable("readelf") == 1) then
@@ -189,39 +238,89 @@ function M.decode(opts)
 	local ns = vim.api.nvim_create_namespace("crash_kernel")
 	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 
-	-- One addr2line run for every frame that has exactly one candidate address.
-	local cmd, asked = { "addr2line", "-e", vmlinux, "-f", "-p" }, {}
-	local modules, ambiguous = 0, 0
+	-- Group frames by target binary (vmlinux or module .ko)
+	local targets = {}
+	local function add_target(path, frame, addr)
+		targets[path] = targets[path] or { cmd = { "addr2line", "-e", path, "-f", "-p" }, frames = {} }
+		table.insert(targets[path].cmd, addr)
+		table.insert(targets[path].frames, frame)
+	end
+
+	local symbols_cache = { [vmlinux] = symbols }
+	local modules_unresolved, ambiguous = 0, 0
+
 	for _, frame in ipairs(frames) do
-		local bases = symbols[frame.symbol]
 		if frame.module then
-			modules = modules + 1
-			annotate(buf, ns, frame.row, ("in module %s: decode against its .ko"):format(frame.module), "Comment")
-		elseif bases and #bases > 1 then
-			ambiguous = ambiguous + 1
-			annotate(buf, ns, frame.row, ("%d functions named %s"):format(#bases, frame.symbol), "Comment")
-		elseif bases then
-			table.insert(cmd, M.add_offset(bases[1], frame.offset))
-			table.insert(asked, frame)
+			local ko = M.find_ko(frame.module, opts)
+			if ko and has_debug_info(ko) then
+				symbols_cache[ko] = symbols_cache[ko] or symbol_table(ko)
+				local mod_syms = symbols_cache[ko]
+				local bases = mod_syms[frame.symbol]
+				if bases and #bases == 1 then
+					add_target(ko, frame, M.add_offset(bases[1], frame.offset))
+				elseif bases and #bases > 1 then
+					ambiguous = ambiguous + 1
+					annotate(
+						buf,
+						ns,
+						frame.row,
+						("%d functions named %s in [%s]"):format(#bases, frame.symbol, frame.module),
+						"Comment"
+					)
+				else
+					modules_unresolved = modules_unresolved + 1
+					annotate(
+						buf,
+						ns,
+						frame.row,
+						("symbol %s not found in [%s]"):format(frame.symbol, frame.module),
+						"Comment"
+					)
+				end
+			else
+				modules_unresolved = modules_unresolved + 1
+				annotate(
+					buf,
+					ns,
+					frame.row,
+					("in module %s: no .ko with debug info found"):format(frame.module),
+					"Comment"
+				)
+			end
+		else
+			local bases = symbols[frame.symbol]
+			if bases and #bases > 1 then
+				ambiguous = ambiguous + 1
+				annotate(buf, ns, frame.row, ("%d functions named %s"):format(#bases, frame.symbol), "Comment")
+			elseif bases then
+				add_target(vmlinux, frame, M.add_offset(bases[1], frame.offset))
+			end
 		end
 	end
 
 	local resolved = 0
-	if #asked > 0 then
-		local res = vim.system(cmd, { text = true }):wait()
+	for _, entry in pairs(targets) do
+		local res = vim.system(entry.cmd, { text = true }):wait()
 		local out = vim.split(res.stdout or "", "\n", { trimempty = true })
-		for i, frame in ipairs(asked) do
+		for i, frame in ipairs(entry.frames) do
 			local where = M.parse_location(out[i])
 			if where then
 				resolved = resolved + 1
-				annotate(buf, ns, frame.row, (frame.unreliable and "? " or "") .. where, "DiagnosticVirtualTextWarn")
+				local mod_tag = frame.module and (" [" .. frame.module .. "]") or ""
+				annotate(
+					buf,
+					ns,
+					frame.row,
+					(frame.unreliable and "? " or "") .. where .. mod_tag,
+					"DiagnosticVirtualTextWarn"
+				)
 			end
 		end
 	end
 
 	local extra = {}
-	if modules > 0 then
-		table.insert(extra, modules .. " in modules")
+	if modules_unresolved > 0 then
+		table.insert(extra, modules_unresolved .. " unresolved in modules")
 	end
 	if ambiguous > 0 then
 		table.insert(extra, ambiguous .. " ambiguous")
