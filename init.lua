@@ -1,5 +1,15 @@
 --- Entry point: bootstraps lazy.nvim, loads core config, then plugins and root detection.
 
+-- Minimum version check: Neovim 0.11+ is required for vim.system, vim.text.diff, and LSP improvements.
+if vim.fn.has("nvim-0.11") == 0 then
+	local ver = vim.version and vim.version().string or "unknown"
+	vim.api.nvim_echo({
+		{ "Error: this config requires Neovim 0.11+ (running " .. ver .. ")\n", "ErrorMsg" },
+		{ "Please upgrade to Neovim 0.11 or nightly.\n", "WarningMsg" },
+	}, true, {})
+	return
+end
+
 --- Clone lazy.nvim into the data dir on first launch, aborting on clone failure.
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then

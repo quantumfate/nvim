@@ -11,6 +11,10 @@ jobs:
     # Trixie rather than bookworm: `just` and `pahole` are packaged there under those names.
     container:
       image: node:22-trixie
+    strategy:
+      fail-fast: false
+      matrix:
+        neovim-version: ["v0.11.0", "nightly"]
     env:
       # The specs load the config the editor would; point it at the checkout.
       XDG_CONFIG_HOME: /tmp/xdg-config
@@ -25,20 +29,25 @@ jobs:
           # nvim-treesitter's main branch compiles grammars with the tree-sitter CLI.
           npm install -g tree-sitter-cli
 
-      - name: Neovim nightly
+      - name: Install Neovim (${{ matrix.neovim-version }})
         run: |
-          curl -fsSL https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.tar.gz \
+          RELEASE_BASE="https://github.com/neovim/neovim/releases/download"
+          curl -fsSL "$RELEASE_BASE/${{ matrix.neovim-version }}/nvim-linux-x86_64.tar.gz" \
             | tar -xz -C /opt
           ln -s /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
-          nvim --version | head -1
           mkdir -p "$XDG_CONFIG_HOME"
           ln -s "$PWD" "$XDG_CONFIG_HOME/nvim"
+
+      - name: Neovim version check
+        run: |
+          nvim --version | head -n 2
+          nvim --headless -c "if has('nvim-0.11') == 0 | echoerr 'Neovim 0.11+ required' | cquit 1 | else | qa! | endif"
 
       - name: Cache plugins and parsers
         uses: https://code.forgejo.org/actions/cache@v4
         with:
           path: ~/.local/share/nvim
-          key: nvim-${{ hashFiles('lazy-lock.json', 'lua/plugins/editor/treesitter.lua') }}
+          key: nvim-${{ matrix.neovim-version }}-${{ hashFiles('lazy-lock.json') }}
 
       # restore, not sync: CI must test the pinned plugin versions, not whatever is newest.
       - name: Plugins
