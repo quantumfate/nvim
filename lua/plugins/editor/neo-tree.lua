@@ -13,9 +13,9 @@ return {
 			{
 				"<leader>ee",
 				function()
-					require("neo-tree.command").execute({ toggle = true, dir = vim.fn.getcwd() })
+					require("features.ui.sidebar").toggle("filesystem")
 				end,
-				desc = "Explorer NeoTree (cwd)",
+				desc = "Explorer NeoTree (files)",
 			},
 			{
 				"<leader>eE",
@@ -27,14 +27,14 @@ return {
 			{
 				"<leader>ge",
 				function()
-					require("neo-tree.command").execute({ source = "git_status", toggle = true })
+					require("features.ui.sidebar").switch("git_status")
 				end,
 				desc = "Git Explorer",
 			},
 			{
 				"<leader>eb",
 				function()
-					require("neo-tree.command").execute({ source = "buffers", toggle = true })
+					require("features.ui.sidebar").switch("buffers")
 				end,
 				desc = "Buffer Explorer",
 			},
@@ -78,6 +78,21 @@ return {
 			window = {
 				mappings = {
 					["<space>"] = "none",
+					["<tab>"] = function()
+						require("features.ui.sidebar").cycle(1)
+					end,
+					["<s-tab>"] = function()
+						require("features.ui.sidebar").cycle(-1)
+					end,
+					["1"] = function()
+						require("features.ui.sidebar").switch("filesystem")
+					end,
+					["2"] = function()
+						require("features.ui.sidebar").switch("buffers")
+					end,
+					["3"] = function()
+						require("features.ui.sidebar").switch("git_status")
+					end,
 					["Y"] = {
 						-- Yank the selected node's path to the system clipboard.
 						function(state)

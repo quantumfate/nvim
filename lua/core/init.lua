@@ -32,6 +32,9 @@ require("features.lang").setup()
 -- Named window slots, and lending `aux` to transient views. See lua/features/workspace/.
 require("features.workspace").setup()
 
+-- Internal UI/UX library: mutually exclusive sidebar, modal keymap profiles, layout states.
+require("features.ui").setup()
+
 -- :Crashes / :CrashOpen / :CrashDecode. See lua/features/crash/.
 require("features.crash").setup()
 

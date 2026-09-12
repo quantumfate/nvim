@@ -26,7 +26,9 @@ local function trouble_mode_filter(mode)
 	end
 end
 
---- Docks a pinned left panel per configured Neo-tree source into opts.left.
+--- Docks a single mutually exclusive sidebar panel into opts.left.
+--- Only ONE window occupies the left edge; sources (filesystem, buffers, git_status)
+--- replace each other inside it rather than stacking collapsed 1-line slices.
 ---@param opts table Edgy options being assembled
 local function add_neotree_panels(opts)
 	-- Read neo-tree's spec from lazy even before neo-tree itself loads.
@@ -35,39 +37,24 @@ local function add_neotree_panels(opts)
 		return
 	end
 
-	--- Edge each Neo-tree source docks to.
-	local source_position = {
-		filesystem = "left",
-		buffers = "top",
-		git_status = "right",
-		document_symbols = "bottom",
-		diagnostics = "bottom",
-	}
-	local neotree_opts = require("lazy.core.plugin").values(lazy_config.spec.plugins["neo-tree.nvim"], "opts", false)
-	local sources = (neotree_opts or {}).sources or { "filesystem" }
-	local project_root = require("lib.root").get
-
-	for i, source in ipairs(sources) do
-		table.insert(opts.left, i, {
-			title = "Neo-Tree " .. source:gsub("_", " "):gsub("^%l", string.upper),
-			ft = "neo-tree",
-			--- Docks only the window showing this specific source.
-			filter = function(buf)
-				return vim.b[buf].neo_tree_source == source
-			end,
-			pinned = true,
-			--- Opens this source at its designated edge, rooted at the project.
-			open = function()
-				vim.cmd(
-					("Neotree show position=%s %s dir=%s"):format(
-						source_position[source] or "bottom",
-						source,
-						project_root()
-					)
-				)
-			end,
-		})
-	end
+	table.insert(opts.left, 1, {
+		title = function()
+			local sidebar = require("features.ui.sidebar")
+			local active = sidebar.active_source() or "filesystem"
+			local label = sidebar.LABELS[active] or "Files"
+			local other = sidebar.available_views()
+			local other_labels = {}
+			for _, v in ipairs(other) do
+				table.insert(other_labels, v.label)
+			end
+			return ("Sidebar: %s  [<Tab> %s]"):format(label, table.concat(other_labels, "/"))
+		end,
+		ft = "neo-tree",
+		pinned = true,
+		open = function()
+			require("features.ui.sidebar").switch(require("features.ui.sidebar").active_source() or "filesystem")
+		end,
+	})
 end
 
 return {

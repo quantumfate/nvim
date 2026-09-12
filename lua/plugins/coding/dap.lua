@@ -258,19 +258,17 @@ return {
 				enabled_commands = false,
 			})
 
-			-- Unfortunately, the way these events are emitted it's the state history of edgy util is completely flushed
-			-- I prefer a working util over compensating for dap
-			dap.listeners.before.attach.edgy_view = function()
-				require("features.workspace").dock().open("debug")
+			dap.listeners.before.attach.ui_debug = function()
+				require("features.ui").mode.enter("debug")
 			end
-			dap.listeners.before.launch.edgy_view = function()
-				require("features.workspace").dock().open("debug")
+			dap.listeners.before.launch.ui_debug = function()
+				require("features.ui").mode.enter("debug")
 			end
-			dap.listeners.before.event_terminated.edgy_view = function()
-				require("features.workspace").dock().close()
+			dap.listeners.before.event_terminated.ui_debug = function()
+				require("features.ui").mode.exit()
 			end
-			dap.listeners.before.event_exited.edgy_view = function()
-				require("features.workspace").dock().close()
+			dap.listeners.before.event_exited.ui_debug = function()
+				require("features.ui").mode.exit()
 			end
 
 			-- Adapters ship as system packages (see lua/toolchain/registry.lua); the two

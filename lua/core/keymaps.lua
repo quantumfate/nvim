@@ -10,7 +10,9 @@ local map = vim.keymap.set
 
 -- Windows ------------------------------------------------------------------
 
-map("n", "<leader>wh", "<cmd>wincmd h<cr>", { desc = "Left" })
+map("n", "<leader>wh", function()
+	require("features.ui").focus_left()
+end, { desc = "Left" })
 map("n", "<leader>wj", "<cmd>wincmd j<cr>", { desc = "Down" })
 map("n", "<leader>wk", "<cmd>wincmd k<cr>", { desc = "Up" })
 map("n", "<leader>wl", "<cmd>wincmd l<cr>", { desc = "Right" })
