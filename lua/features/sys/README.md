@@ -4,25 +4,26 @@ What the machine actually does with your code. Every tool reads the program that
 already knows: pahole, nm, objdump, addr2line, checkpatch.pl, QEMU, gdb. `:SysInfo`
 lists the keys and what each one is missing.
 
-| Key          | Does                                                                     |
-| ------------ | ------------------------------------------------------------------------ |
-| `<leader>xl` | struct layout under the cursor: offsets, holes, cache lines (pahole)     |
-| `<leader>xe` | ELF symbols by size; `<CR>` jumps to source, `d` disassembles            |
-| `<leader>xd` | the function under the cursor, disassembled **from the linked binary**   |
-| `<leader>xr` | run the binary with loud sanitizers/backtraces; frames go to quickfix    |
-| `<leader>xq` | any stack trace in the current buffer (a terminal, a log) to quickfix    |
-| `<leader>xp` | perf profile: `▮ 76.4%` at the end of hot lines, quickfix hottest first  |
-| `<leader>xf` | perf annotate of the function under the cursor, cursor-linked to source  |
-| `<leader>xs` | strace log; failed calls in red, `<CR>` jumps to the line that made them |
-| `<leader>xb` | bpftrace probe on the binary: syscall latency, off-CPU, faults, malloc   |
-| `<leader>xh` | hex view toggle, written back through `xxd -r`                           |
-| `<leader>xk` | checkpatch.pl on this file (kernel tree)                                 |
-| `<leader>xm` | get_maintainer.pl for this file                                          |
-| `<leader>xc` | jump from `CONFIG_FOO` to its Kconfig entry                              |
-| `<leader>xS` | sparse on this file (`:Sparse`): endianness, `__user`, bitwise misuse    |
-| `<leader>xC` | coccinelle script in report mode over this file (`:Coccicheck [file]`)   |
-| `<leader>xQ` | boot the tree's `bzImage` in QEMU, halted, gdbstub on :1234, `nokaslr`   |
-| `<leader>xa` | attach gdb (DAP) to that QEMU with `vmlinux` symbols                     |
+| Key          | Does                                                                      |
+| ------------ | ------------------------------------------------------------------------- |
+| `<leader>xl` | struct layout under the cursor: offsets, holes, cache lines (pahole)      |
+| `<leader>xe` | ELF symbols by size; `<CR>` jumps to source, `d` disassembles             |
+| `<leader>xd` | the function under the cursor, disassembled **from the linked binary**    |
+| `<leader>xr` | run the binary with loud sanitizers/backtraces; frames go to quickfix     |
+| `<leader>xq` | any stack trace in the current buffer (a terminal, a log) to quickfix     |
+| `<leader>xp` | perf profile: `▮ 76.4%` at the end of hot lines, quickfix hottest first   |
+| `<leader>xf` | perf annotate of the function under the cursor, cursor-linked to source   |
+| `<leader>xs` | strace log; failed calls in red, `<CR>` jumps to the line that made them  |
+| `<leader>xb` | bpftrace probe on the binary: syscall latency, off-CPU, faults, malloc    |
+| `<leader>xh` | hex view toggle, written back through `xxd -r`                            |
+| `<leader>xk` | checkpatch.pl on this file (kernel tree)                                  |
+| `<leader>xm` | get_maintainer.pl for this file                                           |
+| `<leader>xc` | jump from `CONFIG_FOO` to its Kconfig entry                               |
+| `<leader>xS` | sparse on this file (`:Sparse`): endianness, `__user`, bitwise misuse     |
+| `<leader>xC` | coccinelle script in report mode over this file (`:Coccicheck [file]`)    |
+| `<leader>xQ` | boot the tree's `bzImage` in QEMU, halted, gdbstub on :1234, `nokaslr`    |
+| `<leader>xa` | attach gdb (DAP) to that QEMU with `vmlinux` symbols                      |
+| `<leader>xP` | patch series workflow with b4: prep, cover, trailers, check, dry-run send |
 
 Toggles work like `<leader>v`: the same key closes the view.
 

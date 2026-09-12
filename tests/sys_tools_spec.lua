@@ -5,6 +5,7 @@ local t = require("tests.harness")
 local profile = require("features.sys.profile")
 local trace = require("features.sys.trace")
 local bpf = require("features.sys.bpf")
+local output = require("features.lang.output")
 
 t.describe("sys perf annotate", function()
 	t.it("reads per-instruction percentages and perf's own locations", function()
@@ -276,5 +277,117 @@ t.describe("sys semantic checkers", function()
 		-- C=1 only checks what it recompiles, so an unchanged file reported nothing.
 		t.eq({ "make", "C=2", "mm/slab.o" }, cmd)
 		t.eq(tree, dir)
+	end)
+end)
+
+t.describe("sys b4 patch workflow", function()
+	local patch = require("features.sys.patch")
+
+	t.it("parses b4 prep --show-info key-value output and commits", function()
+		local lines = {
+			"branch: b4/test-series",
+			"cover-subject: EDITME: cover title for test-series",
+			"base-commit: 828f29ca42b92a9b81d0a2df4794ef9669ec8a82",
+			"start-commit: 2dd771c4ccd08a5e7452d99a47d943e16b1cf412",
+			"end-commit: d5e9e91c2399af24a356b7516e5d63bb9b92352c",
+			"series-range: 2dd771c4ccd08a5e7452d99a47d943e16b1cf412..d5e9e91c2399af24a356b7516e5d63bb9b92352c",
+			"change-id: 20260912-test-series-cdb3a9c6ef09",
+			"revision: 1",
+			"needs-editing: False",
+			"needs-recipients: True",
+			"commit-d5e9e91: test commit",
+			"commit-a1b2c3d: second commit",
+		}
+
+		local info = patch.parse_info(lines)
+		t.ok(info ~= nil, "failed to parse info lines")
+		assert(info)
+		t.eq("b4/test-series", info.branch)
+		t.eq("EDITME: cover title for test-series", info.cover_subject)
+		t.eq("2dd771c4ccd08a5e7452d99a47d943e16b1cf412", info.start_commit)
+		t.eq("20260912-test-series-cdb3a9c6ef09", info.change_id)
+		t.eq(1, info.revision)
+		t.eq(false, info.needs_editing)
+		t.eq(true, info.needs_recipients)
+		t.eq(2, #info.commits)
+		t.eq("d5e9e91", info.commits[1].hash)
+		t.eq("test commit", info.commits[1].subject)
+	end)
+
+	t.it("parses b4 prep --check findings into quickfix items", function()
+		local lines = {
+			"Checking patches using:",
+			"  /tree/scripts/checkpatch.pl -q --terse",
+			"---",
+			"● 914c33e35bf9: ext4: test commit for checkpatch",
+			"  ● checkpatch.pl: :7643: WARNING: Missing commit description",
+			"  ● checkpatch.pl: fs/ext4/super.c:12: ERROR: trailing whitespace",
+			"---",
+			"Success: 0, Warning: 1, Error: 1",
+		}
+
+		local items = patch.parse_check(lines, "/tree")
+		t.eq(2, #items)
+		t.eq({
+			filename = "/tree",
+			lnum = 7643,
+			text = "[914c33e35b] Missing commit description",
+			type = "W",
+		}, items[1])
+		t.eq({
+			filename = "/tree/fs/ext4/super.c",
+			lnum = 12,
+			text = "[914c33e35b] trailing whitespace",
+			type = "E",
+		}, items[2])
+	end)
+
+	t.it("drives b4 prep, info, and dry-run send end-to-end", function()
+		if vim.fn.executable("b4") == 0 or vim.fn.executable("git") == 0 then
+			return
+		end
+		t.reset()
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+
+		-- Setup git repo with user and initial commit
+		vim.system({ "git", "init", "-b", "main" }, { cwd = dir }):wait()
+		vim.system({ "git", "config", "user.name", "Test User" }, { cwd = dir }):wait()
+		vim.system({ "git", "config", "user.email", "test@example.com" }, { cwd = dir }):wait()
+		vim.fn.writefile({ "hello" }, dir .. "/file.txt")
+		vim.system({ "git", "add", "file.txt" }, { cwd = dir }):wait()
+		vim.system({ "git", "commit", "-m", "initial commit" }, { cwd = dir }):wait()
+
+		vim.cmd.edit(dir .. "/file.txt")
+		local buf = vim.api.nvim_get_current_buf()
+
+		t.eq(dir, patch.git_root(buf), "git_root did not find repo root")
+
+		-- 1. Create prep branch
+		patch.prep(buf, "my-series")
+
+		-- 2. Add a commit to the series
+		vim.fn.writefile({ "hello", "world" }, dir .. "/file.txt")
+		vim.system({ "git", "commit", "-am", "my first patch" }, { cwd = dir }):wait()
+
+		-- 3. Verify series info and json
+		local info, err = patch.info(dir)
+		t.ok(info ~= nil, "patch.info failed: " .. (err or ""))
+		assert(info)
+		t.eq("b4/my-series", info.branch)
+		t.eq(1, #info.commits)
+		t.eq("my first patch", info.commits[1].subject)
+
+		local json_str = patch.json(dir)
+		local decoded = vim.json.decode(json_str)
+		t.eq("b4/my-series", decoded.branch)
+
+		-- 4. Verify dry-run send
+		patch.send_dry_run(buf)
+		t.ok(output.showing(patch.send_title), "dry-run output pane was not displayed")
+		output.close(patch.send_title)
+
+		pcall(vim.api.nvim_buf_delete, buf, { force = true })
+		pcall(vim.fn.delete, dir, "rf")
 	end)
 end)

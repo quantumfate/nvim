@@ -160,6 +160,14 @@ M.keys = {
 			require("features.sys.kernel").attach(buf)
 		end,
 	},
+	{
+		key = "P",
+		desc = "Patch series workflow (b4)",
+		needs = { "b4", "git" },
+		run = function(buf)
+			require("features.sys.patch").pick(buf)
+		end,
+	},
 }
 
 --- The exact bytes a buffer stands for.
@@ -282,6 +290,49 @@ function M.setup()
 			semantic.cocci(buf)
 		end
 	end, { nargs = "?", complete = "file", desc = "coccinelle report mode: :Coccicheck [script.cocci]" })
+
+	vim.api.nvim_create_user_command("SysPatch", function(args)
+		local patch = require("features.sys.patch")
+		local buf = vim.api.nvim_get_current_buf()
+		local action = args.fargs[1]
+		if action == "prep" then
+			patch.prep(buf, args.fargs[2])
+		elseif action == "cover" then
+			patch.cover(buf)
+		elseif action == "check" then
+			patch.check(buf)
+		elseif action == "trailers" then
+			patch.trailers(buf)
+		elseif action == "dry-run" or action == "send" then
+			patch.send_dry_run(buf)
+		elseif action == "info" then
+			local cwd = vim.uv.cwd() or "."
+			local dir = patch.git_root(buf) or cwd
+			local info, err = patch.info(dir)
+			if info then
+				print(vim.inspect(info))
+			else
+				Snacks.notify.warn(err or "no b4 info", { title = "b4 patch" })
+			end
+		else
+			patch.pick(buf)
+		end
+	end, {
+		nargs = "*",
+		complete = function()
+			return { "prep", "cover", "check", "trailers", "dry-run", "info" }
+		end,
+		desc = "b4 patch series workflow: :SysPatch [prep|cover|check|trailers|dry-run|info]",
+	})
+
+	vim.api.nvim_create_user_command("SysPatchJson", function(args)
+		local patch = require("features.sys.patch")
+		local cwd = vim.uv.cwd() or "."
+		local dir = (args.fargs and args.fargs[1] and args.fargs[1] ~= "") and args.fargs[1] or cwd
+		io.stdout:write(patch.json(dir) .. "\n")
+		io.stdout:flush()
+		vim.cmd("qa!")
+	end, { nargs = "?", complete = "dir", desc = "b4 series info as JSON: :SysPatchJson [dir]" })
 
 	vim.api.nvim_create_user_command("SysInfo", function()
 		local lines = {}
