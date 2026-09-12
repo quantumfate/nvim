@@ -42,6 +42,6 @@ return {
 	dev = true,
 	enabled = exists,
 	keys = {
-		{ "<leader>Tl", debug_current_spec, desc = "Debug lance spec via osv" },
+		{ "<leader>tD", debug_current_spec, desc = "Debug lance spec via osv" },
 	},
 }

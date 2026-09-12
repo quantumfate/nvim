@@ -157,8 +157,8 @@ return {
 					{ "<leader>gq", gitsigns.setqflist, desc = "Quickfix Hunks", buffer = bufnr },
 
 					-- Toggles
-					{ "<leader>gtb", gitsigns.toggle_current_line_blame, desc = "Toggle Line Blame", buffer = bufnr },
-					{ "<leader>gtw", gitsigns.toggle_word_diff, desc = "Toggle Word Diff", buffer = bufnr },
+					{ "<leader>gub", gitsigns.toggle_current_line_blame, desc = "Toggle Line Blame", buffer = bufnr },
+					{ "<leader>guw", gitsigns.toggle_word_diff, desc = "Toggle Word Diff", buffer = bufnr },
 
 					-- Text object
 					{ "ih", gitsigns.select_hunk, desc = "Select Hunk", mode = { "o", "x" }, buffer = bufnr },
@@ -178,7 +178,7 @@ return {
 				set = function(state)
 					require("gitsigns").toggle_signs(state)
 				end,
-			}):map("<leader>tG")
+			}):map("<leader>uG")
 		end,
 	},
 }

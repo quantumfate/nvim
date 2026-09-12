@@ -144,6 +144,59 @@ K                     hover
 <C-f>                 tmux sessionizer
 ```
 
+## Leader groups
+
+The same question gets the same key in every language. Which-key shows only the
+ones the current buffer can actually answer, so an empty slot means the adapter or
+the language server does not implement it — not that the key is free.
+
+| Group       | Question                            | Owned by                          |
+| ----------- | ----------------------------------- | --------------------------------- |
+| `<leader>b` | build / run this                    | `lua/features/lang/` adapters     |
+| `<leader>t` | test this                           | neotest + the lang adapter's `ta` |
+| `<leader>d` | debug this                          | nvim-dap, `lua/features/crash/`   |
+| `<leader>v` | what does the compiler see and emit | lang adapters + LSP hierarchies   |
+| `<leader>x` | what does the binary say            | `lua/features/sys/`               |
+| `<leader>r` | restructure this                    | `lua/features/refactor/`          |
+| `<leader>e` | explorer sidebar                    | `lua/features/ui/sidebar.lua`     |
+| `<leader>u` | toggle an editor option             | snacks.toggle                     |
+| `<leader>B` | buffer management                   | bufferline / snacks               |
+
+### Build, test, debug
+
+One loop, three prefixes, no language in the keys:
+
+```text
+<leader>bb  build                 <leader>tt  nearest test
+<leader>br  run                   <leader>tf  tests in this file
+<leader>bR  run, choose target    <leader>ts  test summary
+<leader>bc  check, no codegen     <leader>to  test output
+<leader>bo  open the build file   <leader>ta  test via the language's own runner
+<leader>bi  reload project index  <leader>td  debug the nearest test
+
+<leader>dbt  breakpoint           <leader>dSc  continue      <leader>dw  watch expression
+<leader>di   step into            <leader>dSt  terminate     <leader>dk  hover value
+<leader>do   step over            <leader>dc   crash dumps
+<leader>dO   step out             <leader>dD   modal debug mode
+```
+
+Modal debug mode (`<leader>dD`, and automatic on a DAP launch) drops the leader
+entirely for the duration: `c` continue, `n` step over, `s` step into, `o` step out,
+`b` breakpoint, `q` exit. Exiting restores every binding it shadowed.
+
+`:LangInfo` prints the build/test/view table for the current buffer with a yes/— per
+capability, which is the fastest answer to "is this wired here".
+
+### Explorer
+
+One window on the left edge, three views taking turns in it. Each key toggles — the
+key that opened a view closes it, a different key swaps the view in place.
+
+```text
+<leader>ee  Files      <leader>eb  Buffers      <leader>eg  Git status (also <leader>ge)
+<leader>eE  Files, rooted at the current file   <leader>wh  jump into the sidebar
+```
+
 ## Where the bindings live
 
 | Layer                  | Owns                                | File                                |
@@ -153,6 +206,8 @@ K                     hover
 | mini.ai                | `a` `i` `n` `l` `g-` `g_`           | `lua/plugins/lib/mini-ai.lua`       |
 | mini.surround          | `gs*`                               | `lua/plugins/lib/mini-surround.lua` |
 | LSP                    | `g*` navigation                     | `lua/features/lsp/keymaps.lua`      |
+| lang adapters          | `<leader>b` `<leader>t` `<leader>v` | `lua/features/lang/`                |
+| ui                     | `<leader>e` sidebar, `<leader>dD`   | `lua/features/ui/`                  |
 | config                 | prefixes, windows, lists, drags     | `lua/core/keymaps.lua`              |
 
 If a mapping does not behave as documented, `:verbose map <lhs>` names the file

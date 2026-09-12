@@ -34,6 +34,19 @@ for key, direction in pairs({ ["<"] = "h", [">"] = "l", ["-"] = "k", ["+"] = "j"
 	end, { desc = "Swap split " .. direction })
 end
 
+-- Sidebar and modal UI -----------------------------------------------------
+
+-- The explorer keys live with the neo-tree spec; this is the modal debug profile,
+-- which DAP also enters on its own when a session starts.
+map("n", "<leader>dD", function()
+	local ui = require("features.ui")
+	if ui.mode.active() then
+		ui.mode.exit()
+	else
+		ui.mode.enter("debug")
+	end
+end, { desc = "Toggle debug mode (modal keys)" })
+
 -- Scrolling and search ------------------------------------------------------
 
 map("n", "<C-d>", "<C-d>zz", { desc = "Scroll down (centered)" })

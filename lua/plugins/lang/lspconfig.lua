@@ -50,9 +50,9 @@ return {
 					end
 				end
 
-				-- <leader>th toggles inlay hints when the server provides them.
+				-- <leader>uh toggles inlay hints when the server provides them.
 				if client:supports_method("textDocument/inlayHint") then
-					vim.keymap.set("n", "<leader>th", function()
+					vim.keymap.set("n", "<leader>uh", function()
 						local enabled = vim.lsp.inlay_hint.is_enabled({ bufnr = buf })
 						vim.lsp.inlay_hint.enable(not enabled, { bufnr = buf })
 					end, { buffer = buf, desc = "Toggle Inlay Hints" })

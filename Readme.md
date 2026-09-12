@@ -42,7 +42,8 @@ Arrows point at what a layer is allowed to require.
   cross-file undo are shared — see
   [`lua/features/refactor/`](./lua/features/refactor/README.md).
 - Language actions are keyed by question, not by language: `<leader>b` builds and
-  `<leader>v` inspects in Rust, C, Zig, Go, Python and Lua alike — see
+  runs, `<leader>t` tests, `<leader>d` debugs and `<leader>v` inspects in Rust, C,
+  Zig, Go, Python and Lua alike — see
   [`lua/features/lang/`](./lua/features/lang/README.md).
 - The binary is a source of truth too: `<leader>x` shows struct holes, the linked
   machine code, sanitizer frames, rr record/replay, and the kernel-tree workflow (b4,

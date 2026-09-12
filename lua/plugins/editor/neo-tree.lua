@@ -25,18 +25,26 @@ return {
 				desc = "Explorer NeoTree (current file)",
 			},
 			{
-				"<leader>ge",
+				"<leader>eg",
 				function()
-					require("features.ui.sidebar").switch("git_status")
+					require("features.ui.sidebar").toggle("git_status")
 				end,
-				desc = "Git Explorer",
+				desc = "Explorer NeoTree (git status)",
 			},
 			{
 				"<leader>eb",
 				function()
-					require("features.ui.sidebar").switch("buffers")
+					require("features.ui.sidebar").toggle("buffers")
 				end,
-				desc = "Buffer Explorer",
+				desc = "Explorer NeoTree (buffers)",
+			},
+			-- `<leader>g` is the git group; the git tree answers to both spellings.
+			{
+				"<leader>ge",
+				function()
+					require("features.ui.sidebar").toggle("git_status")
+				end,
+				desc = "Git Explorer",
 			},
 		},
 		-- Close the explorer when lazy.nvim deactivates the plugin.
@@ -78,21 +86,6 @@ return {
 			window = {
 				mappings = {
 					["<space>"] = "none",
-					["<tab>"] = function()
-						require("features.ui.sidebar").cycle(1)
-					end,
-					["<s-tab>"] = function()
-						require("features.ui.sidebar").cycle(-1)
-					end,
-					["1"] = function()
-						require("features.ui.sidebar").switch("filesystem")
-					end,
-					["2"] = function()
-						require("features.ui.sidebar").switch("buffers")
-					end,
-					["3"] = function()
-						require("features.ui.sidebar").switch("git_status")
-					end,
 					["Y"] = {
 						-- Yank the selected node's path to the system clipboard.
 						function(state)

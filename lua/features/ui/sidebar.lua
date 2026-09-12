@@ -41,42 +41,7 @@ for _, source in ipairs(M.SOURCES) do
 			pcall(vim.cmd --[[@as function]], cmd)
 		end,
 		close = close_neotree,
-		on_enter = function(win, buf)
-			M.attach_keymaps(win, buf)
-		end,
 	})
-end
-
---- Attaches buffer-local navigation keymaps to switch sidebar views.
----@param win integer
----@param buf integer
-function M.attach_keymaps(win, buf)
-	if not vim.api.nvim_buf_is_valid(buf) then
-		return
-	end
-	local opts = { buffer = buf, silent = true, nowait = true }
-
-	-- Tab / S-Tab cycles between sources inside the sidebar window
-	vim.keymap.set("n", "<Tab>", function()
-		M.cycle(1)
-	end, vim.tbl_extend("force", opts, { desc = "Next sidebar view" }))
-
-	vim.keymap.set("n", "<S-Tab>", function()
-		M.cycle(-1)
-	end, vim.tbl_extend("force", opts, { desc = "Previous sidebar view" }))
-
-	-- Direct view switches from within the sidebar
-	vim.keymap.set("n", "1", function()
-		M.switch("filesystem")
-	end, vim.tbl_extend("force", opts, { desc = "Switch to Files" }))
-
-	vim.keymap.set("n", "2", function()
-		M.switch("buffers")
-	end, vim.tbl_extend("force", opts, { desc = "Switch to Buffers" }))
-
-	vim.keymap.set("n", "3", function()
-		M.switch("git_status")
-	end, vim.tbl_extend("force", opts, { desc = "Switch to Git" }))
 end
 
 --- Switches the active sidebar view, replacing the current one in-place.
@@ -90,26 +55,6 @@ end
 function M.toggle(source)
 	source = source or "filesystem"
 	M.slot:toggle(source)
-end
-
---- Cycles to next or previous source in the vertical array.
----@param direction 1|-1
-function M.cycle(direction)
-	local cur = M.active_source() or "filesystem"
-	local cur_idx = 1
-	for idx, s in ipairs(M.SOURCES) do
-		if s == cur then
-			cur_idx = idx
-			break
-		end
-	end
-	local next_idx = cur_idx + direction
-	if next_idx > #M.SOURCES then
-		next_idx = 1
-	elseif next_idx < 1 then
-		next_idx = #M.SOURCES
-	end
-	M.switch(M.SOURCES[next_idx])
 end
 
 --- Gets the currently active source name.

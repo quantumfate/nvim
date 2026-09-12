@@ -17,7 +17,7 @@ local M = {}
 ---@class lang.Capability
 ---@field key string After the group prefix
 ---@field desc string
----@field group "build"|"view"
+---@field group "build"|"test"|"view"
 
 ---@type table<string, lang.Capability>
 M.capabilities = {
@@ -25,10 +25,13 @@ M.capabilities = {
 	build = { key = "b", desc = "Build", group = "build" },
 	run = { key = "r", desc = "Run", group = "build" },
 	run_other = { key = "R", desc = "Run (choose target)", group = "build" },
-	test = { key = "t", desc = "Test", group = "build" },
 	check = { key = "c", desc = "Check (fast, no codegen)", group = "build" },
 	build_file = { key = "o", desc = "Open build file", group = "build" },
 	reload = { key = "i", desc = "Reload project index", group = "build" },
+
+	-- Tests: `<leader>t`, alongside the runner-agnostic neotest bindings. This one is
+	-- the language's own runner (`cargo test`, `go test`, `zig build test`).
+	test = { key = "a", desc = "Test (project runner)", group = "test" },
 
 	-- Inspection: `<leader>v`. What the compiler actually sees and emits.
 	expand = { key = "e", desc = "Expand macros / preprocess", group = "view" },
@@ -91,7 +94,7 @@ M.lsp_capabilities = {
 	},
 }
 
-local PREFIX = { build = "<leader>b", view = "<leader>v" }
+local PREFIX = { build = "<leader>b", test = "<leader>t", view = "<leader>v" }
 
 --- The title an adapter renders a capability under, or nil when the capability opens
 --- a window of its own (rustaceanvim's views, `:InspectTree`, a terminal). Those are
@@ -175,7 +178,7 @@ function M.report()
 		table.insert(
 			lines,
 			("  %s%-2s %-32s %s"):format(
-				PREFIX[cap.group] == "<leader>b" and "<leader>b" or "<leader>v",
+				PREFIX[cap.group],
 				cap.key,
 				cap.desc,
 				(adapter and adapter[name]) and "yes" or "—"

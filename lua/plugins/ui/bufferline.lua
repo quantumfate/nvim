@@ -16,35 +16,35 @@ return {
 	end,
 	keys = {
 		{
-			"<leader>bda",
+			"<leader>Bda",
 			function()
 				Snacks.bufdelete.all()
 			end,
 			desc = "all buffers",
 		},
 		{
-			"<leader>bdt",
+			"<leader>Bdt",
 			function()
 				Snacks.bufdelete.delete()
 			end,
 			desc = "current buffer",
 		},
 		{
-			"<leader>bdo",
+			"<leader>Bdo",
 			function()
 				Snacks.bufdelete.other()
 			end,
 			desc = "other buffers",
 		},
 		{
-			"<leader>br",
+			"<leader>Br",
 			function()
 				Snacks.explorer.reveal()
 			end,
 			desc = "reveal in explorer",
 		},
 		{
-			"<leader>bp",
+			"<leader>Bp",
 			function()
 				Snacks.picker.buffers()
 			end,

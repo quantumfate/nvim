@@ -5,14 +5,22 @@ supports.
 
 ## Keys
 
-| `<leader>b` build |                      | `<leader>v` view |                             |
-| ----------------- | -------------------- | ---------------- | --------------------------- |
-| `bb`              | build                | `ve`             | expand macros / preprocess  |
-| `br`              | run                  | `va`             | **assembly**                |
-| `bt`              | test                 | `vi`             | intermediate representation |
-| `bc`              | check (no codegen)   | `vt`             | syntax tree                 |
-| `bo`              | open build file      | `vh`             | switch to related file      |
-| `bR`              | reload project index | `vs`             | symbol details              |
+| `<leader>b` build/run |                      | `<leader>v` view |                             |
+| --------------------- | -------------------- | ---------------- | --------------------------- |
+| `bb`                  | build                | `ve`             | expand macros / preprocess  |
+| `br`                  | run                  | `va`             | **assembly**                |
+| `bR`                  | run (choose target)  | `vi`             | intermediate representation |
+| `bc`                  | check (no codegen)   | `vt`             | syntax tree                 |
+| `bo`                  | open build file      | `vh`             | switch to related file      |
+| `bi`                  | reload project index | `vs`             | symbol details              |
+
+Tests live in the test group rather than the build group, next to the
+runner-agnostic neotest bindings:
+
+|      |                                                    |
+| ---- | -------------------------------------------------- |
+| `ta` | test, through the language's own runner            |
+| `tt` | nearest test, `tf` file, `ts` summary, `to` output |
 
 From the language server, bound when it advertises the method:
 
