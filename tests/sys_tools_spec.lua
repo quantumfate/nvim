@@ -343,6 +343,22 @@ t.describe("sys b4 patch workflow", function()
 		t.eq("test commit", info.commits[1].subject)
 	end)
 
+	t.it("handles non-git buffers and empty check output gracefully", function()
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+		local file = dir .. "/untracked.txt"
+		vim.fn.writefile({ "test" }, file)
+		local buf = vim.fn.bufadd(file)
+		vim.fn.bufload(buf)
+
+		t.eq(nil, patch.git_root(buf))
+		t.eq(nil, patch.parse_info({}))
+		t.eq({}, patch.parse_check({}, dir))
+
+		pcall(vim.api.nvim_buf_delete, buf, { force = true })
+		pcall(vim.fn.delete, dir, "rf")
+	end)
+
 	t.it("parses b4 prep --check findings into quickfix items", function()
 		local lines = {
 			"Checking patches using:",
