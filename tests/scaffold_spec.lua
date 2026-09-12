@@ -65,4 +65,130 @@ t.describe("scaffold", function()
 		t.ok(templates.luarc:find("LuaJIT", 1, true), "the runtime is not pinned")
 		t.ok(templates.luarc:find("vim", 1, true), "`vim` is not declared, so every call is undefined")
 	end)
+
+	---@param dir string
+	---@param recipe string
+	---@return boolean ok, string? stdout, string? stderr
+	local function run_just(dir, recipe)
+		local res = vim.system({ "just", recipe }, { cwd = dir, text = true }):wait(120000)
+		return res.code == 0, res.stdout, res.stderr
+	end
+
+	t.it("generated C cmake recipes build, test, and generate compile-db twice", function()
+		if vim.fn.executable("just") == 0 or vim.fn.executable("cmake") == 0 then
+			return
+		end
+		local dir = project({
+			["CMakeLists.txt"] = {
+				"cmake_minimum_required(VERSION 3.20)",
+				"project(cmakeproj C)",
+				"enable_testing()",
+				"add_executable(app main.c)",
+				"add_test(NAME app_test COMMAND app)",
+			},
+			["main.c"] = { "int main(void) { return 0; }" },
+		})
+		local justfile = templates.justfile({ root = dir, ecosystems = { c = true } })
+		vim.fn.writefile(vim.split(justfile, "\n"), dir .. "/justfile")
+
+		local ok_build1, _, err1 = run_just(dir, "build")
+		t.ok(ok_build1, "cmake build failed: " .. (err1 or ""))
+
+		local ok_test1, _, err2 = run_just(dir, "test")
+		t.ok(ok_test1, "cmake test failed: " .. (err2 or ""))
+
+		local ok_db1, _, err3 = run_just(dir, "compile-db")
+		t.ok(ok_db1, "cmake compile-db 1 failed: " .. (err3 or ""))
+		t.ok(vim.uv.fs_stat(dir .. "/compile_commands.json") ~= nil, "compile_commands.json was not created")
+
+		local ok_db2, _, err4 = run_just(dir, "compile-db")
+		t.ok(ok_db2, "cmake compile-db 2 failed: " .. (err4 or ""))
+
+		local ok_build2, _, err5 = run_just(dir, "build")
+		t.ok(ok_build2, "cmake second build failed: " .. (err5 or ""))
+
+		local ok_test2, _, err6 = run_just(dir, "test")
+		t.ok(ok_test2, "cmake second test failed: " .. (err6 or ""))
+
+		pcall(vim.fn.delete, dir, "rf")
+	end)
+
+	t.it("generated C meson recipes build, test, and generate compile-db twice", function()
+		if vim.fn.executable("just") == 0 or vim.fn.executable("meson") == 0 or vim.fn.executable("ninja") == 0 then
+			return
+		end
+		local dir = project({
+			["meson.build"] = {
+				"project('mesonproj', 'c')",
+				"exe = executable('app', 'main.c')",
+				"test('app_test', exe)",
+			},
+			["main.c"] = { "int main(void) { return 0; }" },
+		})
+		local justfile = templates.justfile({ root = dir, ecosystems = { c = true } })
+		vim.fn.writefile(vim.split(justfile, "\n"), dir .. "/justfile")
+
+		local ok_build1, _, err1 = run_just(dir, "build")
+		t.ok(ok_build1, "meson build failed: " .. (err1 or ""))
+
+		local ok_test1, _, err2 = run_just(dir, "test")
+		t.ok(ok_test1, "meson test failed: " .. (err2 or ""))
+
+		local ok_db1, _, err3 = run_just(dir, "compile-db")
+		t.ok(ok_db1, "meson compile-db 1 failed: " .. (err3 or ""))
+		t.ok(vim.uv.fs_stat(dir .. "/compile_commands.json") ~= nil, "compile_commands.json was not created")
+
+		local ok_db2, _, err4 = run_just(dir, "compile-db")
+		t.ok(ok_db2, "meson compile-db 2 (--reconfigure) failed: " .. (err4 or ""))
+
+		local ok_build2, _, err5 = run_just(dir, "build")
+		t.ok(ok_build2, "meson second build failed: " .. (err5 or ""))
+
+		local ok_test2, _, err6 = run_just(dir, "test")
+		t.ok(ok_test2, "meson second test failed: " .. (err6 or ""))
+
+		pcall(vim.fn.delete, dir, "rf")
+	end)
+
+	t.it("generated C make recipes build, test, and generate compile-db twice", function()
+		if vim.fn.executable("just") == 0 or vim.fn.executable("make") == 0 or vim.fn.executable("bear") == 0 then
+			return
+		end
+		local dir = project({
+			["Makefile"] = {
+				"all: app",
+				"app: main.c",
+				"\t$(CC) -o app main.c",
+				"test: app",
+				"\t./app",
+				"clean:",
+				"\trm -f app",
+				".PHONY: all test clean",
+			},
+			["main.c"] = { "int main(void) { return 0; }" },
+		})
+		local justfile = templates.justfile({ root = dir, ecosystems = { c = true } })
+		vim.fn.writefile(vim.split(justfile, "\n"), dir .. "/justfile")
+
+		local ok_build1, _, err1 = run_just(dir, "build")
+		t.ok(ok_build1, "make build failed: " .. (err1 or ""))
+
+		local ok_test1, _, err2 = run_just(dir, "test")
+		t.ok(ok_test1, "make test failed: " .. (err2 or ""))
+
+		local ok_db1, _, err3 = run_just(dir, "compile-db")
+		t.ok(ok_db1, "make compile-db 1 failed: " .. (err3 or ""))
+		t.ok(vim.uv.fs_stat(dir .. "/compile_commands.json") ~= nil, "compile_commands.json was not created")
+
+		local ok_db2, _, err4 = run_just(dir, "compile-db")
+		t.ok(ok_db2, "make compile-db 2 failed: " .. (err4 or ""))
+
+		local ok_build2, _, err5 = run_just(dir, "build")
+		t.ok(ok_build2, "make second build failed: " .. (err5 or ""))
+
+		local ok_test2, _, err6 = run_just(dir, "test")
+		t.ok(ok_test2, "make second test failed: " .. (err6 or ""))
+
+		pcall(vim.fn.delete, dir, "rf")
+	end)
 end)
