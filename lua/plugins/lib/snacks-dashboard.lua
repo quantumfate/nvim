@@ -61,6 +61,17 @@ return {
 				end,
 			},
 			preset = {
+				header = [[
+           ( (
+            ) )
+         .-------.
+        |  ~ ☕ ~ |]
+         \_______/
+         /\_/\   /
+        ( ^.^ ) /
+       c(  "  )o
+        (__|__)
+]],
 				---@type fun(cmd:string, opts:table)|nil Picker backend; nil auto-detects fzf-lua/telescope/mini.pick.
 				pick = nil,
 				---@type snacks.dashboard.Item[] Quick-action entries shown in the `keys` section.
@@ -107,7 +118,7 @@ return {
 				},
 			},
 			sections = {
-				{ section = "header", enabled = false },
+				{ section = "header", padding = 1 },
 				{ section = "keys", gap = 1, padding = 1 },
 				-- Passed as a function, not called: snacks resolves it at render time, so a
 				-- launch that opens a file straight away never reads the store at all. The

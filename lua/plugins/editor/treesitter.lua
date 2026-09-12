@@ -95,7 +95,7 @@ return {
 
 			local to_install = missing_parsers()
 			if #to_install > 0 then
-				ts.install(to_install)
+				pcall(ts.install, to_install)
 			end
 
 			-- Blocking form of the install above, for `nvim --headless` provisioning:
@@ -106,7 +106,12 @@ return {
 					return
 				end
 				-- Compiling this many grammars from scratch is minutes, not seconds.
-				ts.install(pending):wait(600000)
+				pcall(function()
+					local task = ts.install and ts.install(pending)
+					if task and task.wait then
+						task:wait(600000)
+					end
+				end)
 			end, { desc = "Install every missing parser, blocking until done" })
 
 			-- Compound filetypes have no parser of their own; point them at their base grammar

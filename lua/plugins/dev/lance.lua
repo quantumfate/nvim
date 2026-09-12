@@ -10,7 +10,12 @@ local function debug_current_spec()
 	end
 
 	-- External: PROJECT_DIR env var locates the plugin checkout.
-	local root = os.getenv("PROJECT_DIR") .. "/github/quantumfate/lance.nvim"
+	local project_dir = os.getenv("PROJECT_DIR")
+	if not project_dir then
+		vim.notify("PROJECT_DIR environment variable is not set", vim.log.levels.WARN)
+		return
+	end
+	local root = project_dir .. "/github/quantumfate/lance.nvim"
 	local cmd = string.format(
 		"nvim --headless "
 			.. "-c \"lua vim.opt.rtp:prepend('%s')\" "
@@ -27,10 +32,15 @@ local function debug_current_spec()
 	vim.notify("osv listening on :8086 — attach via <leader>dSc", vim.log.levels.INFO)
 end
 
+local project_dir = os.getenv("PROJECT_DIR")
+local lance_dir = project_dir and (project_dir .. "/github/quantumfate/lance.nvim") or nil
+local exists = lance_dir ~= nil and vim.uv.fs_stat(lance_dir) ~= nil
+
 return {
 	-- External: PROJECT_DIR env var locates the local dev checkout.
-	dir = os.getenv("PROJECT_DIR") .. "/github/quantumfate/lance.nvim",
+	dir = lance_dir,
 	dev = true,
+	enabled = exists,
 	keys = {
 		{ "<leader>Tl", debug_current_spec, desc = "Debug lance spec via osv" },
 	},
