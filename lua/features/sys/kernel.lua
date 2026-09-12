@@ -40,13 +40,17 @@ function M.parse_checkpatch(lines, dir)
 	for _, line in ipairs(lines) do
 		-- `--show-types` prints `WARNING:TYPE: msg`, without it `WARNING: msg`.
 		local file, lnum, kind, msg = line:match("^(%S+):(%d+): (%u+):%s*(.*)$")
+		if not file then
+			file, kind, msg = line:match("^(%S+): (%u+):%s*(.*)$")
+			lnum = "1"
+		end
 		if file then
 			if file:sub(1, 1) ~= "/" then
 				file = vim.fs.joinpath(dir, file)
 			end
 			table.insert(items, {
 				filename = file,
-				lnum = tonumber(lnum),
+				lnum = tonumber(lnum) or 1,
 				text = msg,
 				type = kind == "ERROR" and "E" or kind == "WARNING" and "W" or "I",
 			})

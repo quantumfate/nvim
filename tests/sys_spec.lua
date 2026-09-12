@@ -169,6 +169,77 @@ t.describe("sys kernel", function()
 		t.ok(text:find("-s -S", 1, true), "not halted for gdb")
 		t.ok(text:find("nokaslr", 1, true), "KASLR left on; breakpoints would miss")
 	end)
+
+	t.it("runs kernel helpers against a real kernel tree when present", function()
+		local real_tree = "/home/quantum/Projects/linux"
+		if not vim.uv.fs_stat(vim.fs.joinpath(real_tree, "MAINTAINERS")) or vim.fn.executable("rg") == 0 then
+			return
+		end
+		t.reset()
+		local ext4_file = vim.fs.joinpath(real_tree, "fs/ext4/super.c")
+		vim.cmd.edit(ext4_file)
+		local buf = vim.api.nvim_get_current_buf()
+
+		t.eq(real_tree, kernel.tree(buf), "failed to detect real kernel tree root")
+
+		-- Test get_maintainer.pl on ext4
+		local res_m = vim.system(
+			{ "perl", vim.fs.joinpath(real_tree, "scripts/get_maintainer.pl"), "-f", ext4_file },
+			{ cwd = real_tree }
+		):wait(30000)
+		t.eq(0, res_m.code, "get_maintainer.pl exited non-zero")
+		t.ok(res_m.stdout and res_m.stdout:find("Theodore Ts'o", 1, true) ~= nil, "ext4 maintainer missing")
+
+		-- Test checkpatch.pl on ext4
+		local res_c = vim.system({
+			"perl",
+			vim.fs.joinpath(real_tree, "scripts/checkpatch.pl"),
+			"--terse",
+			"--no-tree",
+			"--show-types",
+			"--file",
+			ext4_file,
+		}, { cwd = real_tree }):wait(30000)
+		local items = kernel.parse_checkpatch(vim.split(res_c.stdout or "", "\n", { plain = true }), real_tree)
+		t.ok(#items > 0, "no checkpatch items parsed on ext4/super.c")
+		t.eq("W", items[1].type)
+		t.eq(ext4_file, items[1].filename)
+
+		-- Test Kconfig jump on CONFIG_EXT4_FS_POSIX_ACL
+		local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+		local found_line = nil
+		for i, line in ipairs(lines) do
+			local s = line:find("CONFIG_EXT4_FS_POSIX_ACL", 1, true)
+			if s then
+				found_line = i
+				vim.api.nvim_win_set_cursor(0, { i, s + 7 })
+				break
+			end
+		end
+		t.ok(found_line ~= nil, "symbol not found in super.c")
+		t.eq("EXT4_FS_POSIX_ACL", kernel.symbol_at_cursor())
+		kernel.kconfig(buf)
+		t.eq("Kconfig", vim.fs.basename(vim.api.nvim_buf_get_name(0)))
+		local jumped_line = vim.api.nvim_get_current_line()
+		t.ok(jumped_line:find("EXT4_FS_POSIX_ACL", 1, true) ~= nil, "did not jump to EXT4_FS_POSIX_ACL definition")
+
+		-- Test e1000 Kconfig jump on CONFIG_NET_POLL_CONTROLLER
+		local e1000_file = vim.fs.joinpath(real_tree, "drivers/net/ethernet/intel/e1000/e1000_main.c")
+		vim.cmd.edit(e1000_file)
+		local e1000_buf = vim.api.nvim_get_current_buf()
+		local e_lines = vim.api.nvim_buf_get_lines(e1000_buf, 0, -1, false)
+		for i, line in ipairs(e_lines) do
+			local s = line:find("CONFIG_NET_POLL_CONTROLLER", 1, true)
+			if s then
+				vim.api.nvim_win_set_cursor(0, { i, s + 7 })
+				break
+			end
+		end
+		t.eq("NET_POLL_CONTROLLER", kernel.symbol_at_cursor())
+		kernel.kconfig(e1000_buf)
+		t.eq("Kconfig", vim.fs.basename(vim.api.nvim_buf_get_name(0)))
+		t.ok(vim.api.nvim_get_current_line():find("NET_POLL_CONTROLLER", 1, true) ~= nil)
+	end)
 end)
 
 t.describe("sys perf and strace", function()
