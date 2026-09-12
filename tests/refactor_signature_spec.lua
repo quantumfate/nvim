@@ -322,4 +322,111 @@ t.describe("signature typescript", function()
 		end)
 		t.ok(seen[1] and seen[1]:find("nested parameter list"), vim.inspect(seen))
 	end)
+
+	t.it("drives add, remove, and reorder live against ts_ls and validates with tsc", function()
+		if
+			vim.fn.executable("typescript-language-server") == 0
+			or vim.fn.executable("tsc") == 0
+			or not has_parser("typescript")
+		then
+			return
+		end
+		t.reset()
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+		local tsconfig = dir .. "/tsconfig.json"
+		local file = dir .. "/index.ts"
+		vim.fn.writefile({
+			'{ "compilerOptions": { "target": "ES2022", "module": "NodeNext", "strict": true } }',
+		}, tsconfig)
+		vim.fn.writefile({
+			"const extra = true;",
+			"function f(a: string): void;",
+			"function f(a: number): void;",
+			"function f(a: any) {}",
+			"",
+			"f(1);",
+			"f.apply(null, [1]);",
+			"",
+			"class Box {",
+			"  constructor(a: number, b: string) {}",
+			"}",
+			"",
+			'const b = new Box(1, "hello");',
+		}, file)
+
+		vim.cmd.edit(file)
+		local bufnr = vim.api.nvim_get_current_buf()
+
+		local client_id = vim.lsp.start({
+			name = "ts_ls",
+			cmd = { "typescript-language-server", "--stdio" },
+			root_dir = dir,
+		})
+		assert(client_id, "failed to start ts_ls")
+
+		local ok = vim.wait(15000, function()
+			local c = vim.lsp.get_client_by_id(client_id)
+			return not not (c and c.initialized and vim.lsp.buf_is_attached(bufnr, client_id))
+		end, 100)
+		t.ok(ok, "ts_ls did not initialize in time")
+
+		-- 1. Reorder params on Box constructor: swap a and b
+		vim.api.nvim_win_set_cursor(0, { 10, 15 })
+		local reordered = false
+		local real_finish = Plan.finish
+		Plan.finish = function(plan, opts)
+			real_finish(plan, opts)
+			reordered = true
+		end
+		signature.reorder_param({ direction = "next", preview = false })
+		vim.wait(10000, function()
+			return reordered
+		end, 100)
+		t.ok(reordered, "reorder_param failed to complete")
+
+		-- 2. Remove parameter a from Box constructor (after swap, a is at index 1)
+		vim.api.nvim_win_set_cursor(0, { 10, 26 })
+		local removed = false
+		Plan.finish = function(plan, opts)
+			real_finish(plan, opts)
+			removed = true
+		end
+		signature.remove_param({ preview = false })
+		vim.wait(10000, function()
+			return removed
+		end, 100)
+		t.ok(removed, "remove_param failed to complete")
+
+		-- 3. Add parameter extra to f (standing on implementation)
+		vim.api.nvim_win_set_cursor(0, { 4, 11 })
+		local added = false
+		local plan_ref = nil
+		Plan.finish = function(plan, opts)
+			plan_ref = plan
+			real_finish(plan, opts)
+			added = true
+		end
+		signature.add_param({ spec = "extra: boolean", preview = false })
+		vim.wait(10000, function()
+			return added
+		end, 100)
+		t.ok(added, "add_param failed to complete")
+		assert(plan_ref)
+		t.ok(skips(plan_ref):find("called through .apply", 1, true), "did not skip .apply call")
+
+		Plan.finish = real_finish
+		vim.cmd("write")
+
+		-- 4. Verify result compiles cleanly with tsc --noEmit
+		local res = vim.system({ "tsc", "--noEmit", "--project", tsconfig }, { text = true, cwd = dir }):wait(30000)
+		t.eq(0, res.code, "tsc --noEmit failed after refactors:\n" .. (res.stdout or "") .. "\n" .. (res.stderr or ""))
+
+		-- Stop client and clean up
+		local cl = vim.lsp.get_client_by_id(client_id)
+		if cl then
+			cl:stop()
+		end
+		pcall(vim.fn.delete, dir, "rf")
+	end)
 end)
