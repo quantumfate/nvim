@@ -168,6 +168,14 @@ M.keys = {
 			require("features.sys.patch").pick(buf)
 		end,
 	},
+	{
+		key = "R",
+		desc = "Record binary with rr",
+		needs = { "rr" },
+		run = function(buf)
+			require("features.sys.run").rr_record(buf)
+		end,
+	},
 }
 
 --- The exact bytes a buffer stands for.
@@ -333,6 +341,24 @@ function M.setup()
 		io.stdout:flush()
 		vim.cmd("qa!")
 	end, { nargs = "?", complete = "dir", desc = "b4 series info as JSON: :SysPatchJson [dir]" })
+
+	vim.api.nvim_create_user_command("SysRr", function(args)
+		local run = require("features.sys.run")
+		local buf = vim.api.nvim_get_current_buf()
+		local action = args.fargs[1]
+		if action == "replay" then
+			run.rr_replay(buf)
+		else
+			local extra_args = #args.fargs > 1 and vim.list_slice(args.fargs, 2) or nil
+			run.rr_record(buf, extra_args)
+		end
+	end, {
+		nargs = "*",
+		complete = function()
+			return { "record", "replay" }
+		end,
+		desc = "Record binary execution with rr: :SysRr [record|replay] [args...]",
+	})
 
 	vim.api.nvim_create_user_command("SysInfo", function()
 		local lines = {}

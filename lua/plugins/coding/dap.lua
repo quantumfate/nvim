@@ -444,6 +444,14 @@ return {
 					end,
 					cwd = "${workspaceFolder}",
 				},
+				{
+					name = "Attach to rr replay :1234",
+					type = "gdb",
+					request = "attach",
+					target = "localhost:1234",
+					program = project_binary,
+					cwd = "${workspaceFolder}",
+				},
 			}
 			dap.configurations.c = native
 			dap.configurations.cpp = native

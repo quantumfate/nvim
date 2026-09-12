@@ -239,6 +239,38 @@
   changed_when: false
   timeout: 300
 
+- name: Configure sysctl and Zen MSR workaround for rr
+  when: nvim_enable_rr
+  block:
+    - name: Allow unprivileged perf events for rr
+      ansible.posix.sysctl:
+        name: kernel.perf_event_paranoid
+        value: "1"
+        state: present
+        reload: true
+      become: true
+
+    - name: Check if running on AMD Zen CPU
+      ansible.builtin.set_fact:
+        nvim_is_amd_zen: >-
+          {{ ansible_facts['processor'] | select('search', 'AMD') | list | length > 0
+             or (ansible_facts['processor_model_name'] is defined and 'AMD' in ansible_facts['processor_model_name']) }}
+
+    - name: Apply rr Zen SpecLockMap workaround
+      when: nvim_is_amd_zen
+      block:
+        - name: Load msr module
+          community.general.modprobe:
+            name: msr
+            state: present
+          become: true
+
+        - name: Write SpecLockMap MSR (0xc0011029)
+          ansible.builtin.command:
+            cmd: wrmsr -a 0xc0011029 0x2000
+          changed_when: true
+          become: true
+
 - name: Verify the toolchain
   when: nvim_verify_tools and nvim_refresh_store
   become: false

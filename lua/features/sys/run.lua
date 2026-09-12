@@ -53,4 +53,56 @@ function M.run(buf)
 	end)
 end
 
+--- Checks whether the kernel perf_event_paranoid setting allows unprivileged rr recording.
+---@return boolean ok, integer paranoid
+function M.check_rr_paranoid()
+	local ok, content = pcall(vim.fn.readfile, "/proc/sys/kernel/perf_event_paranoid")
+	local val = ok and tonumber(content[1]) or 2
+	return val <= 1, val
+end
+
+--- Records the binary with rr into a trace.
+---@param buf integer
+---@param args? string[]
+function M.rr_record(buf, args)
+	if vim.fn.executable("rr") == 0 then
+		Snacks.notify.warn("rr is not installed", { title = "rr record" })
+		return
+	end
+	local ok, paranoid = M.check_rr_paranoid()
+	if not ok then
+		Snacks.notify.warn(
+			("rr requires kernel.perf_event_paranoid <= 1 (current: %d)\nRun: sudo sysctl kernel.perf_event_paranoid=1\nOr enable nvim_enable_rr in the ansible role"):format(
+				paranoid
+			),
+			{ title = "rr record" }
+		)
+		return
+	end
+
+	local root = require("lib.root").get({ buf = buf })
+	require("features.sys.util").binary(buf, function(bin)
+		local cmd = { "rr", "record", bin }
+		if args and #args > 0 then
+			vim.list_extend(cmd, args)
+		end
+		require("features.lang.output").terminal(cmd, root, {
+			title = "rr record · " .. vim.fs.basename(bin),
+		})
+	end)
+end
+
+--- Replays the latest rr recording with an interactive gdb server or terminal.
+---@param buf integer
+function M.rr_replay(buf)
+	if vim.fn.executable("rr") == 0 then
+		Snacks.notify.warn("rr is not installed", { title = "rr replay" })
+		return
+	end
+	local root = require("lib.root").get({ buf = buf })
+	require("features.lang.output").terminal({ "rr", "replay" }, root, {
+		title = "rr replay",
+	})
+end
+
 return M

@@ -51,3 +51,8 @@ nvim_notify_script: "{{ ansible_facts.user_dir }}/.local/bin/nvim-tool-notify"
 # Shared with the editor: :ToolchainUpdate appends to the same file, tagged by source.
 nvim_event_log: "{{ nvim_state_dir }}/toolchain-events.jsonl"
 nvim_notify_urgency: critical
+
+# Record and replay debugging with rr. Opt-in: requires kernel.perf_event_paranoid <= 1
+# and on AMD Zen CPUs the SpecLockMap erratum workaround (MSR 0xc0011029).
+nvim_enable_rr: false
+

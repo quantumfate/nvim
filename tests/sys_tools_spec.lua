@@ -280,6 +280,35 @@ t.describe("sys semantic checkers", function()
 	end)
 end)
 
+t.describe("sys rr record and replay", function()
+	local run = require("features.sys.run")
+
+	t.it("inspects kernel.perf_event_paranoid setting", function()
+		local ok, paranoid = run.check_rr_paranoid()
+		t.eq("number", type(paranoid))
+		t.eq(paranoid <= 1, ok)
+	end)
+
+	t.it("warns when rr is executed with paranoid > 1", function()
+		t.reset()
+		local warnings = {}
+		local orig_warn = Snacks.notify.warn
+		Snacks.notify.warn = function(msg, opts)
+			table.insert(warnings, { msg = msg, opts = opts })
+		end
+		-- Run on buffer 0
+		run.rr_record(0)
+		Snacks.notify.warn = orig_warn
+		if vim.fn.executable("rr") == 1 then
+			local _, paranoid = run.check_rr_paranoid()
+			if paranoid > 1 then
+				t.ok(#warnings > 0, "expected warning when paranoid > 1")
+				t.ok(warnings[1].msg:find("perf_event_paranoid"), "expected paranoid explanation in warning")
+			end
+		end
+	end)
+end)
+
 t.describe("sys b4 patch workflow", function()
 	local patch = require("features.sys.patch")
 
