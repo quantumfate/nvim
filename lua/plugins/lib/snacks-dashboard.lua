@@ -178,7 +178,6 @@ return {
 							vim.api.nvim_feedkeys(":Theme ", "n", false)
 						end,
 					},
-					{ icon = "󰒲 ", key = "t", desc = "Toolchain Dashboard", action = ":ToolchainDashboard" },
 					{ icon = "💥", key = "c", desc = "Crash Dumps", action = ":Crashes" },
 					{ icon = " ", key = "x", desc = "Systems Tools", action = ":SysInfo" },
 					{ icon = "✉ ", key = "p", desc = "b4 Patch Workflow", action = ":SysPatch" },
