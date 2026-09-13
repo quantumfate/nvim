@@ -3,6 +3,7 @@ local t = require("tests.harness")
 local theme = require("theme")
 local roles = require("theme.roles")
 local color = require("theme.color")
+local store = require("theme.store")
 
 t.describe("theme switching and highlights", function()
 	local SCHEMES = { "catppuccin", "catppuccin-latte", "habamax", "peachpuff", "desert" }
@@ -60,6 +61,54 @@ t.describe("theme switching and highlights", function()
 		vim.notify = orig_notify
 		t.ok(#messages > 0, "Theme command printed nothing")
 		t.ok(messages[1]:find("catppuccin", 1, true) ~= nil, "active scheme name missing from report: " .. messages[1])
+	end)
+end)
+
+t.describe("theme store", function()
+	local orig_xdg = vim.env.XDG_STATE_HOME
+
+	local function with_store(contents, fn)
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+		vim.env.XDG_STATE_HOME = dir
+		if contents ~= nil then
+			vim.fn.writefile({ contents }, vim.fs.joinpath(dir, "theme.json"))
+		end
+		local ok, err = pcall(fn)
+		vim.env.XDG_STATE_HOME = orig_xdg
+		if not ok then
+			error(err, 0)
+		end
+	end
+
+	t.it("maps a known palette to its catppuccin colorscheme", function()
+		with_store(
+			[[{"palette":"macchiato","mode":"auto","day":"latte","night":"macchiato","scale":1,"opacity":1}]],
+			function()
+				t.eq("catppuccin-macchiato", store.read())
+			end
+		)
+	end)
+
+	t.it("ignores an unknown palette", function()
+		with_store(
+			[[{"palette":"nonexistent","mode":"auto","day":"latte","night":"macchiato","scale":1,"opacity":1}]],
+			function()
+				t.eq(nil, store.read())
+			end
+		)
+	end)
+
+	t.it("ignores a missing file", function()
+		with_store(nil, function()
+			t.eq(nil, store.read())
+		end)
+	end)
+
+	t.it("ignores malformed JSON", function()
+		with_store("{ not json", function()
+			t.eq(nil, store.read())
+		end)
 	end)
 end)
 

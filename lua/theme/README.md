@@ -2,6 +2,9 @@
 
 `:Theme <name>` switches and remembers. `:Theme` reports the active one.
 
+`store.lua` follows the desktop's shared `theme.json` palette live, until the
+first manual `:Theme` call opts the session out for good.
+
 ## Roles
 
 Highlights are written against a ramp, not a palette. Every scheme has one.
@@ -35,6 +38,7 @@ The autocmd is why the scheme and the hand-written groups cannot drift apart.
 | `highlights.lua` | ~130 groups, by role                           |
 | `adapters/*.lua` | optional per-scheme corrections                |
 | `color.lua`      | blend, luminance, read a group                 |
+| `store.lua`      | follows the desktop's shared theme.json        |
 
 ## Adapters are optional
 

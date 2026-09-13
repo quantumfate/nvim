@@ -32,6 +32,17 @@ local function state_file()
 	return vim.fs.joinpath(vim.fn.stdpath("state"), "theme.txt")
 end
 
+--- Set once the user picks a scheme through :Theme, so theme.store stops applying
+--- the desktop's palette over it for the rest of the session. Cleared on restart:
+--- there is no "hand it back" command, matching the desktop store's own manual mode.
+local is_manual = false
+
+--- Whether the session has opted out of following the desktop's theme store.
+---@return boolean
+function M.manual()
+	return is_manual
+end
+
 --- Re-applies this config's own highlights on top of the active colorscheme.
 local function reapply()
 	local ok, err = pcall(function()
@@ -102,6 +113,7 @@ function M.setup()
 			vim.notify(("%s (%s)"):format(name, adapted), vim.log.levels.INFO, { title = "Theme" })
 			return
 		end
+		is_manual = true
 		M.set(args.args)
 	end, {
 		nargs = "?",
@@ -112,6 +124,8 @@ function M.setup()
 		end,
 		desc = "Switch colorscheme (no argument reports the active one)",
 	})
+
+	require("theme.store").setup()
 end
 
 return M
