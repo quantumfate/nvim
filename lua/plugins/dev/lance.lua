@@ -36,11 +36,16 @@ local project_dir = os.getenv("PROJECT_DIR")
 local lance_dir = project_dir and (project_dir .. "/github/quantumfate/lance.nvim") or nil
 local exists = lance_dir ~= nil and vim.uv.fs_stat(lance_dir) ~= nil
 
+-- An absent checkout yields NO spec at all: Lazy does not accept `dev = true`
+-- without a dir, and CI (no lance checkout) must not be told to install it.
+if not lance_dir or not exists then
+	return {}
+end
+
 return {
 	-- External: PROJECT_DIR env var locates the local dev checkout.
 	dir = lance_dir,
 	dev = true,
-	enabled = exists,
 	keys = {
 		{ "<leader>tD", debug_current_spec, desc = "Debug lance spec via osv" },
 	},
