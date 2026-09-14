@@ -1,4 +1,4 @@
-# Regression tests on Codeberg's hosted Forgejo runners.
+# Regression tests on GitHub Actions.
 name: ci
 
 on:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    runs-on: codeberg-small
+    runs-on: ubuntu-latest
     # Trixie rather than bookworm: `just` and `pahole` are packaged there under those names.
     container:
       image: node:22-trixie
@@ -19,7 +19,7 @@ jobs:
       # The specs load the config the editor would; point it at the checkout.
       XDG_CONFIG_HOME: /tmp/xdg-config
     steps:
-      - uses: https://code.forgejo.org/actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: System packages
         run: |
@@ -44,7 +44,7 @@ jobs:
           nvim --headless -c "if has('nvim-0.11') == 0 | echoerr 'Neovim 0.11+ required' | cquit 1 | else | qa! | endif"
 
       - name: Cache plugins and parsers
-        uses: https://code.forgejo.org/actions/cache@v4
+        uses: actions/cache@v4
         with:
           path: ~/.local/share/nvim
           key: nvim-${{ matrix.neovim-version }}-${{ hashFiles('lazy-lock.json') }}

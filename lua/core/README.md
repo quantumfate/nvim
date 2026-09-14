@@ -5,7 +5,7 @@
 
 ## Layout
 
-Adapted for my [Programmer Dvorak Layout](https://codeberg.org/quantumfate/system-config/src/branch/main/roles/keyboard).
+Adapted for my [Programmer Dvorak Layout](https://github.com/quantumfate/system-config/blob/main/roles/keyboard).
 
 ```text
 -  =  ]   forward / next          _  =  [   backward / previous
