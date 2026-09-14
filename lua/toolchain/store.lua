@@ -1,5 +1,9 @@
---- Writes $XDG_STATE_HOME/nvim/tools.json: what resolved on PATH, at which version.
+--- Writes $QF_STORE/nvim/tools.json: what resolved on PATH, at which version.
 --- Neovim owns the file, ansible only reads it.
+---
+--- $QF_STORE is the desktop's shared quantum-store directory; the editor's
+--- tool inventory lives with the rest of the state (see
+--- hypr/session/uwsm/env-hyprland for the one place the path is named).
 ---@class toolchain.store
 local M = {}
 
@@ -20,14 +24,35 @@ local function cache_key(path, args)
 	return path .. "\0" .. table.concat(args, " ")
 end
 
+--- The shared quantum-store directory, with nvim's own state dir as the
+--- one step back: a tools.json the desk has not migrated still answers, and
+--- the next refresh writes forward.
+---@return string
+function M.root()
+	local env = os.getenv("QF_STORE")
+	if env then
+		return env
+	end
+	local state = os.getenv("XDG_STATE_HOME") or vim.fs.joinpath(vim.env.HOME, ".local", "state")
+	return vim.fs.joinpath(state, "quantum-store")
+end
+
 ---@return string
 function M.path()
+	return vim.fs.joinpath(M.root(), "nvim", "tools.json")
+end
+
+---@return string
+local function legacy_path()
 	return vim.fs.joinpath(vim.fn.stdpath("state"), "tools.json")
 end
 
 ---@return table?
 function M.read()
 	local ok, content = pcall(vim.fn.readfile, M.path())
+	if (not ok or #content == 0) and vim.uv.fs_stat(legacy_path()) ~= nil then
+		ok, content = pcall(vim.fn.readfile, legacy_path())
+	end
 	if not ok or #content == 0 then
 		return nil
 	end

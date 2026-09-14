@@ -20,12 +20,28 @@ local PALETTES = {
 	mocha = "catppuccin-mocha",
 }
 
---- Where the desktop keeps the shared theme, honoring the same override the other
---- consumers do.
+--- Where the desktop keeps the shared theme: the shared quantum-store
+--- directory ($QF_STORE), matching the other consumers, with the legacy
+--- path as the one step back.
 ---@return string
 local function path()
-	local root = os.getenv("XDG_STATE_HOME") or vim.fs.joinpath(vim.env.HOME, ".local", "state")
-	return vim.fs.joinpath(root, "theme.json")
+	local env = os.getenv("QF_STORE")
+	local root = env
+		or vim.fs.joinpath(
+			os.getenv("XDG_STATE_HOME") or vim.fs.joinpath(vim.env.HOME, ".local", "state"),
+			"quantum-store"
+		)
+	local file = vim.fs.joinpath(root, "theme.json")
+	if vim.uv.fs_stat(file) == nil then
+		local legacy = vim.fs.joinpath(
+			os.getenv("XDG_STATE_HOME") or vim.fs.joinpath(vim.env.HOME, ".local", "state"),
+			"theme.json"
+		)
+		if vim.uv.fs_stat(legacy) ~= nil then
+			return legacy
+		end
+	end
+	return file
 end
 
 --- Reads the store and maps it to a colorscheme name. Never throws: a missing file,

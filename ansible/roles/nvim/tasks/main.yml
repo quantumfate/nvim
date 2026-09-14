@@ -233,6 +233,12 @@
   # Neovim owns the store; the role only asks for a re-probe, then reads it.
   when: nvim_refresh_store
   become: false
+  # tools.json lives in the shared quantum-store directory (see
+  # qf_store_dir in defaults). `environment:` there resolves the one knob the
+  # desk agrees on; the store module migrating the legacy
+  # ~/.local/state/nvim copy on read makes the first refresh place it right.
+  environment:
+    QF_STORE: "{{ nvim_qf_store_dir }}"
   ansible.builtin.command: >-
     nvim --headless -c "lua require('toolchain.store').refresh({}, function() vim.cmd('qa!') end)"
   # Regenerating a derived file is not a change to the machine.

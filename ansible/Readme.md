@@ -121,3 +121,11 @@ happened to the toolchain.
         nvim_repo_path: /path/to/checkout
         nvim_ecosystem_filter: [core, lua, rust] # default: every ecosystem
 ```
+
+## Shared state
+
+The tool store writes to the desk's shared quantum-store directory
+(`$QF_STORE/nvim/tools.json`; `$QF_STORE` defaults to
+`$XDG_STATE_HOME/quantum-store`, exported by the desktop's session env). The
+role resolves the same point (`nvim_qf_store_dir`) around the refresh, and
+`lib/toolchain` adopts a legacy copy on read.
