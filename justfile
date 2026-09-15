@@ -33,6 +33,8 @@ check-project DIR='.':
 
 # CI/pre-commit gate: formatting + tests + project checks (lint is advisory)
 check: fmt-check test toolchain-check check-project
+	@../hypr/bin/,privacy-check
+
 
 # Bootstrap the local dev environment (hooks, toolchain, PATH)
 setup:
