@@ -78,7 +78,7 @@ return {
 			desc = "Previous Todo Comment",
 		},
 		{
-			"<leader>ft",
+			"<leader>st",
 			-- `Snacks` is a global from snacks.nvim.
 			function()
 				Snacks.picker.todo_comments()
@@ -86,7 +86,7 @@ return {
 			desc = "Todo",
 		},
 		{
-			"<leader>fT",
+			"<leader>sT",
 			function()
 				Snacks.picker.todo_comments({ keywords = { "TODO", "FIX", "FIXME" } })
 			end,
