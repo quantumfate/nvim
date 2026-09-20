@@ -6,6 +6,14 @@
 --- watched rather than polled, and applied through the same theme.set() a user would
 --- call by hand, so a store-driven change is indistinguishable from a manual one once
 --- it lands.
+---
+--- The store keeps the *baseline* palette (`palette`) and the palette in effect right
+--- now (`resolved`): a mode holds a lease the way it holds a window, and while it does
+--- the lease's palette is what is actually shown. This editor cannot run the desk's
+--- lease resolver, so ,theme.sh writes `resolved` for it — the same value its socket
+--- pokes use — and the editor follows that single authority, falling back to
+--- `palette` on stores written before the field existed (they are equal with no lease
+--- held).
 ---@class theme.store
 local M = {}
 
@@ -57,7 +65,11 @@ function M.read()
 	if not ok_decode or type(decoded) ~= "table" then
 		return nil
 	end
-	return PALETTES[decoded.palette]
+	-- `resolved` is the single authority, written by ,theme.sh apply on every pass
+	-- as the lease-aware palette its socket pokes use; `palette` is the baseline it
+	-- is also written beside. Older stores have only `palette`, and with no lease
+	-- held the two are equal anyway.
+	return PALETTES[decoded.resolved or decoded.palette]
 end
 
 --- Set once setup() has installed the watcher, so tests and :Theme can tell it apart
@@ -84,8 +96,11 @@ local debounce = nil ---@type uv.uv_timer_t?
 --- out from under a watch on the file itself — libuv fires once for that first
 --- rename and then watches a now-orphaned inode nothing writes to again. Watching
 --- the containing directory sidesteps this: renames into it keep re-arming.
-function M.setup()
-	if watching then
+---
+---@param dir? string Directory to watch instead of the store's own (a scratch
+--- store's directory, for tests arming the watcher independently).
+function M.setup(dir)
+	if dir == nil and watching then
 		return
 	end
 	watching = true
@@ -95,13 +110,13 @@ function M.setup()
 	-- reenter lazy's own setup.
 	vim.schedule(apply)
 
-	local dir = vim.fs.dirname(path())
+	local target = dir or vim.fs.dirname(path())
 	local handle = vim.uv.new_fs_event()
-	if not handle or vim.uv.fs_stat(dir) == nil then
+	if not handle or vim.uv.fs_stat(target) == nil then
 		return
 	end
 
-	local ok = handle:start(dir, {}, function(err, filename)
+	local ok = handle:start(target, {}, function(err, filename)
 		if err or filename ~= "theme.json" then
 			return
 		end

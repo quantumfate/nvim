@@ -66,15 +66,20 @@ end)
 
 t.describe("theme store", function()
 	local orig_xdg = vim.env.XDG_STATE_HOME
+	local orig_store = vim.env.QF_STORE
 
+	-- path() prefers QF_STORE (the desk exports it), so a scratch test must pin
+	-- both variables or read() silently looks at the live store.
 	local function with_store(contents, fn)
 		local dir = vim.fn.tempname()
 		vim.fn.mkdir(dir, "p")
+		vim.env.QF_STORE = dir
 		vim.env.XDG_STATE_HOME = dir
 		if contents ~= nil then
 			vim.fn.writefile({ contents }, vim.fs.joinpath(dir, "theme.json"))
 		end
 		local ok, err = pcall(fn)
+		vim.env.QF_STORE = orig_store
 		vim.env.XDG_STATE_HOME = orig_xdg
 		if not ok then
 			error(err, 0)
@@ -86,6 +91,24 @@ t.describe("theme store", function()
 			[[{"palette":"macchiato","mode":"auto","day":"latte","night":"macchiato","scale":1,"opacity":1}]],
 			function()
 				t.eq("catppuccin-macchiato", store.read())
+			end
+		)
+	end)
+
+	t.it("prefers the resolved palette over a stale baseline", function()
+		with_store(
+			[[{"palette":"macchiato","resolved":"latte","mode":"auto","day":"latte","night":"macchiato","scale":1,"opacity":1}]],
+			function()
+				t.eq("catppuccin-latte", store.read())
+			end
+		)
+	end)
+
+	t.it("falls back to the baseline palette without a resolved field", function()
+		with_store(
+			[[{"palette":"mocha","mode":"auto","day":"latte","night":"macchiato","scale":1,"opacity":1}]],
+			function()
+				t.eq("catppuccin-mocha", store.read())
 			end
 		)
 	end)
@@ -109,6 +132,48 @@ t.describe("theme store", function()
 		with_store("{ not json", function()
 			t.eq(nil, store.read())
 		end)
+	end)
+
+	-- The desk replaces theme.json by writing a sibling and renaming it into
+	-- place, so every update is an atomic swap. The watcher must see that swap;
+	-- this is the live-switch path that needs no restart.
+	t.it("apply a swap-in write while the store is watched", function()
+		local dir = vim.fn.tempname()
+		vim.fn.mkdir(dir, "p")
+		vim.env.QF_STORE = dir
+		vim.env.XDG_STATE_HOME = dir
+		local file = vim.fs.joinpath(dir, "theme.json")
+		vim.fn.writefile({
+			[[{"palette":"macchiato","resolved":"macchiato","mode":"auto","day":"latte","night":"macchiato","scale":1,"opacity":1}]],
+		}, file)
+		theme.set("habamax", { persist = false })
+
+		-- arm the watcher on the scratch store's directory; `apply` (self-scheduled
+		-- by setup) and the watcher both read path() which now resolves to the
+		-- scratch store.
+		store.setup(dir)
+
+		local applied = vim.wait(2000, function()
+			return vim.g.colors_name == "catppuccin-macchiato"
+		end)
+		t.ok(applied, "watcher never applied the initial store; colors_name=" .. tostring(vim.g.colors_name))
+
+		-- Atomic swap: write a sibling, rename it over the watched file. The
+		-- inode the old watcher (if any) followed is replaced, which is exactly
+		-- what a directory watch is for.
+		local tmp = file .. ".new"
+		vim.fn.writefile({
+			[[{"palette":"latte","resolved":"mocha","mode":"auto","day":"latte","night":"macchiato","scale":1,"opacity":1}]],
+		}, tmp)
+		os.rename(tmp, file)
+
+		local switched = vim.wait(2000, function()
+			return vim.g.colors_name == "catppuccin-mocha"
+		end)
+		t.ok(switched, "watcher did not apply the swapped-in store; colors_name=" .. tostring(vim.g.colors_name))
+
+		vim.env.QF_STORE = orig_store
+		vim.env.XDG_STATE_HOME = orig_xdg
 	end)
 end)
 

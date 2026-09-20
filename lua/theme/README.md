@@ -3,7 +3,11 @@
 `:Theme <name>` switches and remembers. `:Theme` reports the active one.
 
 `store.lua` follows the desktop's shared `theme.json` palette live, until the
-first manual `:Theme` call opts the session out for good.
+first manual `:Theme` call opts the session out for good. It follows the
+store's `resolved` palette — the lease-aware value the desk writes beside the
+baseline `palette` — so a mode's palette reaches the editor even while the
+mode holds it, socketed or not: the store watcher covers every instance, and
+`,theme.sh apply` additionally pokes control sockets for immediate swaps.
 
 ## Roles
 
@@ -32,13 +36,13 @@ The autocmd is why the scheme and the hand-written groups cannot drift apart.
 
 ## Files
 
-| File             | Holds                                          |
-| ---------------- | ---------------------------------------------- |
-| `roles.lua`      | the contract, and the derive-from-scheme guess |
-| `highlights.lua` | ~130 groups, by role                           |
-| `adapters/*.lua` | optional per-scheme corrections                |
-| `color.lua`      | blend, luminance, read a group                 |
-| `store.lua`      | follows the desktop's shared theme.json        |
+| File             | Holds                                                             |
+| ---------------- | ----------------------------------------------------------------- |
+| `roles.lua`      | the contract, and the derive-from-scheme guess                    |
+| `highlights.lua` | ~130 groups, by role                                              |
+| `adapters/*.lua` | optional per-scheme corrections                                   |
+| `color.lua`      | blend, luminance, read a group                                    |
+| `store.lua`      | follows the desktop's shared theme.json (`resolved`, lease-aware) |
 
 ## Adapters are optional
 

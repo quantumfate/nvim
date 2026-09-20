@@ -135,8 +135,16 @@ gd gD gy gI gO        definition, declaration, type, implementation, symbols
 grr grn gra gri grt   references, rename, code action, implementation, type
 K                     hover
 <leader>cn            navbuddy symbol tree
-<leader>fs            treesitter symbol picker
-<leader>fll           LSP document symbols
+<leader>ff            find all files in project (root)
+<leader>fcf           find code files in project (no docs/CI)
+<leader>fc/           grep code in project (no docs/CI)
+<leader>ftf           find test files (tests/test/spec dirs)
+<leader>ft/           grep tests (tests/test/spec dirs)
+<leader>flf           find files in current file's dir
+<leader>fl/           grep in current file's dir
+<leader>fs            smart find files (cwd)
+<leader>/             grep everything (cwd)
+<leader>st / sT       search todo comments (all / TODO+FIX+FIXME)
 
 <leader>ha            harpoon add
 <C-h> <C-t> <C-n>     harpoon slots 1-3
