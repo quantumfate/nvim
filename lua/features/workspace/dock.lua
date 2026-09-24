@@ -55,6 +55,28 @@ M.views = {
 		open = "Trouble diagnostics open filter.buf=0 focus=false open_no_results=true",
 		close = "Trouble diagnostics close",
 	},
+
+	loclist = {
+		title = "Loclist",
+		ft = "trouble",
+		open = "Trouble loclist open filter.buf=0 focus=false open_no_results=true",
+		close = "Trouble loclist close",
+	},
+
+	symbols = {
+		title = "Symbols",
+		ft = "symbols",
+		open = "Trouble symbols open filter.buf=0 focus=false open_no_results=true",
+		close = "Trouble symbols close",
+	},
+
+	todo = {
+		title = "Todos",
+		ft = "todo",
+		open = "Trouble todo open filter.buf=0 focus=false open_no_results=true",
+		close = "Trouble todo close",
+	},
+
 	-- Every file, not just this one. Servers that can report on files you have not
 	-- opened (workspace/diagnostic) are asked to; for Lua and C, whose servers cannot,
 	-- a batch check runs in the background and its findings join the list as they land.

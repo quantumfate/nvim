@@ -57,7 +57,7 @@ function M.setup()
 	end, { desc = "Toolchain report with update actions" })
 
 	-- <leader>i is the "interfaces" group (see whichkey).
-	vim.keymap.set("n", "<leader>it", function()
+	vim.keymap.set("n", "<leader>pt", function()
 		require("toolchain.dashboard").open()
 	end, { desc = "Toolchain" })
 

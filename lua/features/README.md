@@ -15,6 +15,8 @@ code they call lives here.
 | `lualine/`                                                  | statusline components and their colours                          |
 | `ts_scope.lua`                                              | duplicate the textobject under the cursor                        |
 | `ts_select.lua`                                             | treesitter-driven selection                                      |
+| [`whichkey.lua`](./whichkey.lua)                            | which-key rail placement: bottom rail hugging the cursor's half  |
+| `multicursor.lua`                                           | motion-spawned cursors over multicursor.nvim (`gz` dialect)      |
 | `treesitter.lua`                                            | parser and query helpers                                         |
 | `mini.lua`                                                  | shared mini.\* setup and which-key hints                         |
 | `win_swap.lua`                                              | swap with a neighbouring split, skipping panels                  |

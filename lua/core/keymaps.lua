@@ -4,6 +4,7 @@
 ---   flash        — `s` / `S` / `r` / `R` label jumps  (plugins/editor/flash.lua)
 ---   textobjects  — `]f` `[c` motions, `<leader>m` swaps (plugins/editor/treesitter.lua)
 ---   mini.ai      — `af` `iv` `iu` textobjects          (plugins/lib/mini-ai.lua)
+---   multicursor  — `gz{motion}` cursor spawning        (plugins/editor/multicursor.lua)
 ---   LSP          — `g*` navigation                     (plugins/lang/conf/keymaps.lua)
 
 local map = vim.keymap.set

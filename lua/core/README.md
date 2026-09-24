@@ -121,12 +121,28 @@ ma `a       buffer-local mark            mA `A   global mark, survives files
 <C-o> <C-i> jumplist back / forward
 ```
 
-`gn` selects the next search match as a textobject, which is the multi-cursor
-this config ships with:
+`gn` selects the next search match as a textobject — `/oldName<CR> cgn newName<Esc> . . .`
+
+### Multiple cursors from motions
+
+`gz` arms a capture; the next motion leaves a cursor behind and lands the main
+one (`plugins/editor/multicursor.lua` + `lua/features/multicursor.lua`):
 
 ```text
-/oldName<CR>   cgn newName<Esc>   then  . . .
+gz w gze gz} gz-q   cursor from the next word / word end / paragraph
+gzf( gzt.           f/t read their pending char from the capture
+
+while cursors exist the bare keys join in — each motion spawns again:
+w b e $ ^ { } f t   spawn at the next destination, keep collecting
+Q{motion}           move ONLY the main cursor (reposition without spawning)
+]m [m               rotate which cursor is the main one
+<Esc>               collapse back to a single cursor
 ```
+
+Nothing outside a session is remapped: the layer arms through the plugin's
+own keymap layer, so which-key renders the runtime-enabled set by construction.
+`flash` keeps `s`, gitsigns keeps `]c`/`[c`, harpoon keeps `<C-n>`, and `n`/`N`
+still walk all cursors to the next match mid-session.
 
 ## Symbols, LSP, files
 

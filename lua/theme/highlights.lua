@@ -225,6 +225,19 @@ function M.build(roles)
 		Special = { fg = r.accent, bg = r.ramp[1] },
 		Visual = { bg = r.ramp[2] },
 		CursorLine = { bg = r.ramp[1] },
+
+		-- Multicursor. Secondary cursors are metadata (grey), like line numbers —
+		-- the caret that stays when the session ends is the one active thing, so
+		-- only the main cursor's preview takes the accent. Locked cursors dim one
+		-- step further than idle ones.
+		MultiCursorCursor = { fg = r.ramp[1], bg = r.ramp[6], reverse = false },
+		MultiCursorVisual = { bg = r.ramp[2] },
+		MultiCursorSign = { fg = r.ramp[5] },
+		MultiCursorMatchPreview = { fg = r.ramp[1], bg = r.ramp[6] },
+		MultiCursorDisabledCursor = { fg = r.ramp[1], bg = r.ramp[4] },
+		MultiCursorDisabledVisual = { fg = r.ramp[7], bg = r.ramp[1] },
+		MultiCursorDisabledSign = { fg = r.ramp[3] },
+
 		Directory = { fg = r.accent },
 		-- Line numbers are a ruler, not content: they were mauve,
 		-- which made the brightest colour on screen the one thing

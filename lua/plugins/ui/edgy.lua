@@ -152,11 +152,32 @@ return {
 					desc = "Diagnostics",
 				},
 				{
+					"<leader>il",
+					function()
+						dock.toggle("loclist")
+					end,
+					desc = "Loclist",
+				},
+				{
+					"<leader>is",
+					function()
+						dock.toggle("symbols")
+					end,
+					desc = "Symbols",
+				},
+				{
 					"<leader>iQ",
 					function()
 						dock.toggle("project")
 					end,
 					desc = "Project diagnostics",
+				},
+				{
+					"<leader>it",
+					function()
+						dock.toggle("todo")
+					end,
+					desc = "Todos",
 				},
 				{
 					"<leader>iT",
@@ -194,7 +215,7 @@ return {
 					desc = "Equalize Windows",
 				},
 				{
-					"<leader>is",
+					"<leader>iS",
 					function()
 						require("edgy").select()
 					end,

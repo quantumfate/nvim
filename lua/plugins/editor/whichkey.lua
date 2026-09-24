@@ -52,10 +52,11 @@ return {
 	--- Built lazily: the icon rules below read the `icons` global, and a plain table would read it while lazy.nvim
 	--- imports this file, pulling the glyph table into startup.
 	opts = function()
-		return {
+		local opts = {
 			-- Not a preset: the presets are either full width (classic) or a tall side
-			-- panel (helix). This is a fixed box, bottom centre, same size every time —
-			-- the point is that a group sits where it sat last time.
+			-- panel (helix). This is a vertical rail, bottom-anchored, which re-chooses
+			-- its edge (left or right) from the cursor's half of the screen every time
+			-- it opens — the point is that a group sits where it sat last time.
 			preset = false,
 			plugins = {
 				marks = true,
@@ -91,11 +92,15 @@ return {
 			-- 	return not lhs:match("^[%[%]]%a")
 			-- end,
 			win = {
-				no_overlap = false,
-				width = { min = 40, max = 0.6 },
-				height = { min = 4, max = 0.5 },
-				col = 0.5,
-				row = -2,
+				no_overlap = false, -- the rail parks at an editor edge; overlap logic would only fight it
+				-- A vertical rail, bottom-anchored (`row = math.huge` is the same
+				-- upstream anchor the default uses; the box grows upward). `col` is
+				-- rewritten per show by features/whichkey.lua: 0 hugs the left edge,
+				-- math.huge the right — whichever half the cursor works in.
+				width = { min = 30, max = 44 },
+				height = { min = 4, max = 0.75 },
+				col = 0,
+				row = math.huge,
 				border = "rounded",
 				padding = { 0, 1 },
 				title = true,
@@ -180,7 +185,7 @@ return {
 					{ "<leader>B", group = "buffers" },
 					{ "<leader>i", group = "interfaces" },
 					{ "<leader>x", group = "systems" },
-					{ "<leader>p", group = "popups" },
+					{ "<leader>p", group = "glance" },
 					{ "<leader>w", group = "windows" },
 					{ "<leader>e", group = "explorer" },
 					{ "<leader>G", group = "grep" },
@@ -237,10 +242,19 @@ return {
 				},
 			},
 		}
+
+		-- The rail re-chooses its side (cursor's half of the screen) each time
+		-- it opens; that wrap needs which-key's own modules, so it waits for
+		-- the plugin to finish loading before reaching into view.lua.
+		require("lib.modules").on_load("which-key.nvim", function()
+			require("features.whichkey").setup()
+		end)
+
+		return opts
 	end,
 	keys = {
 		{
-			"<leader>iL",
+			"<leader>pl",
 			"<cmd>Lazy<cr>",
 			desc = "Lazy",
 		},
