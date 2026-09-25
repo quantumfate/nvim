@@ -23,7 +23,7 @@ if [[ -f ".gitmessage" ]]; then
   log_ok "Commit template enabled"
 fi
 
-# Enable direnv so the nix shell and tool PATHs load on cd.
+# Enable direnv so the project's tool PATHs load on cd.
 if have direnv && [[ -f .envrc ]]; then
   direnv allow
   log_ok "direnv enabled (.envrc)"
@@ -31,5 +31,4 @@ fi
 
 log_ok "Repository wired."
 log_info "Install the toolchain:  just provision   (packages + plugins, ansible)"
-log_info "                    or:  just dev         (project, nix shell)"
 log_info "Run checks:             just check"

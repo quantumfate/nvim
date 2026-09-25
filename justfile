@@ -61,6 +61,3 @@ provision-idempotence:
 toolchain-status:
 	nvim --headless -c "lua require('toolchain.store').refresh({}, function(d) print(vim.inspect(d.summary)) vim.cmd('qa!') end)"
 
-# Enter the reproducible nix dev shell
-dev:
-	nix develop
